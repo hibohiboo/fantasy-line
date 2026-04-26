@@ -15,6 +15,10 @@ export const baseConfig = defineConfig([
     languageOptions: { globals: globals.node },
     rules: {
       'no-unused-vars': ['off'], // 型定義のvarまで認識してしまうため
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
     },
   },
   {

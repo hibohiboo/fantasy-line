@@ -1,0 +1,34 @@
+{
+  "name": "@fantasy-life/api",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "db:migrate:local": "drizzle-kit push --config=drizzle.config.ts",
+    "db:seed:local": "tsx src/db/seed.ts",
+    "lint": "eslint . --fix",
+    "ncu": "ncu -u"
+  },
+  "dependencies": {
+    "@repo/schema": "*",
+    "zod": "^4.3.6",
+    "drizzle-orm": "^0.45.2",
+    "mysql2": "^3.22.2"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "eslint": "^10.2.1",
+    "vitest": "^4.1.5",
+    "typescript": "~6.0.3",
+    "esbuild": "^0.28.0",
+    "tsx": "^4.19.4",
+    "drizzle-kit": "^0.31.10",
+    "@types/node": "^25.6.0",
+    "@types/aws-lambda": "^8.10.161",
+    "@aws-sdk/client-secrets-manager": "^3.1037.0"
+  }
+}
