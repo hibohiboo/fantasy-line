@@ -21,14 +21,13 @@
     "vue-router": "^5.0.6"
   },
   "devDependencies": {
-    "@tsconfig/node24": "^24.0.4",
+    "@repo/typescript-config": "*",
     "@types/jsdom": "^28.0.1",
     "@types/node": "^25.6.0",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vitest/eslint-plugin": "^1.6.16",
     "@vue/eslint-config-typescript": "^14.7.0",
     "@vue/test-utils": "^2.4.8",
-    "@vue/tsconfig": "^0.9.1",
     "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-oxlint": "~1.61.0",
