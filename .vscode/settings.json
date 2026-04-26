@@ -1,0 +1,88 @@
+{
+  "eslint.format.enable": false,
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "eslint.useFlatConfig": true,
+  "eslint.useESLintClass": true,
+  "prettier.requireConfig": true,
+  "editor.formatOnSave": true,
+  "editor.formatOnType": false,
+  "editor.formatOnPaste": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.insertSpaces": true,
+  "editor.tabSize": 2,
+  "editor.tabCompletion": "on",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "files.eol": "\n",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[jsonc]": {
+    "editor.formatOnSave": false
+  },
+  // デフォルトの設定はオフにしておく
+  "js/ts.format.enabled": false,
+  // tailwindcssの設定
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  // gitのWorktreeを使う設定: https://tech.dentsusoken.com/entry/2025/08/25/VSCode%E6%A8%99%E6%BA%96%E3%81%AEgit_worktree%E7%AE%A1%E7%90%86%E6%A9%9F%E8%83%BD%E3%81%A7Claude_Code%E3%82%92%E4%B8%A6%E5%88%97%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B
+  "git.detectWorktrees": true,
+  // 軽量化: https://qiita.com/nolanlover0527/items/071277263f8851012e6b
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/*/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.vscode/**": true,
+    "**/coverage/**": true,
+    "**/test-results/**": true,
+    "**/tmp/**": true,
+    "**/.cache/**": true,
+    "**/.turbo/**": true
+  },
+  // サイドバーに表示しないフォルダの設定
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/dist": false, // たまに見たいので表示はしておく
+    "**/build": true
+  },
+  // 検索対象にしない
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/coverage": true,
+    "**/test-results/**": true
+  },
+  // tsの軽量化
+  "js/ts.tsserver.log": "off", // tsserverのログ出力を停止
+  "js/ts.tsserver.automaticTypeAcquisition.enabled": false, // 自動型取得を無効化 (JS用に@typesから型をDLする機能)
+  "js/ts.tsserver.experimental.enableProjectDiagnostics": false, // 大規模プロジェクトでの診断負荷を軽減
+  // git統合の最適化
+  "git.enabled": true,
+  "git.autorefresh": true,
+  "git.autofetch": false,
+  "git.decorations.enabled": true
+}
