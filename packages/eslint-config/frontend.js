@@ -1,51 +1,31 @@
-import globals from 'globals';
-import vue from 'eslint-plugin-vue';
-import tseslint from 'typescript-eslint';
-import { defineConfig } from 'eslint/config';
-import css from '@eslint/css';
+import { globalIgnores } from 'eslint/config';
+import {
+  defineConfigWithVueTs,
+  vueTsConfigs,
+} from '@vue/eslint-config-typescript';
+import pluginVue from 'eslint-plugin-vue';
+import pluginVitest from '@vitest/eslint-plugin';
+import pluginOxlint from 'eslint-plugin-oxlint';
+import skipFormatting from 'eslint-config-prettier/flat';
 import { baseConfig } from './base.js';
 
-export default defineConfig([
-  ...baseConfig,
+export default defineConfigWithVueTs(
+  baseConfig,
   {
-    ignores: ['dist', 'build', 'node_modules'],
+    name: 'app/files-to-lint',
+    files: ['**/*.{vue,ts,mts,tsx}'],
   },
+
+  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
+
+  ...pluginVue.configs['flat/essential'],
+  vueTsConfigs.recommended,
   {
-    files: ['**/*.{js,mjs,cjs,ts,mts,cts,vue}'],
-    languageOptions: { globals: globals.browser },
+    ...pluginVitest.configs.recommended,
+    files: ['src/**/__tests__/*'],
   },
-  {
-    files: ['**/*.css'],
-    plugins: { css },
-    language: 'css/css',
-    extends: ['css/recommended'],
-    rules: {
-      'css/no-invalid-properties': ['warn', { allowUnknownVariables: true }],
-      'css/use-baseline': ['error', { allowSelectors: ['nesting'] }],
-    },
-  },
-  ...vue.configs['flat/vue3-recommended'],
-  {
-    files: ['**/*.vue'],
-    languageOptions: {
-      parserOptions: {
-        parser: tseslint.parser,
-        extraFileExtensions: ['.vue'],
-      },
-    },
-    rules: {
-      'sonarjs/prefer-read-only-props': 'error',
-    },
-  },
-  {
-    files: ['**/*.{ts,mts,cts}'],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.json'],
-      },
-    },
-    rules: {
-      'sonarjs/prefer-read-only-props': 'error',
-    },
-  },
-]);
+
+  ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
+
+  skipFormatting,
+);
