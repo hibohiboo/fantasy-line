@@ -5,7 +5,9 @@
     "module": "commonjs",
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "types": ["node"]
   },
-  "exclude": ["drizzle.config.ts", "node_modules"]
+  "exclude": ["drizzle.config.ts", "node_modules"],
+  "include": ["src"]
 }
