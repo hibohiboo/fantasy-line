@@ -14,6 +14,7 @@ export class InfraStack extends cdk.Stack {
       projectRoot: path.join(__dirname, '../..'),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_24_X,
+      architecture: lambda.Architecture.ARM_64,
     });
 
     const api = new apigateway.RestApi(this, 'FantasyLineApi', {
