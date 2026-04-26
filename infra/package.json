@@ -8,14 +8,19 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "prelocal-api": "npm run synth",
+    "local-api": "cross-env SM_CLI_TELEMETRY=0 AWS_SECRET_ACCESS_KEY=dummy AWS_ACCESS_KEY_ID=dummy sam local start-api --template cdk.out/InfraStack.template.json"
   },
   "devDependencies": {
     "@types/jest": "^30",
     "@types/node": "^25.6.0",
+    "aws-cdk": "2.1119.0",
+    "cross-env": "^10.1.0",
+    "esbuild": "^0.28.0",
     "jest": "^30",
     "ts-jest": "^29",
-    "aws-cdk": "2.1119.0",
     "ts-node": "^10.9.2",
     "typescript": "~6.0.3"
   },

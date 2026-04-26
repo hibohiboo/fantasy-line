@@ -11,8 +11,9 @@ export class InfraStack extends cdk.Stack {
 
     const echoFunction = new lambdaNodejs.NodejsFunction(this, 'EchoFunction', {
       entry: path.join(__dirname, '../../apps/api/src/handlers/echo.ts'),
+      projectRoot: path.join(__dirname, '../..'),
       handler: 'handler',
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
     });
 
     const api = new apigateway.RestApi(this, 'FantasyLineApi', {
