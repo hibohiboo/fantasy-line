@@ -1,5 +1,6 @@
 {
   "name": "@fantasy-life/api",
+  "type": "module",
   "engines": {
     "node": ">=24"
   },
