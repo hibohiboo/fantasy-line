@@ -8,6 +8,7 @@
     "build": "tsc --noEmit",
     "test": "vitest run",
     "db:migrate:local": "drizzle-kit push --config=drizzle.config.ts",
+    "db:seed:local": "tsx src/db/seed.ts",
     "lint": "eslint . --fix",
     "ncu": "ncu -u"
   },
@@ -24,6 +25,7 @@
     "vitest": "^4.1.5",
     "typescript": "~6.0.3",
     "esbuild": "^0.28.0",
+    "tsx": "^4.19.4",
     "drizzle-kit": "^0.31.10",
     "@types/node": "^25.6.0",
     "@types/aws-lambda": "^8.10.161",

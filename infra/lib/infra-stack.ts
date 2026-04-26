@@ -17,6 +17,21 @@ export class InfraStack extends cdk.Stack {
       architecture: lambda.Architecture.ARM_64,
     });
 
+    const itemsFunction = new lambdaNodejs.NodejsFunction(this, 'ItemsFunction', {
+      entry: path.join(__dirname, '../../apps/api/src/handlers/items.ts'),
+      projectRoot: path.join(__dirname, '../..'),
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_24_X,
+      architecture: lambda.Architecture.ARM_64,
+      environment: {
+        DB_HOST: 'host.docker.internal',
+        DB_PORT: '3306',
+        DB_USER: 'testuser',
+        DB_PASSWORD: 'testpass',
+        DB_NAME: 'testdb',
+      },
+    });
+
     const api = new apigateway.RestApi(this, 'FantasyLineApi', {
       restApiName: 'Fantasy Line API',
     });
@@ -26,5 +41,8 @@ export class InfraStack extends cdk.Stack {
       'ANY',
       new apigateway.LambdaIntegration(echoFunction),
     );
+
+    const itemsResource = api.root.addResource('items');
+    itemsResource.addMethod('GET', new apigateway.LambdaIntegration(itemsFunction));
   }
 }
