@@ -23,6 +23,7 @@ export class InfraStack extends cdk.Stack {
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_24_X,
       architecture: lambda.Architecture.ARM_64,
+      timeout: cdk.Duration.seconds(30),
       environment: {
         DB_HOST: 'host.docker.internal',
         DB_PORT: '3306',
