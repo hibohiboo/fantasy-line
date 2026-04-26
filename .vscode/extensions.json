@@ -3,7 +3,8 @@
     "ms-vscode.vscode-typescript-next",
     "esbenp.prettier-vscode", // "endOfLine": "lf"が効かない。 https://github.com/prettier/prettier-vscode/issues/1327
     "EditorConfig.EditorConfig", // "endOfLine": "lf"のために導入
-    "dbaeumer.vscode-eslint"
+    "dbaeumer.vscode-eslint",
+    "Vue.volar"
   ],
   "unwantedRecommendations": []
 }
