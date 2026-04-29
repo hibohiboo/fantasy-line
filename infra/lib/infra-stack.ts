@@ -9,12 +9,14 @@ export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const isLocal = process.env.LOCAL_API === 'true';
+
     const echoFunction = new lambdaNodejs.NodejsFunction(this, 'EchoFunction', {
       entry: path.join(__dirname, '../../apps/api/src/handlers/echo.ts'),
       projectRoot: path.join(__dirname, '../..'),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_24_X,
-      architecture: lambda.Architecture.ARM_64,
+      architecture: isLocal ? undefined : lambda.Architecture.ARM_64,
     });
 
     const itemsFunction = new lambdaNodejs.NodejsFunction(this, 'ItemsFunction', {
@@ -22,7 +24,7 @@ export class InfraStack extends cdk.Stack {
       projectRoot: path.join(__dirname, '../..'),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_24_X,
-      architecture: lambda.Architecture.ARM_64,
+      architecture: isLocal ? undefined : lambda.Architecture.ARM_64,
       timeout: cdk.Duration.seconds(30),
       environment: {
         DB_HOST: 'host.docker.internal',
