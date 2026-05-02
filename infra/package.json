@@ -11,7 +11,7 @@
     "cdk": "cdk",
     "synth": "cdk synth",
     "prelocal-api": "cross-env LOCAL_API=true npm run synth",
-    "local-api": "cross-env SM_CLI_TELEMETRY=0 LOCAL_API=true AWS_SECRET_ACCESS_KEY=dummy AWS_ACCESS_KEY_ID=dummy sam local start-api --template cdk.out/InfraStack.template.json"
+    "local-api": "wsl -d Ubuntu -- bash -lc 'SAM_CLI_TELEMETRY=0 AWS_SECRET_ACCESS_KEY=dummy AWS_ACCESS_KEY_ID=dummy sam local start-api --template cdk.out/InfraStack.template.json'"
   },
   "devDependencies": {
     "@types/jest": "^30",
