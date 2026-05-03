@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import { handler } from '../../src/handlers/echo';
+import { handler } from '../../../src/handlers/echo';
 
 describe('echo handler', () => {
   it('queryStringParametersがある場合、その内容をそのまま返す', async () => {

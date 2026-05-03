@@ -2,7 +2,7 @@ import { GenericContainer, Wait } from 'testcontainers';
 import type { StartedTestContainer } from 'testcontainers';
 import mysql from 'mysql2/promise';
 import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from '../../src/db/schema';
+import * as schema from '../../../src/db/schema';
 
 export async function waitForMysql(pool: mysql.Pool, maxRetries = 20): Promise<void> {
   for (let i = 0; i < maxRetries; i++) {
