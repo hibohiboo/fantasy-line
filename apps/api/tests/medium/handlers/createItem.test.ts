@@ -7,6 +7,7 @@ import {
   beforeEach,
   vi,
 } from 'vitest';
+// バリデーションエラー（400）ケースは DB 不要のため tests/small/handlers/createItem.test.ts で管理
 import type { StartedTestContainer } from 'testcontainers';
 import mysql from 'mysql2/promise';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
@@ -68,29 +69,4 @@ describe('createItem handler', () => {
     expect(body.item.price).toBe(0);
   });
 
-  it('nameが未指定の場合400を返す', async () => {
-    const { handler } = await import('../../../src/handlers/createItem');
-
-    const result = await handler(
-      { body: JSON.stringify({ price: 100 }) } as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(400);
-    const body = JSON.parse(result.body);
-    expect(body.error).toBeDefined();
-  });
-
-  it('bodyがJSONでない場合400を返す', async () => {
-    const { handler } = await import('../../../src/handlers/createItem');
-
-    const result = await handler(
-      { body: 'not json' } as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(400);
-    const body = JSON.parse(result.body);
-    expect(body.error).toBe('Invalid JSON');
-  });
 });
