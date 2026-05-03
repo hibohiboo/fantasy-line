@@ -4,7 +4,18 @@ import { EchoResponseSchema } from '@repo/schema';
 import { handler } from '../../../src/handlers/echo';
 
 describe('echo handler', () => {
-  it('レスポンスボディが EchoResponseSchema に準拠している', async () => {
+  it('queryStringParametersがある場合、JSON文字列として返す', async () => {
+    const result = await handler(
+      { queryStringParameters: { message: 'hello' } } as unknown as APIGatewayProxyEvent,
+      {} as Context,
+    );
+
+    expect(result.statusCode).toBe(200);
+    const parsed = EchoResponseSchema.parse(JSON.parse(result.body));
+    expect(parsed.message).toBe(JSON.stringify({ message: 'hello' }));
+  });
+
+  it('queryStringParametersがない場合、"echo"を返す', async () => {
     const result = await handler(
       { queryStringParameters: null } as APIGatewayProxyEvent,
       {} as Context,

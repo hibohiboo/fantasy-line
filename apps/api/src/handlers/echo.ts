@@ -7,7 +7,9 @@ export const handler = async (
   event: APIGatewayProxyEvent,
   _context: Context,
 ): Promise<APIGatewayProxyResult> => {
-  const message = event.queryStringParameters ?? 'echo';
+  const message = event.queryStringParameters
+    ? JSON.stringify(event.queryStringParameters)
+    : 'echo';
   return {
     statusCode: 200,
     headers: { 'Content-type': 'application/json' },
