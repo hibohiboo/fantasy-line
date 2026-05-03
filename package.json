@@ -13,7 +13,8 @@
   "license": "MIT",
   "author": "hibohiboo",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "ncu": "cd packages/eslint-config && npm run ncu && cd ../schema && npm run ncu && cd ../typescript-config && npm run ncu && cd ../../apps/api && npm run ncu && cd ../frontend && npm run ncu && cd ../../infra && npm run ncu"
   },
   "engines": {
     "node": ">=24.14.1"

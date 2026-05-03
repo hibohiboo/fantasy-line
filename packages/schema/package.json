@@ -11,11 +11,11 @@
     "ncu": "ncu -u"
   },
   "dependencies": {
-    "zod": "^4.3.6"
+    "zod": "^4.4.2"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
-    "eslint": "^10.2.1"
+    "eslint": "^10.3.0"
   }
 }
