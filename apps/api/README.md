@@ -84,6 +84,27 @@ expect(body.message).toEqual({ message: 'hello' }); // スキーマに反する�
 スキーマに違反するレスポンスを返すテストケースは作成しない。
 新たにレスポンス型を追加・変更した場合は対応する Zod スキーマを `@repo/schema` に追加すること。
 
+#### アサーションの指針
+
+冗長なアサーションを避け、テストの意図を明確にする。
+
+| アサーション | 方針 | 理由 |
+|---|---|---|
+| `statusCode` (Small スキーマ検証) | **書かない** | `Schema.parse()` が例外を投げるためスキーマ検証が主アサーション |
+| `statusCode` (200 / 201 / 400) | **書く** | HTTP ステータスコードはフロントエンドが依存する契約 |
+| `headers['Content-Type']` | **書かない** | `JSON.parse()` / `Schema.parse()` が成功した時点で JSON と確定済み |
+
+#### バリデーションエラーケースの記述
+
+DB に依存しないバリデーションエラー（400）は Small テストで `it.each` を使ってまとめる。
+
+```typescript
+it.each([
+  { label: 'nameが未指定', body: JSON.stringify({ price: 100 }), expectedError: ... },
+  { label: 'nameが空文字', body: JSON.stringify({ name: '' }),    expectedError: ... },
+])('$label 場合は400を返す', async ({ body, expectedError }) => { ... });
+```
+
 ### Small テスト
 
 外部リソースに依存しないテスト。
@@ -109,8 +130,21 @@ expect(body.message).toEqual({ message: 'hello' }); // スキーマに反する�
 
 **規約**
 - `tests/medium/test/mysql-setup.ts` の `setupMysqlContainer()` でコンテナを起動する
-- `vi.doMock` + `vi.resetModules()` + 動的 `import` で DB クライアントを注入する
+- `vi.doMock` + `vi.resetModules()` + 動的 `import` を `beforeEach` にまとめ、テスト間で handler を共有する
 - テスト間のデータ干渉を防ぐため `beforeEach` でテーブルをクリアする
+
+```typescript
+// Medium テストの beforeEach パターン
+import type * as MyModule from '../../../src/handlers/myHandler';
+let handler: typeof MyModule.handler;
+
+beforeEach(async () => {
+  await testDb.delete(schema.items);
+  vi.resetModules();
+  vi.doMock('../../../src/db/client', () => ({ db: testDb }));
+  ({ handler } = await import('../../../src/handlers/myHandler'));
+});
+```
 
 ### Large テスト
 

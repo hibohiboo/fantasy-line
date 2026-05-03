@@ -11,12 +11,14 @@ import type { StartedTestContainer } from 'testcontainers';
 import mysql from 'mysql2/promise';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
+import type * as ItemsModule from '../../../src/handlers/items';
 import * as schema from '../../../src/db/schema';
 import { setupMysqlContainer } from '../test/mysql-setup';
 
 let container: StartedTestContainer;
 let pool: mysql.Pool;
 let testDb: MySql2Database<typeof schema>;
+let handler: typeof ItemsModule.handler;
 
 beforeAll(async () => {
   ({ container, pool, testDb } = await setupMysqlContainer());
@@ -32,20 +34,14 @@ describe('items handler', () => {
     await testDb.delete(schema.items);
     vi.resetModules();
     vi.doMock('../../../src/db/client', () => ({ db: testDb }));
+    ({ handler } = await import('../../../src/handlers/items'));
   });
 
   it('データが存在しない場合、空のitemsを返す', async () => {
-    const { handler } = await import('../../../src/handlers/items');
-
-    const result = await handler(
-      {} as APIGatewayProxyEvent,
-      {} as Context,
-    );
+    const result = await handler({} as APIGatewayProxyEvent, {} as Context);
 
     expect(result.statusCode).toBe(200);
-    expect(result.headers?.['Content-Type']).toBe('application/json');
-    const body = JSON.parse(result.body);
-    expect(body.items).toEqual([]);
+    expect(JSON.parse(result.body).items).toEqual([]);
   });
 
   it('データが存在する場合、全itemsを返す', async () => {
@@ -54,19 +50,14 @@ describe('items handler', () => {
       { name: '回復薬', description: 'HPを100回復する', rarity: 'common', price: 100 },
     ]);
 
-    const { handler } = await import('../../../src/handlers/items');
-
-    const result = await handler(
-      {} as APIGatewayProxyEvent,
-      {} as Context,
-    );
+    const result = await handler({} as APIGatewayProxyEvent, {} as Context);
 
     expect(result.statusCode).toBe(200);
-    const body = JSON.parse(result.body);
-    expect(body.items).toHaveLength(2);
-    expect(body.items[0].name).toBe('炎の剣');
-    expect(body.items[0].rarity).toBe('rare');
-    expect(body.items[0].price).toBe(5000);
-    expect(body.items[1].name).toBe('回復薬');
+    const { items } = JSON.parse(result.body);
+    expect(items).toHaveLength(2);
+    expect(items[0].name).toBe('炎の剣');
+    expect(items[0].rarity).toBe('rare');
+    expect(items[0].price).toBe(5000);
+    expect(items[1].name).toBe('回復薬');
   });
 });

@@ -10,7 +10,6 @@ describe('echo handler', () => {
       {} as Context,
     );
 
-    expect(result.statusCode).toBe(200);
     const parsed = EchoResponseSchema.parse(JSON.parse(result.body));
     expect(parsed.message).toBe(JSON.stringify({ message: 'hello' }));
   });
@@ -21,7 +20,6 @@ describe('echo handler', () => {
       {} as Context,
     );
 
-    expect(result.statusCode).toBe(200);
     const parsed = EchoResponseSchema.parse(JSON.parse(result.body));
     expect(parsed.message).toBe('echo');
   });

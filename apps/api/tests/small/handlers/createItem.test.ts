@@ -39,7 +39,6 @@ describe('createItem handler - バリデーションエラー', () => {
     );
 
     expect(result.statusCode).toBe(400);
-    expect(result.headers?.['Content-Type']).toBe('application/json');
     expect(JSON.parse(result.body).error).toEqual(expectedError);
   });
 });
