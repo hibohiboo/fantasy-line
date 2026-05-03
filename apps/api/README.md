@@ -2,6 +2,49 @@
 
 Lambda ハンドラー群と Drizzle ORM による MySQL アクセス層。
 
+## マイグレーション
+
+### ファイル構成
+
+```
+drizzle/
+  0000_*.sql        # 自動生成されたマイグレーション SQL（コミット必須）
+  meta/             # drizzle-kit の内部メタデータ（コミット必須）
+src/db/
+  schema.ts         # テーブル定義の唯一の正（Single Source of Truth）
+```
+
+### 指針
+
+**`schema.ts` を変更したら必ず `db:generate` を実行すること。**
+
+マイグレーションファイルはテストの `migrate()` でも使われるため、
+`schema.ts` と `drizzle/` が乖離するとテストが実際のスキーマと異なる状態で動作する。
+
+### 手順
+
+```bash
+# 1. src/db/schema.ts を編集する
+
+# 2. マイグレーションファイルを生成する（DB接続不要）
+npm run db:generate
+
+# 3. 生成された drizzle/*.sql を必ずコミットに含める
+
+# 4. ローカル DB に適用する（開発時）
+npm run db:migrate:local
+```
+
+### 各コマンドの使い分け
+
+| コマンド | 用途 | DB接続 |
+|---------|------|--------|
+| `npm run db:generate` | `schema.ts` からマイグレーション SQL を生成 | 不要 |
+| `npm run db:migrate:local` | ローカル DB にスキーマを適用（`drizzle-kit push`） | 必要 |
+
+> **注意**: `db:migrate:local` は `drizzle-kit push` のため差分 SQL を直接適用する。
+> 本番環境へのマイグレーションは `migrate()` + 生成済み SQL ファイルを使うこと。
+
 ## テスト
 
 [Google のテストサイズ定義](https://testing.googleblog.com/2010/12/test-sizes.html) に基づいてテストを分類しています。

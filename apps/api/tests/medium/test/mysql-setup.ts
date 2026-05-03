@@ -1,8 +1,13 @@
+import path from 'path';
 import { GenericContainer, Wait } from 'testcontainers';
 import type { StartedTestContainer } from 'testcontainers';
 import mysql from 'mysql2/promise';
 import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
+import { migrate } from 'drizzle-orm/mysql2/migrator';
 import * as schema from '../../../src/db/schema';
+
+// vitest は apps/api/ をCWDとして実行するため drizzle/ への相対パスが確定する
+const migrationsFolder = path.resolve(process.cwd(), 'drizzle');
 
 export async function waitForMysql(pool: mysql.Pool, maxRetries = 20): Promise<void> {
   for (let i = 0; i < maxRetries; i++) {
@@ -43,18 +48,7 @@ export async function setupMysqlContainer(): Promise<{
   const testDb = drizzle({ client: pool, schema, mode: 'default' });
 
   await waitForMysql(pool);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS items (
-      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-      name VARCHAR(255) NOT NULL,
-      description VARCHAR(1000),
-      rarity VARCHAR(50) NOT NULL DEFAULT 'common',
-      price INT NOT NULL DEFAULT 0,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (id)
-    )
-  `);
+  await migrate(testDb, { migrationsFolder });
 
   return { container, pool, testDb };
 }

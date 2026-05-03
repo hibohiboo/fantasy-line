@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:small": "vitest run --config vitest.small.config.ts",
     "test:medium": "vitest run --config vitest.medium.config.ts",
+    "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:migrate:local": "drizzle-kit push --config=drizzle.config.ts",
     "db:seed:local": "tsx src/db/seed.ts",
     "lint": "eslint . --fix",
