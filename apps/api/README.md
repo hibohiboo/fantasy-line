@@ -65,6 +65,25 @@ tests/
       mysql-setup.ts  # testcontainers セットアップヘルパー
 ```
 
+### テスト方針
+
+#### フロントエンドとの整合性確認
+
+API のレスポンス形式は `@repo/schema` に定義された Zod スキーマが唯一の正（Single Source of Truth）。
+**フロントエンドはこのスキーマを使って型を生成するため、テストでも同スキーマで検証すること。**
+
+```typescript
+// 良い例：スキーマでパースしてフロントエンドが受け取れる形であることを保証する
+import { EchoResponseSchema } from '@repo/schema';
+const parsed = EchoResponseSchema.parse(JSON.parse(result.body));
+
+// 悪い例：実装の詳細をそのままアサートするだけでフロントエンドとの整合が保証されない
+expect(body.message).toEqual({ message: 'hello' }); // スキーマに反する値でも通ってしまう
+```
+
+スキーマに違反するレスポンスを返すテストケースは作成しない。
+新たにレスポンス型を追加・変更した場合は対応する Zod スキーマを `@repo/schema` に追加すること。
+
 ### Small テスト
 
 外部リソースに依存しないテスト。
@@ -75,8 +94,8 @@ tests/
 - モックによる依存関係の代替は可
 
 **対象例**
-- バリデーションロジック
-- レスポンス形式の検証
+- `@repo/schema` のスキーマを使ったレスポンス形式の検証
+- バリデーションエラー（400）ケースの網羅（`it.each` を使うこと）
 - 純粋関数
 
 ### Medium テスト
