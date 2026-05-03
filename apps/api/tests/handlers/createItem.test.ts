@@ -11,7 +11,7 @@ import type { StartedTestContainer } from 'testcontainers';
 import mysql from 'mysql2/promise';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import * as schema from '../db/schema';
+import * as schema from '../../src/db/schema';
 import { setupMysqlContainer } from '../test/mysql-setup';
 
 let container: StartedTestContainer;
@@ -31,11 +31,11 @@ describe('createItem handler', () => {
   beforeEach(async () => {
     await testDb.delete(schema.items);
     vi.resetModules();
-    vi.doMock('../db/client', () => ({ db: testDb }));
+    vi.doMock('../../src/db/client', () => ({ db: testDb }));
   });
 
   it('正常なリクエストでアイテムを作成して201を返す', async () => {
-    const { handler } = await import('./createItem');
+    const { handler } = await import('../../src/handlers/createItem');
 
     const result = await handler(
       {
@@ -54,7 +54,7 @@ describe('createItem handler', () => {
   });
 
   it('descriptionを省略してもデフォルト値で作成される', async () => {
-    const { handler } = await import('./createItem');
+    const { handler } = await import('../../src/handlers/createItem');
 
     const result = await handler(
       { body: JSON.stringify({ name: '鉄の盾' }) } as APIGatewayProxyEvent,
@@ -69,7 +69,7 @@ describe('createItem handler', () => {
   });
 
   it('nameが未指定の場合400を返す', async () => {
-    const { handler } = await import('./createItem');
+    const { handler } = await import('../../src/handlers/createItem');
 
     const result = await handler(
       { body: JSON.stringify({ price: 100 }) } as APIGatewayProxyEvent,
@@ -82,7 +82,7 @@ describe('createItem handler', () => {
   });
 
   it('bodyがJSONでない場合400を返す', async () => {
-    const { handler } = await import('./createItem');
+    const { handler } = await import('../../src/handlers/createItem');
 
     const result = await handler(
       { body: 'not json' } as APIGatewayProxyEvent,

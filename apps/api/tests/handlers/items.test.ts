@@ -11,7 +11,7 @@ import type { StartedTestContainer } from 'testcontainers';
 import mysql from 'mysql2/promise';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import * as schema from '../db/schema';
+import * as schema from '../../src/db/schema';
 import { setupMysqlContainer } from '../test/mysql-setup';
 
 let container: StartedTestContainer;
@@ -31,11 +31,11 @@ describe('items handler', () => {
   beforeEach(async () => {
     await testDb.delete(schema.items);
     vi.resetModules();
-    vi.doMock('../db/client', () => ({ db: testDb }));
+    vi.doMock('../../src/db/client', () => ({ db: testDb }));
   });
 
   it('データが存在しない場合、空のitemsを返す', async () => {
-    const { handler } = await import('./items');
+    const { handler } = await import('../../src/handlers/items');
 
     const result = await handler(
       {} as APIGatewayProxyEvent,
@@ -54,7 +54,7 @@ describe('items handler', () => {
       { name: '回復薬', description: 'HPを100回復する', rarity: 'common', price: 100 },
     ]);
 
-    const { handler } = await import('./items');
+    const { handler } = await import('../../src/handlers/items');
 
     const result = await handler(
       {} as APIGatewayProxyEvent,
