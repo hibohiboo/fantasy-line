@@ -7,14 +7,14 @@ import {
   beforeEach,
   vi,
 } from 'vitest';
-// バリデーションエラー（400）ケースは DB 不要のため tests/small/handlers/createItem.test.ts で管理
+// バリデーションエラー（400）ケースは DB 不要のため tests/handlers/createItem.small.test.ts で管理
 import type { StartedTestContainer } from 'testcontainers';
 import mysql from 'mysql2/promise';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as CreateItemModule from '../../../src/handlers/createItem';
-import * as schema from '../../../src/db/schema';
-import { setupMysqlContainer } from '../test/mysql-setup';
+import type * as CreateItemModule from '../../src/handlers/createItem';
+import * as schema from '../../src/db/schema';
+import { setupMysqlContainer } from '../helpers/mysql-setup';
 
 let container: StartedTestContainer;
 let pool: mysql.Pool;
@@ -34,8 +34,8 @@ describe('createItem handler', () => {
   beforeEach(async () => {
     await testDb.delete(schema.items);
     vi.resetModules();
-    vi.doMock('../../../src/db/client', () => ({ db: testDb }));
-    ({ handler } = await import('../../../src/handlers/createItem'));
+    vi.doMock('../../src/db/client', () => ({ db: testDb }));
+    ({ handler } = await import('../../src/handlers/createItem'));
   });
 
   it('正常なリクエストでアイテムを作成して201を返す', async () => {

@@ -4,7 +4,7 @@ import type { StartedTestContainer } from 'testcontainers';
 import mysql from 'mysql2/promise';
 import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
-import * as schema from '../../../src/db/schema';
+import * as schema from '../../src/db/schema';
 
 // vitest は apps/api/ をCWDとして実行するため drizzle/ への相対パスが確定する
 const migrationsFolder = path.resolve(process.cwd(), 'drizzle');

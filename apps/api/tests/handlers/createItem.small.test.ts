@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 
-vi.mock('../../../src/db/client', () => ({ db: {} }));
+vi.mock('../../src/db/client', () => ({ db: {} }));
 
-import { handler } from '../../../src/handlers/createItem';
+import { handler } from '../../src/handlers/createItem';
 
 describe('createItem handler - バリデーションエラー', () => {
   it.each([
