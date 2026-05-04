@@ -221,5 +221,10 @@ export class InfraStack extends cdk.Stack {
       value: auroraCluster.clusterEndpoint.hostname,
       description: 'Aurora cluster endpoint for open-tunnel --remote-host',
     });
+
+    new cdk.CfnOutput(this, 'MigrationFunctionName', {
+      value: migrationFunction.functionName,
+      description: 'Migration Lambda function name',
+    });
   }
 }
