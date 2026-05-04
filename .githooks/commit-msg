@@ -16,8 +16,8 @@ extractTicketId()
 {
     echo "$(getGitBranchName)" \
     | awk 'BEGIN{ FS="[/]"}
-           $1 == "id" || $1 == "hotfix" { printf "#%s", $2, $3 }
-           $2 == "id" || $2 == "hotfix" { printf "#%s", $3, $4 }
+           $1 == "id" || $1 == "hotfix" { printf "AB#%s", $2, $3 }
+           $2 == "id" || $2 == "hotfix" { printf "AB#%s", $3, $4 }
            '
 }
 appendMsgTo1stLine()
