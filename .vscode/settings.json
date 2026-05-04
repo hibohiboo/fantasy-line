@@ -36,11 +36,18 @@
   "[jsonc]": {
     "editor.formatOnSave": false
   },
+  "[markdown]": {
+    "editor.defaultFormatter": null,
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false
+  },
   // デフォルトの設定はオフにしておく
   "js/ts.format.enabled": false,
   // tailwindcssの設定
   "files.associations": {
-    "*.css": "tailwindcss"
+    "*.css": "tailwindcss",
+    "*.agent.md": "markdown"
   },
   // gitのWorktreeを使う設定: https://tech.dentsusoken.com/entry/2025/08/25/VSCode%E6%A8%99%E6%BA%96%E3%81%AEgit_worktree%E7%AE%A1%E7%90%86%E6%A9%9F%E8%83%BD%E3%81%A7Claude_Code%E3%82%92%E4%B8%A6%E5%88%97%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B
   "git.detectWorktrees": true,
