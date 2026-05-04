@@ -5,7 +5,6 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as path from 'path';
 
 export class InfraStack extends cdk.Stack {
@@ -89,17 +88,6 @@ export class InfraStack extends cdk.Stack {
       securityGroups: [lambdaSecurityGroup],
     });
 
-    // -- DB認証情報 --
-    const dbSecret = new secretsmanager.Secret(this, 'AuroraSecret', {
-      description: 'Aurora MySQL credentials',
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({ username: 'admin' }),
-        generateStringKey: 'password',
-        excludePunctuation: true,
-        passwordLength: 32,
-      },
-    });
-
     // -- Aurora --
     const auroraCluster = new rds.DatabaseCluster(this, 'AuroraCluster', {
       engine: rds.DatabaseClusterEngine.auroraMysql({
@@ -135,7 +123,7 @@ export class InfraStack extends cdk.Stack {
       vpcSubnets: { subnetGroupName: 'lambda' },
       securityGroups: [lambdaSecurityGroup],
       environment: {
-        DB_SECRET_ARN: dbSecret.secretArn,
+        DB_SECRET_ARN: auroraCluster.secret!.secretArn,
       },
       projectRoot: path.join(__dirname, '../..'),
       bundling: {
@@ -162,7 +150,7 @@ export class InfraStack extends cdk.Stack {
         entry: path.join(__dirname, '../../apps/api/src/handlers/items.ts'),
       },
     );
-    dbSecret.grantRead(itemsFunction);
+    auroraCluster.secret!.grantRead(itemsFunction);
 
     const migrationFunction = new lambdaNodejs.NodejsFunction(
       this,
@@ -188,7 +176,7 @@ export class InfraStack extends cdk.Stack {
         },
       },
     );
-    dbSecret.grantRead(migrationFunction);
+    auroraCluster.secret!.grantRead(migrationFunction);
 
     // -- API Gateway --
     const api = new apigateway.RestApi(this, 'FantasyLineApi', {
