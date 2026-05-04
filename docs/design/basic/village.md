@@ -47,20 +47,7 @@ Drizzle ORM ── Aurora MySQL (AWS RDS)
   └── villages テーブル
 ```
 
-**影響コンポーネント:**
-
-| レイヤー | 対象 |
-|---|---|
-| スキーマ共有 | `packages/schema/src/village.ts`（新規） |
-| API ハンドラー | `apps/api/src/handlers/createVillage.ts`（新規） |
-| API ハンドラー | `apps/api/src/handlers/listVillages.ts`（新規） |
-| DB スキーマ | `apps/api/src/db/schema.ts`（villages テーブル追加） |
-| DB マイグレーション | `apps/api/drizzle/` 配下に新規 SQL 追加 |
-| インフラ | `infra/lib/infra-stack.ts`（Lambda・API Gateway リソース追加） |
-| フロントエンド | `apps/frontend/src/views/VillageListView.vue`（新規） |
-| フロントエンド | `apps/frontend/src/views/VillageCreateView.vue`（新規） |
-| フロントエンド | `apps/frontend/src/stores/village.ts`（新規） |
-| フロントエンド | `apps/frontend/src/router/index.ts`（ルート追加） |
+実装レベルの影響コンポーネント一覧は [詳細設計](../detail/village.md) の冒頭を参照すること。
 
 ## 主要なユースケースフロー
 
@@ -95,17 +82,13 @@ Drizzle ORM ── Aurora MySQL (AWS RDS)
 
 ## データモデル概要
 
-```
-User（認証ユーザー）
-  └─ 1:N ─ Village（村）
-              id         : 連番ID（主キー）
-              name       : 村名（最大128文字、必須）
-              owner_id   : 管理者ユーザーID（外部キー相当）
-              created_at : 作成日時
-```
+テーブル定義・ER図・CRUD表は [データモデル](../data-model/village.md) を参照すること。
 
+**概要:**
+
+- `villages` テーブルが中心エンティティ。`owner_id` によって認証ユーザーと 1:N で関連付けられる
 - 同一ユーザーが同名の村を複数作成できる（ユニーク制約なし）
-- 1ユーザーあたりの村数に上限なし
+- 現時点で村管理が操作するテーブルは `villages` のみ（CRUD表は [データモデル](../data-model/village.md) 参照）
 
 ## 制約・前提条件
 

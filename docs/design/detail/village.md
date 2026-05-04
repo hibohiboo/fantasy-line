@@ -6,6 +6,25 @@
 
 ---
 
+## 実装影響コンポーネント一覧
+
+本 PBI で新規作成・変更が必要なファイルの一覧。
+
+| レイヤー | 対象 | 変更種別 |
+|---|---|---|
+| スキーマ共有 | `packages/schema/src/village.ts` | 新規 |
+| API ハンドラー | `apps/api/src/handlers/createVillage.ts` | 新規 |
+| API ハンドラー | `apps/api/src/handlers/listVillages.ts` | 新規 |
+| DB スキーマ | `apps/api/src/db/schema.ts` | villages テーブル追加 |
+| DB マイグレーション | `apps/api/drizzle/` 配下に新規 SQL | 新規 |
+| インフラ | `infra/lib/infra-stack.ts` | Lambda・API Gateway リソース追加 |
+| フロントエンド | `apps/frontend/src/views/VillageListView.vue` | 新規 |
+| フロントエンド | `apps/frontend/src/views/VillageCreateView.vue` | 新規 |
+| フロントエンド | `apps/frontend/src/stores/village.ts` | 新規 |
+| フロントエンド | `apps/frontend/src/router/index.ts` | ルート追加 |
+
+---
+
 ## 処理フロー詳細
 
 ### 村を作成する
@@ -124,53 +143,7 @@ Headers:
 
 ## データモデル詳細
 
-### villages テーブル
-
-```sql
-CREATE TABLE `villages` (
-  `id`         SERIAL         NOT NULL AUTO_INCREMENT,
-  `name`       VARCHAR(128)   NOT NULL,
-  `owner_id`   VARCHAR(255)   NOT NULL,
-  `created_at` TIMESTAMP      NOT NULL DEFAULT (NOW()),
-  CONSTRAINT `villages_id` PRIMARY KEY (`id`)
-);
-
-CREATE INDEX `villages_owner_id_idx` ON `villages` (`owner_id`);
-```
-
-**フィールド定義:**
-
-| カラム | 型 | 制約 | 説明 |
-|---|---|---|---|
-| id | SERIAL (BIGINT UNSIGNED) | PRIMARY KEY, AUTO_INCREMENT | 村の一意識別子 |
-| name | VARCHAR(128) | NOT NULL | 村名（最大128文字） |
-| owner_id | VARCHAR(255) | NOT NULL, INDEX | 管理者ユーザーID（JWT の sub または同等の識別子） |
-| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | 作成日時 |
-
-**設計方針:**
-- 同名村の重複を許容するため、`name` にユニーク制約を設けない
-- `owner_id` は文字列型とし、認証プロバイダの識別子形式に依存しない設計にする
-- 村の上限は設けない
-
-### Drizzle ORM スキーマ（`apps/api/src/db/schema.ts` への追加）
-
-```typescript
-export const villages = mysqlTable('villages', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 128 }).notNull(),
-  ownerId: varchar('owner_id', { length: 255 }).notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-});
-
-export type Village = typeof villages.$inferSelect;
-export type NewVillage = typeof villages.$inferInsert;
-```
-
-### マイグレーション方針
-
-- `apps/api/drizzle/` 配下に Drizzle Kit が生成する SQL ファイルを追加する
-- 既存の `0000_smiling_metal_master.sql`（items テーブル）に続く連番ファイルを生成する
-- マイグレーション実行は既存の `migration.ts` Lambda ハンドラーで行う
+テーブル定義・Drizzle ORM スキーマ・マイグレーション方針・CRUD表は [データモデル](../data-model/village.md) を参照すること。
 
 ---
 
