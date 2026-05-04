@@ -17,6 +17,10 @@
       "command": "npx",
       "args": ["-y", "@azure-devops/mcp", "${input:ado_org}"]
     },
+    "azure-devops-mcp": {
+      "url": "https://mcp.dev.azure.com/hibohiboo",
+      "type": "http"
+    },
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]
