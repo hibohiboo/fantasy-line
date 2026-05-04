@@ -24,6 +24,10 @@
 - `npm run test` で引き続き通過を確認する
 - `npm run lint` でlintを確認する
 
+# フロントエンドコンポーネントを実装する場合
+
+実装対象にUI（Vue コンポーネント・HTML/CSS）が含まれる場合は、`.claude/skills/frontend-design/SKILL.md` を読み込み、そのガイドラインに従って実装すること。
+
 # 考慮不足が判明した場合
 
 - 実装計画チェックリストに追加項目を記載する
