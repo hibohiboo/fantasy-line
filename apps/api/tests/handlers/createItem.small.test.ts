@@ -1,9 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
+import type * as CreateItemModule from '../../src/handlers/createItem';
+import { mockDbClient } from '../helpers/db-mock';
 
-vi.mock('../../src/db/client', () => ({ db: {} }));
+let handler: typeof CreateItemModule.handler;
 
-import { handler } from '../../src/handlers/createItem';
+beforeAll(async () => {
+  vi.doMock('../../src/db/client', () => mockDbClient({}));
+  ({ handler } = await import('../../src/handlers/createItem'));
+});
 
 describe('createItem handler - バリデーションエラー', () => {
   it.each([
