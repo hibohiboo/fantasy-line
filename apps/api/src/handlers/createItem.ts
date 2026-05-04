@@ -6,7 +6,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { CreateItemSchema } from '@repo/schema';
-import { db } from '../db/client';
+import { getDb } from '../db/client';
 import { items } from '../db/schema';
 
 export const handler = async (
@@ -33,6 +33,7 @@ export const handler = async (
     };
   }
 
+  const db = await getDb();
   const [inserted] = await db.insert(items).values(parsed.data).$returningId();
   if (!inserted) throw new Error('Insert returned no result');
 

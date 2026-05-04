@@ -15,6 +15,7 @@ import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import type * as CreateItemModule from '../../src/handlers/createItem';
 import * as schema from '../../src/db/schema';
 import { setupMysqlContainer } from '../helpers/mysql-setup';
+import { mockDbClient } from '../helpers/db-mock';
 
 let container: StartedTestContainer;
 let pool: mysql.Pool;
@@ -34,7 +35,7 @@ describe('createItem handler', () => {
   beforeEach(async () => {
     await testDb.delete(schema.items);
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => ({ db: testDb }));
+    vi.doMock('../../src/db/client', () => mockDbClient(testDb));
     ({ handler } = await import('../../src/handlers/createItem'));
   });
 

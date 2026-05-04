@@ -181,7 +181,7 @@ export class InfraStack extends cdk.Stack {
               const src = inputDir.replace(/\\/g, '/');
               const dst = outputDir.replace(/\\/g, '/');
               return [
-                `node -e "const {cpSync}=require('fs);const {join}=require('path');cpSync(join('${src}','drizzle'),join('${dst}','migrations'),{recursize:true})`,
+                `node -e "const {cpSync}=require('fs');const {join}=require('path');cpSync(join('${src}','apps','api','drizzle'),join('${dst}','migrations'),{recursive:true})"`,
               ];
             },
           },
