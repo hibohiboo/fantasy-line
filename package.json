@@ -13,6 +13,7 @@
   "license": "MIT",
   "author": "hibohiboo",
   "scripts": {
+    "init": "git config --local core.hooksPath .githooks && echo Changed hooks directory when npm install",
     "test": "echo \"Error: no test specified\" && exit 1",
     "ncu": "cd packages/eslint-config && npm run ncu && cd ../schema && npm run ncu && cd ../typescript-config && npm run ncu && cd ../../apps/api && npm run ncu && cd ../frontend && npm run ncu && cd ../../infra && npm run ncu"
   },
