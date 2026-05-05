@@ -116,37 +116,18 @@ export class InfraStack extends cdk.Stack {
     );
 
     // -- Lambda Layer --
+    // CDK の bundling 機構（temp dir → rename）は Windows で EPERM になるため使わない。
+    // 代わりに CDK staging より前に layer/nodejs/ へ直接 npm install し、
+    // fromAsset でそのまま zip する方式を採用している。
     const layerDir = path.join(__dirname, '../layer');
+    const nodejsDir = path.join(layerDir, 'nodejs');
+    mkdirSync(nodejsDir, { recursive: true });
+    copyFileSync(path.join(layerDir, 'package.json'), path.join(nodejsDir, 'package.json'));
+    execSync('npm install --omit=dev', { cwd: nodejsDir, stdio: 'inherit' });
+
     const sharedDepsLayer = new lambda.LayerVersion(this, 'SharedDepsLayer', {
       layerVersionName: 'fantasy-line-shared-deps',
-      code: lambda.Code.fromAsset(layerDir, {
-        bundling: {
-          image: lambda.Runtime.NODEJS_24_X.bundlingImage,
-          command: [
-            'bash',
-            '-c',
-            'mkdir -p /asset-output/nodejs && cp /asset-input/package.json /asset-output/nodejs/ && cd /asset-output/nodejs && npm install --omit=dev --no-package-lock',
-          ],
-          local: {
-            tryBundle(outputDir: string) {
-              try {
-                mkdirSync(path.join(outputDir, 'nodejs'), { recursive: true });
-                copyFileSync(
-                  path.join(layerDir, 'package.json'),
-                  path.join(outputDir, 'nodejs', 'package.json'),
-                );
-                execSync('npm install --omit=dev --no-package-lock', {
-                  cwd: path.join(outputDir, 'nodejs'),
-                  stdio: 'inherit',
-                });
-                return true;
-              } catch {
-                return false;
-              }
-            },
-          },
-        },
-      }),
+      code: lambda.Code.fromAsset(layerDir),
       compatibleRuntimes: [lambda.Runtime.NODEJS_24_X],
       compatibleArchitectures: [lambda.Architecture.ARM_64, lambda.Architecture.X86_64],
       description: 'Shared npm dependencies: drizzle-orm, mysql2, zod',

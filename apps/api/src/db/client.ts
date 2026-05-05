@@ -39,7 +39,7 @@ async function buildDb() {
   }
 
   const pool = mysql.createPool({
-    host: process.env.DB_HOST ?? 'localhost',
+    host: process.env.DB_HOST ?? 'host.docker.internal',
     port: Number(process.env.DB_PORT ?? '3306'),
     user: process.env.DB_USER ?? 'testuser',
     password: process.env.DB_PASSWORD ?? 'testpass',
