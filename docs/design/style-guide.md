@@ -200,7 +200,7 @@ Vuetify の spacing utility（`ma-*` / `pa-*`）を使用する。1単位 = 4px�
 <v-text-field
   v-model="villageName"
   label="村名"
-  :rules="[rules.required, rules.maxLength]"
+  :rules="[validateName]"
   maxlength="128"
   counter
   required
@@ -208,14 +208,22 @@ Vuetify の spacing utility（`ma-*` / `pa-*`）を使用する。1単位 = 4px�
 ```
 
 ```typescript
-const rules = {
-  required: (v: string) => !!v || '村名を入力してください',
-  maxLength: (v: string) => v.length <= 128 || '村名は128文字以内で入力してください',
+import { CreateVillageSchema } from '@repo/schema'
+
+const nameSchema = CreateVillageSchema.shape.name
+
+function validateName(v: string): true | string {
+  const result = nameSchema.safeParse(v)
+  if (result.success) return true
+  const code = result.error.issues[0]?.code
+  if (code === 'too_small') return '村名を入力してください'
+  if (code === 'too_big') return '村名は128文字以内で入力してください'
+  return '入力内容を確認してください'
 }
 ```
 
 **ルール:**
-- バリデーションルールは `packages/schema` の Zod スキーマと一致させる
+- バリデーションルールは `packages/schema` の Zod スキーマを `safeParse()` で直接使う（マジックナンバーの重複定義禁止）
 - `counter` を付与して文字数を視覚的にフィードバックする
 - フィールドのエラーメッセージは Vuetify の `:rules` に委ねる（独自 `<p>` タグは使わない）
 

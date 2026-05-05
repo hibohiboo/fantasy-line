@@ -128,7 +128,7 @@ VillageCreateView.vue
 <v-text-field
   v-model="villageName"
   label="村名"
-  :rules="[rules.required, rules.maxLength]"
+  :rules="[validateName]"
   maxlength="128"
   counter
   required
@@ -136,13 +136,21 @@ VillageCreateView.vue
 ```
 
 ```typescript
-const rules = {
-  required: (v: string) => !!v.trim() || '村名を入力してください',
-  maxLength: (v: string) => v.length <= 128 || '村名は128文字以内で入力してください',
+import { CreateVillageSchema } from '@repo/schema'
+
+const nameSchema = CreateVillageSchema.shape.name
+
+function validateName(v: string): true | string {
+  const result = nameSchema.safeParse(v)
+  if (result.success) return true
+  const code = result.error.issues[0]?.code
+  if (code === 'too_small') return '村名を入力してください'
+  if (code === 'too_big') return '村名は128文字以内で入力してください'
+  return '入力内容を確認してください'
 }
 ```
 
-バリデーションルールは `packages/schema` の `CreateVillageSchema`（`z.string().min(1).max(128)`）と一致させること。
+`CreateVillageSchema.shape.name.safeParse()` で Zod スキーマを直接使い、マジックナンバー（`min(1)` / `max(128)`）を重複定義しない。スキーマの制約が変更された場合にフロントエンドのバリデーションも自動的に追従する。
 
 ### 送信フロー
 
@@ -180,3 +188,4 @@ async function onSubmit() {
 |---|---|---|
 | PBI-001 | 2026-05-05 | 初版作成。村一覧・村作成の開発者向け画面設計（コンポーネント構成・Pinia 連携・バリデーション仕様） |
 | PBI-001 | 2026-05-06 | 日付フォーマットを `yyyy-MM-dd HH:mm:ss`（JST / `Intl.DateTimeFormat` + `formatToParts`）に変更 |
+| PBI-001 | 2026-05-06 | バリデーションルールを独自実装から `CreateVillageSchema.shape.name.safeParse()` を使うスキーマ駆動に変更 |

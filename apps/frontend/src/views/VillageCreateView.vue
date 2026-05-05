@@ -6,7 +6,7 @@
       <v-text-field
         v-model="villageName"
         label="村名"
-        :rules="[rules.required, rules.maxLength]"
+        :rules="[validateName]"
         maxlength="128"
         counter
         required
@@ -39,6 +39,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useVillageStore } from '@/stores/village'
+import { CreateVillageSchema } from '@repo/schema'
 
 const router = useRouter()
 const store = useVillageStore()
@@ -48,9 +49,15 @@ const villageName = ref('')
 const isSubmitting = ref(false)
 const apiError = ref<string | null>(null)
 
-const rules = {
-  required: (v: string) => !!v.trim() || '村名を入力してください',
-  maxLength: (v: string) => v.length <= 128 || '村名は128文字以内で入力してください',
+const nameSchema = CreateVillageSchema.shape.name
+
+function validateName(v: string): true | string {
+  const result = nameSchema.safeParse(v)
+  if (result.success) return true
+  const code = result.error.issues[0]?.code
+  if (code === 'too_small') return '村名を入力してください'
+  if (code === 'too_big') return '村名は128文字以内で入力してください'
+  return '入力内容を確認してください'
 }
 
 async function onSubmit() {
