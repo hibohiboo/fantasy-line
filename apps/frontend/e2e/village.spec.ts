@@ -93,6 +93,10 @@ test.describe('村を作成する', () => {
     ]
 
     await page.route('**/villages', async (route) => {
+      if (route.request().resourceType() === 'document') {
+        await route.continue()
+        return
+      }
       const userId = route.request().headers()['x-user-id']
       const filtered = userId ? allVillages.filter((v) => v.ownerId === userId) : allVillages
       await route.fulfill({
@@ -101,14 +105,16 @@ test.describe('村を作成する', () => {
       })
     })
 
-    // User A: addInitScript でページロード時に userId='user-a' をセット
-    await setupAuth(page, 'user-a')
+    // User A: まず / に遷移して origin を確立してから localStorage をセット
+    // (localStorage は同一 origin でページをまたいで持続するため goto 後も有効)
+    await page.goto('/')
+    await page.evaluate(() => localStorage.setItem('userId', 'user-a'))
     await page.goto('/villages')
     await expect(page.locator('.v-card-title').filter({ hasText: 'ユーザーAの村' })).toBeVisible()
     await expect(page.locator('.v-card-title').filter({ hasText: 'ユーザーBの村' })).toHaveCount(0)
 
-    // User B: 後から追加した addInitScript が user-a のスクリプトの後に実行され上書きされる
-    await page.addInitScript(() => localStorage.setItem('userId', 'user-b'))
+    // User B: localStorage を書き換えて再ナビゲート
+    await page.evaluate(() => localStorage.setItem('userId', 'user-b'))
     await page.goto('/villages')
     await expect(page.locator('.v-card-title').filter({ hasText: 'ユーザーBの村' })).toBeVisible()
     await expect(page.locator('.v-card-title').filter({ hasText: 'ユーザーAの村' })).toHaveCount(0)
