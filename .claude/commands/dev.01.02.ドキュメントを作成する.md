@@ -153,7 +153,7 @@ paths:
 
 ## 5. 非機能要件 — `docs/design/non-functional/`
 
-横断的に影響する関心事（セキュリティ・ログ・エラー・パフォーマンス・マイグレーションなど）は機能設計書に混在させず、このディレクトリに独立したドキュメントとして管理する。
+横断的に影響する関心事（セキュリティ・ログ・エラー・パフォーマンス・マイグレーション・インフラなど）は機能設計書に混在させず、このディレクトリに独立したドキュメントとして管理する。
 
 | ファイル名 | 内容 |
 |---|---|
@@ -162,10 +162,20 @@ paths:
 | `error-handling.md` | HTTPステータスコード規約、エラーレスポンス形式、リトライ方針 |
 | `performance.md` | レスポンスタイム目標、N+1対策方針、キャッシュ戦略 |
 | `migration.md` | DBマイグレーションツール・命名規則・実行手順・禁止事項 |
-| `logging.md` | ログの必須フィールド（userId・対象リソースID）・レベル定義・出力タイミング・禁止情報 |
+| `infrastructure.md` | CDK スタック構成・Lambda Layer 方針・Lambda 追加手順 |
 
 - 既存ファイルがある場合はPBIによる変更・追加点のみ差分更新する
 - 基本設計・詳細設計から関連する非機能要件ドキュメントへリンクを張る
+
+### インフラ設計を変更する場合に `infrastructure.md` を更新すること
+
+以下の変更が発生したとき、`docs/design/non-functional/infrastructure.md` を必ず更新する。
+
+- Lambda 関数を追加・削除した
+- Lambda Layer（`infra/layer/package.json`）にパッケージを追加・削除した
+- `lambdaDefaults` の設定（runtime・architecture・timeout など）を変更した
+- API Gateway のルート構成を変更した
+- VPC・セキュリティグループ・Aurora などの主要リソースを変更した
 
 ## 6. 実装ノート — `docs/sprints/<sprint名>/<PBI番号>.md`
 
@@ -242,6 +252,7 @@ PBIにUI変更が含まれる場合は、以下を必ず参照すること。
   - `docs/design/data-model/<対象名>.md`（DBを変更する場合）
   - `docs/design/openapi/openapi.yaml`（APIが変更される場合）
   - `docs/design/non-functional/migration.md`（DBを新規追加・変更する場合。初回は新規作成）
+  - `docs/design/non-functional/infrastructure.md`（Lambda・API Gateway・Layer などインフラを変更する場合）
   - `docs/design/non-functional/` 配下の該当ファイル（その他横断的変更がある場合）
   - `docs/sprints/<sprint名>/<PBI番号>.md`（PBI固有の実装起点スニペット・暫定手順がある場合）
 - 各設計ドキュメントの変更履歴セクションに今回のPBI番号・変更内容・日付が記録されていること
