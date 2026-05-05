@@ -27,12 +27,31 @@ UIは世界観を感じさせつつも、管理ツールとして情報が読み
 
 ## Vuetify 採用方針
 
-UI フレームワークとして **Vuetify 3** を使用する。
+UI フレームワークとして **Vuetify 4**（最新安定版: 4.0.6）を使用する。
 
-- Material Design のコンポーネント体系を活用して開発速度を確保する
-- テーマシステムでアースカラーを定義し、Material Design のデフォルト配色を上書きする
+- **Material Design 3（MD3）** がデフォルト。MD2 への戻しは行わない
+- テーマシステムでアースカラーを定義し、MD3 のデフォルト配色を上書きする
 - Vuetify に存在するコンポーネントは自作しない
 - Vuetify のコンポーネントで対応できない場合のみ `scoped` CSS で追加スタイルを当てる
+
+### インストール
+
+```bash
+npm install vuetify vite-plugin-vuetify
+```
+
+### Vite 設定（`vite.config.ts`）
+
+```typescript
+import vuetify from 'vite-plugin-vuetify'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    vuetify({ autoImport: true }),  // コンポーネントの自動インポートを有効化
+  ],
+})
+```
 
 ---
 
@@ -45,6 +64,7 @@ Vuetify のテーマシステムで定義する。`main.ts` の `createVuetify()
 ```typescript
 // apps/frontend/src/main.ts
 import { createVuetify } from 'vuetify'
+import 'vuetify/styles'
 
 const vuetify = createVuetify({
   theme: {
@@ -110,19 +130,25 @@ h1, h2, h3 {
 
 `Cinzel` は見出し（h1〜h3）のみ使用する。本文・UI テキストは Vuetify のデフォルト（Roboto / システムフォント）を使用する。
 
-### Vuetify タイポグラフィクラス
+### Vuetify タイポグラフィクラス（MD3）
 
-コンポーネント内でのテキスト装飾には Vuetify の utility クラスを使用する。
+Vuetify 4 は MD3 のタイポグラフィスケールを使用する。コンポーネント内でのテキスト装飾には以下の utility クラスを使用する。
 
-| クラス | 用途 |
-|---|---|
-| `text-h1` 〜 `text-h6` | 見出し |
-| `text-body-1` | 本文（16px） |
-| `text-body-2` | 補助テキスト（14px） |
-| `text-caption` | ラベル・補足（12px） |
-| `font-weight-bold` | 太字 |
-| `text-medium-emphasis` | 補助テキストの色（muted） |
-| `text-disabled` | 無効状態のテキスト |
+| クラス | サイズ目安 | 用途 |
+|---|---|---|
+| `text-display-small` | 36px | 画面タイトル（h1 相当） |
+| `text-headline-large` | 32px | ページ見出し（h2 相当） |
+| `text-headline-medium` | 28px | セクション見出し（h3 相当） |
+| `text-title-large` | 22px | カードタイトル・強調 |
+| `text-title-medium` | 16px | 小見出し |
+| `text-body-large` | 16px | 本文（基準） |
+| `text-body-medium` | 14px | 補助テキスト・表のセル |
+| `text-body-small` | 12px | 注釈 |
+| `text-label-large` | 14px | ボタンラベル・フォームラベル |
+| `text-label-small` | 11px | バッジ・タグ |
+| `font-weight-bold` | — | 太字 |
+| `text-medium-emphasis` | — | 補助テキストの色（muted） |
+| `text-disabled` | — | 無効状態のテキスト |
 
 ---
 
@@ -166,6 +192,7 @@ Vuetify の spacing utility（`ma-*` / `pa-*`）を使用する。1単位 = 4px�
 - 1画面に `color="primary"` のボタンは1つまで
 - ローディング中は `:loading="true"` を使用する（`disabled` の手動設定は不要）
 - アイコンのみのボタンは `aria-label` を付与する
+- Vuetify 4 では `v-btn` のデフォルト `text-transform: uppercase` が廃止済み。大文字化が必要な場合は明示的に CSS を当てる
 
 ### フォームフィールド
 
@@ -317,4 +344,4 @@ Vuetify は ARIA 属性をコンポーネントに組み込んでいるが、以
 
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
-| PBI-001 | 2026-05-05 | 初版作成（Vuetify 3 採用。カラーパレット・タイポグラフィ・コンポーネントパターン・命名規則を定義） |
+| PBI-001 | 2026-05-05 | 初版作成（Vuetify 4 / MD3 採用。カラーパレット・タイポグラフィ・コンポーネントパターン・命名規則を定義） |
