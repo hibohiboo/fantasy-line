@@ -18,9 +18,9 @@
     "ncu": "cd packages/eslint-config && npm run ncu && cd ../schema && npm run ncu && cd ../typescript-config && npm run ncu && cd ../../apps/api && npm run ncu && cd ../frontend && npm run ncu && cd ../../infra && npm run ncu"
   },
   "engines": {
-    "node": ">=24.14.1"
+    "node": ">=24.15.0"
   },
-  "packageManager": "npm@11.4.2",
+  "packageManager": "npm@11.13.0",
   "workspaces": [
     "packages/*",
     "apps/*"

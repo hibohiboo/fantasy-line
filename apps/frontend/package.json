@@ -19,11 +19,12 @@
   "dependencies": {
     "pinia": "^3.0.4",
     "vue": "^3.5.33",
-    "vue-router": "^5.0.6"
+    "vue-router": "^5.0.6",
+    "vuetify": "^4.0.6"
   },
   "devDependencies": {
-    "@repo/typescript-config": "*",
     "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
     "@types/jsdom": "^28.0.1",
     "@types/node": "^25.6.0",
     "@vitejs/plugin-vue": "^6.0.6",
@@ -37,6 +38,7 @@
     "typescript": "~6.0.3",
     "vite": "^8.0.10",
     "vite-plugin-vue-devtools": "^8.1.1",
+    "vite-plugin-vuetify": "^2.1.3",
     "vitest": "^4.1.5",
     "vue-tsc": "^3.2.7"
   },
