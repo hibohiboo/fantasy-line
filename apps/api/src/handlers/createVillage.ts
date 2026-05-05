@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { CreateVillageSchema } from '@repo/schema';
 import { getDb } from '../db/client';
 import { villages } from '../db/schema';
+import { json } from '../http';
 
 export const handler = async (
   event: APIGatewayProxyEvent,
@@ -17,29 +18,17 @@ export const handler = async (
   try {
     body = JSON.parse(event.body ?? '');
   } catch {
-    return {
-      statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid JSON' }),
-    };
+    return json(400, { error: 'Invalid JSON' });
   }
 
   const parsed = CreateVillageSchema.safeParse(body);
   if (!parsed.success) {
-    return {
-      statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: z.flattenError(parsed.error) }),
-    };
+    return json(400, { error: z.flattenError(parsed.error) });
   }
 
   const ownerId = event.headers?.['X-User-Id'];
   if (!ownerId) {
-    return {
-      statusCode: 401,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Unauthorized' }),
-    };
+    return json(401, { error: 'Unauthorized' });
   }
 
   const db = await getDb();
@@ -56,9 +45,5 @@ export const handler = async (
 
   console.log(JSON.stringify({ level: 'info', action: 'createVillage', villageId: inserted.id, ownerId }));
 
-  return {
-    statusCode: 201,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ village: created }),
-  };
+  return json(201, { village: created });
 };
