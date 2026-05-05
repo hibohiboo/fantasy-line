@@ -26,8 +26,9 @@ describe('VillageCard', () => {
     expect(wrapper.text()).toContain('エルムの村')
   })
 
-  it('作成日を表示する', () => {
+  it('作成日を yyyy-MM-dd HH:mm:ss（日本時間）形式で表示する', () => {
     const wrapper = mountCard()
-    expect(wrapper.text()).toContain('2026')
+    // '2026-05-05T00:00:00.000Z' は JST（UTC+9）で 2026-05-05 09:00:00
+    expect(wrapper.text()).toContain('2026-05-05 09:00:00')
   })
 })
