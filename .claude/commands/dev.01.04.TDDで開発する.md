@@ -73,6 +73,32 @@
 
 実装対象にUI（Vue コンポーネント・HTML/CSS）が含まれる場合は、`.claude/skills/frontend-design/SKILL.md` を読み込み、そのガイドラインに従って実装すること。
 
+## フォームバリデーション
+
+フロントエンドのバリデーションルールは **`packages/schema` の Zod スキーマを `safeParse()` で直接使う**こと。マジックナンバー（`min(1)` や `max(128)` などの定数）をフロントエンドに重複定義しない。
+
+```typescript
+// ✅ 良い例：スキーマを safeParse() で直接使う
+import { CreateVillageSchema } from '@repo/schema'
+const nameSchema = CreateVillageSchema.shape.name
+function validateName(v: string): true | string {
+  const result = nameSchema.safeParse(v)
+  if (result.success) return true
+  const code = result.error.issues[0]?.code
+  if (code === 'too_small') return '村名を入力してください'
+  if (code === 'too_big') return '村名は128文字以内で入力してください'
+  return '入力内容を確認してください'
+}
+
+// ❌ 悪い例：マジックナンバーの重複定義
+const rules = {
+  required: (v: string) => !!v || '村名を入力してください',
+  maxLength: (v: string) => v.length <= 128 || '村名は128文字以内で入力してください',
+}
+```
+
+スキーマの制約（`min` / `max` の値）が変わった場合にフロントエンドが自動的に追従できる。
+
 # 考慮不足が判明した場合
 
 - 実装計画チェックリストに追加項目を記載する
