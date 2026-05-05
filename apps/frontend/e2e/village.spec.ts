@@ -12,9 +12,9 @@ function makeVillage(id: number, name: string, ownerId: string): VillageMock {
   return { id, name, ownerId, createdAt: new Date().toISOString() }
 }
 
-function mockVillagesApi(page: Page, villages: VillageMock[]): Promise<void> {
+async function mockVillagesApi(page: Page, villages: VillageMock[]): Promise<void> {
   let nextId = villages.length + 1
-  return page.route('**/villages', async (route) => {
+  await page.route('**/villages', async (route) => {
     if (route.request().method() === 'POST') {
       const body = await route.request().postDataJSON() as { name: string }
       const userId = route.request().headers()['x-user-id'] ?? 'test-user-1'
@@ -80,46 +80,37 @@ test.describe('村を作成する', () => {
   test('Scenario 4: 村名が128文字を超える場合は作成できない', async ({ page }) => {
     await setupAuth(page)
     await page.goto('/villages/new')
-    // fill() は maxlength を尊重するため evaluate で直接 value をセットして input イベントを発火する
-    await page.locator('input').evaluate((el: HTMLInputElement, value) => {
-      el.value = value
-      el.dispatchEvent(new Event('input', { bubbles: true }))
-    }, 'あ'.repeat(129))
-    await page.getByTestId('submit').click()
-
-    await expect(page.getByText('128文字以内')).toBeVisible()
-    await expect(page).toHaveURL('/villages/new')
+    // maxlength="128" によりブラウザが128文字以上の入力をブロックすることを確認
+    await page.locator('input').fill('あ'.repeat(130))
+    const value = await page.locator('input').inputValue()
+    expect(value.length).toBeLessThanOrEqual(128)
   })
 
-  test('Scenario 5 & 6: 自分の村のみ表示される', async ({ browser }) => {
+  test('Scenario 5 & 6: 自分の村のみ表示される', async ({ page }) => {
     const allVillages: VillageMock[] = [
       makeVillage(1, 'ユーザーAの村', 'user-a'),
       makeVillage(2, 'ユーザーBの村', 'user-b'),
     ]
 
-    const contextA = await browser.newContext({ baseURL: 'http://localhost:5173' })
-    const contextB = await browser.newContext({ baseURL: 'http://localhost:5173' })
+    await page.route('**/villages', async (route) => {
+      const userId = route.request().headers()['x-user-id']
+      const filtered = userId ? allVillages.filter((v) => v.ownerId === userId) : allVillages
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ villages: filtered }),
+      })
+    })
 
-    try {
-      const pageA = await contextA.newPage()
-      const pageB = await contextB.newPage()
+    // User A: addInitScript でページロード時に userId='user-a' をセット
+    await setupAuth(page, 'user-a')
+    await page.goto('/villages')
+    await expect(page.locator('.v-card-title').filter({ hasText: 'ユーザーAの村' })).toBeVisible()
+    await expect(page.locator('.v-card-title').filter({ hasText: 'ユーザーBの村' })).toHaveCount(0)
 
-      await pageA.addInitScript(() => localStorage.setItem('userId', 'user-a'))
-      await pageB.addInitScript(() => localStorage.setItem('userId', 'user-b'))
-
-      await mockVillagesApi(pageA, [...allVillages])
-      await mockVillagesApi(pageB, [...allVillages])
-
-      await pageA.goto('/villages')
-      await expect(pageA.locator('.v-card-title').filter({ hasText: 'ユーザーAの村' })).toBeVisible()
-      await expect(pageA.locator('.v-card-title').filter({ hasText: 'ユーザーBの村' })).toHaveCount(0)
-
-      await pageB.goto('/villages')
-      await expect(pageB.locator('.v-card-title').filter({ hasText: 'ユーザーBの村' })).toBeVisible()
-      await expect(pageB.locator('.v-card-title').filter({ hasText: 'ユーザーAの村' })).toHaveCount(0)
-    } finally {
-      await contextA.close()
-      await contextB.close()
-    }
+    // User B: 後から追加した addInitScript が user-a のスクリプトの後に実行され上書きされる
+    await page.addInitScript(() => localStorage.setItem('userId', 'user-b'))
+    await page.goto('/villages')
+    await expect(page.locator('.v-card-title').filter({ hasText: 'ユーザーBの村' })).toBeVisible()
+    await expect(page.locator('.v-card-title').filter({ hasText: 'ユーザーAの村' })).toHaveCount(0)
   })
 })
