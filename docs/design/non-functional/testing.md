@@ -134,11 +134,27 @@ API 統合テストが通っていても E2E が通っていなければ PBI 完
 
 ## テストサイズ分類
 
-| サイズ | 対象 | 実行速度 | 依存 | 配置 |
+### バックエンド（apps/api）
+
+| サイズ | 対象 | 実行速度 | 依存 | 配置・命名 |
 |---|---|---|---|---|
-| **Small** | 単一関数・単一クラス | 高速（ms） | 外部依存なし（モック可） | `tests/small/` |
-| **Medium** | 複数モジュール・DB を含む統合テスト | 中速（秒） | DB・ファイル I/O 許容 | `tests/medium/` |
-| **Large** | API エンドポイント・E2E シナリオ | 低速（秒〜分） | 実サービス・ブラウザ | `tests/large/` |
+| **Small** | 単一ハンドラー（DB モック） | 高速（ms） | 外部依存なし | `tests/handlers/*.small.test.ts` |
+| **Medium** | ハンドラー + 実 DB（Testcontainers） | 中速（秒） | DB 必要 | `tests/handlers/*.medium.test.ts` |
+| **Large** | 複数ハンドラーを跨ぐ統合 / E2E | 低速（秒〜分） | 実サービス・ブラウザ | `tests/integration/` / `e2e/` |
+
+### フロントエンド（apps/frontend）
+
+| サイズ | 対象 | 実行速度 | 依存 | 配置・命名 |
+|---|---|---|---|---|
+| **Small** | 単一コンポーネント・単一ストア（API モック） | 高速（ms） | 外部依存なし（fetch モック） | `src/**/__tests__/*.small.spec.ts` |
+| **Medium** | View レベルの結合テスト（複数コンポーネント＋ストア連携、API モック） | 中速（秒） | fetch モック | `src/**/__tests__/*.medium.spec.ts` |
+| **Large** | E2E（Playwright、実ブラウザ＋実 API） | 低速（秒〜分） | 実サービス・ブラウザ | `e2e/*.spec.ts` |
+
+#### フロントエンド分類の判断基準
+
+- **Small**: テスト対象が 1 コンポーネント or 1 ストアのみ。`mount()` するコンポーネントが 1 つで、子コンポーネントは `stubs` にするか描画しない
+- **Medium**: View を `mount()` し、実際の子コンポーネント（VillageCard など）も描画する。Pinia ストアも実物を使い、fetch のみモック
+- **Large**: Playwright で実ブラウザを操作する E2E テスト（`e2e/` 配下）
 
 ---
 
@@ -158,3 +174,4 @@ API 統合テストが通っていても E2E が通っていなければ PBI 完
 |---|---|---|
 | PBI-001 | 2026-05-05 | 初版作成。「責務が生まれた場所でテスト」の原則・レイヤー別責務表・実装計画への適用方法を定義 |
 | PBI-001 | 2026-05-05 | レスポンスのスキーマ検証パターン（`XXXResponseSchema.parse()`）と DB スキーマ・API レスポンス スキーマの分離方針を追加 |
+| PBI-001 | 2026-05-06 | フロントエンドの Small / Medium / Large 分類基準を追加（Small: 単一コンポーネント・ストア、Medium: View 結合テスト、Large: Playwright E2E） |
