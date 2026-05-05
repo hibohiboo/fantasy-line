@@ -18,8 +18,8 @@
 | DB スキーマ | `apps/api/src/db/schema.ts` | villages テーブル追加 |
 | DB マイグレーション | `apps/api/drizzle/` 配下に新規 SQL | 新規 |
 | インフラ | `infra/lib/infra-stack.ts` | Lambda・API Gateway リソース追加 |
-| フロントエンド | `apps/frontend/src/views/VillageListView.vue` | 新規 |
-| フロントエンド | `apps/frontend/src/views/VillageCreateView.vue` | 新規 |
+| フロントエンド | `apps/frontend/src/views/VillageListView.vue` | 新規（詳細: [画面設計](../screen/village.md)） |
+| フロントエンド | `apps/frontend/src/views/VillageCreateView.vue` | 新規（詳細: [画面設計](../screen/village.md)） |
 | フロントエンド | `apps/frontend/src/stores/village.ts` | 新規 |
 | フロントエンド | `apps/frontend/src/router/index.ts` | ルート追加 |
 
@@ -138,6 +138,7 @@ Headers:
 - `owner_id = 認証ユーザーID` の条件でフィルタする
 - 他ユーザーの村は返さない
 - 空配列も正常レスポンス（`200 OK`、`{ "villages": [] }`）
+- **ソート順: `created_at DESC`（最新作成順）** — 将来のページネーション対応を見越して API 側でソートする（フロントでのソートはページまたぎで正確に機能しないため）
 
 ---
 
