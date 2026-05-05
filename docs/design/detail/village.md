@@ -18,8 +18,8 @@
 | DB スキーマ | `apps/api/src/db/schema.ts` | villages テーブル追加 |
 | DB マイグレーション | `apps/api/drizzle/` 配下に新規 SQL | 新規 |
 | インフラ | `infra/lib/infra-stack.ts` | Lambda・API Gateway リソース追加 |
-| フロントエンド | `apps/frontend/src/views/VillageListView.vue` | 新規（詳細: [画面設計](../screen/village.md)） |
-| フロントエンド | `apps/frontend/src/views/VillageCreateView.vue` | 新規（詳細: [画面設計](../screen/village.md)） |
+| フロントエンド | `apps/frontend/src/views/VillageListView.vue` | 新規（詳細: [画面設計・開発者向け](../screen/village.dev.md)） |
+| フロントエンド | `apps/frontend/src/views/VillageCreateView.vue` | 新規（詳細: [画面設計・開発者向け](../screen/village.dev.md)） |
 | フロントエンド | `apps/frontend/src/stores/village.ts` | 新規 |
 | フロントエンド | `apps/frontend/src/router/index.ts` | ルート追加 |
 
