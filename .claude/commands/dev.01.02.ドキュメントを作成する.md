@@ -147,7 +147,15 @@ PBI固有の「実装開始時点のスナップショット」を記録する�
 
 # フロントエンドコンポーネントを設計する場合
 
-PBIにUI変更が含まれる場合は、`.claude/skills/frontend-design/SKILL.md` を読み込み、そのガイドラインに従ってコンポーネント設計を行うこと。
+PBIにUI変更が含まれる場合は、以下を必ず参照すること。
+
+1. `docs/design/style-guide.md` — カラーパレット・Vuetify テーマ設定・コンポーネントパターン・命名規則の正本
+2. `.claude/skills/frontend-design/SKILL.md` — 高品質なUIを生成するためのガイドライン
+
+**Vuetify 使用上の原則:**
+- Vuetify に存在するコンポーネントは必ず使用する（自作しない）
+- テーマカラー外の色のハードコード禁止。`color="primary"` 等の Vuetify カラー名を使用する
+- スタイルガイドに定義されていないコンポーネントパターンが必要な場合は、`style-guide.md` を先に更新してから実装する
 
 ---
 

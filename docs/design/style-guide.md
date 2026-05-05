@@ -6,7 +6,7 @@ last_updated: 2026-05-05
 
 ## 対象読者
 
-フロントエンド担当の開発者。Vue コンポーネント実装時・CSS 追加時に参照すること。
+フロントエンド担当の開発者。Vue コンポーネント実装時・Vuetify コンポーネント選定時に参照すること。
 
 ---
 
@@ -25,51 +25,69 @@ UIは世界観を感じさせつつも、管理ツールとして情報が読み
 
 ---
 
+## Vuetify 採用方針
+
+UI フレームワークとして **Vuetify 3** を使用する。
+
+- Material Design のコンポーネント体系を活用して開発速度を確保する
+- テーマシステムでアースカラーを定義し、Material Design のデフォルト配色を上書きする
+- Vuetify に存在するコンポーネントは自作しない
+- Vuetify のコンポーネントで対応できない場合のみ `scoped` CSS で追加スタイルを当てる
+
+---
+
 ## カラーパレット
 
-`apps/frontend/src/assets/base.css` の CSS Custom Properties を上書き・拡張する。
+Vuetify のテーマシステムで定義する。`main.ts` の `createVuetify()` に以下を設定すること。
 
-### ブランドカラー（意味を持つ色）
+### Vuetify テーマ設定（実装起点）
 
-| 変数名 | 値 | 用途 |
+```typescript
+// apps/frontend/src/main.ts
+import { createVuetify } from 'vuetify'
+
+const vuetify = createVuetify({
+  theme: {
+    defaultTheme: 'light',
+    themes: {
+      light: {
+        colors: {
+          primary:    '#4a7c59',  // 深い森の緑 — 主要アクション
+          secondary:  '#c9963d',  // 金の装飾 — アクセント・強調
+          error:      '#a63228',  // 赤褐色 — 削除・エラー
+          success:    '#2d6e3e',  // 成功
+          warning:    '#8a6020',  // 警告
+          background: '#f5f0e8',  // 羊皮紙のオフホワイト
+          surface:    '#fffdf7',  // カード・パネル背景
+        },
+      },
+      dark: {
+        colors: {
+          primary:    '#4a7c59',
+          secondary:  '#c9963d',
+          error:      '#a63228',
+          success:    '#2d6e3e',
+          warning:    '#8a6020',
+          background: '#1c1a14',
+          surface:    '#2a2720',
+        },
+      },
+    },
+  },
+})
+```
+
+### カラーの意味と用途
+
+| Vuetify カラー名 | 値 | 用途 |
 |---|---|---|
-| `--color-primary` | `#4a7c59` | 主要アクション（ボタン・リンク）。深い森の緑 |
-| `--color-primary-hover` | `#3a6347` | primary のホバー状態 |
-| `--color-primary-text` | `#ffffff` | primary 背景上のテキスト |
-| `--color-accent` | `#c9963d` | 強調・バッジ・アイコン。金の装飾 |
-| `--color-accent-text` | `#1a1008` | accent 背景上のテキスト |
-| `--color-danger` | `#a63228` | 削除・エラー。赤褐色 |
-| `--color-danger-hover` | `#8a2820` | danger のホバー状態 |
-| `--color-danger-text` | `#ffffff` | danger 背景上のテキスト |
-
-### 背景・サーフェス
-
-| 変数名 | 値（ライトモード） | 値（ダークモード） | 用途 |
-|---|---|---|---|
-| `--color-background` | `#f5f0e8` | `#1c1a14` | ページ背景。羊皮紙のオフホワイト |
-| `--color-surface` | `#fffdf7` | `#2a2720` | カード・パネル背景 |
-| `--color-surface-raised` | `#ffffff` | `#343028` | モーダル・ドロップダウン |
-| `--color-border` | `#d4c9b0` | `#4a4438` | 標準ボーダー |
-| `--color-border-strong` | `#a89880` | `#6a5e4e` | 強調ボーダー |
-
-### テキスト
-
-| 変数名 | 値（ライトモード） | 値（ダークモード） | 用途 |
-|---|---|---|---|
-| `--color-text` | `#2c2416` | `#e8e0d0` | 本文テキスト |
-| `--color-text-muted` | `#6b5e4a` | `#9a8e7a` | 補助テキスト・プレースホルダー |
-| `--color-heading` | `#1a1208` | `#f0e8d8` | 見出し |
-
-### ステータスカラー
-
-| 変数名 | 値 | 用途 |
-|---|---|---|
-| `--color-success` | `#2d6e3e` | 成功メッセージ |
-| `--color-success-bg` | `#eaf4ee` | 成功メッセージ背景 |
-| `--color-warning` | `#8a6020` | 警告メッセージ |
-| `--color-warning-bg` | `#fdf5e0` | 警告メッセージ背景 |
-| `--color-error` | `#a63228` | エラーメッセージ |
-| `--color-error-bg` | `#faeaea` | エラーメッセージ背景 |
+| `primary` | `#4a7c59` | 主要アクションボタン・リンク・フォーカスリング |
+| `secondary` | `#c9963d` | バッジ・強調ラベル・アイコンアクセント |
+| `error` | `#a63228` | 削除ボタン・エラーメッセージ・バリデーションエラー |
+| `success` | `#2d6e3e` | 成功通知 |
+| `warning` | `#8a6020` | 警告通知 |
+| `background` | `#f5f0e8` | ページ背景 |
+| `surface` | `#fffdf7` | カード・ダイアログ背景 |
 
 ---
 
@@ -78,58 +96,49 @@ UIは世界観を感じさせつつも、管理ツールとして情報が読み
 ### フォントファミリー
 
 ```css
---font-body:    'Inter', 'Hiragino Kaku Gothic ProN', 'Meiryo', system-ui, sans-serif;
---font-heading: 'Cinzel', 'Georgia', 'Times New Roman', serif;  /* 見出し専用 */
---font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+/* apps/frontend/src/assets/main.css に追加 */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
+
+:root {
+  --font-heading: 'Cinzel', 'Georgia', serif;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading);
+}
 ```
 
-`Cinzel` は Google Fonts から読み込む。見出し（h1〜h3）にのみ使用し、本文には使わない。
+`Cinzel` は見出し（h1〜h3）のみ使用する。本文・UI テキストは Vuetify のデフォルト（Roboto / システムフォント）を使用する。
 
-### スケール
+### Vuetify タイポグラフィクラス
 
-| 変数名 | サイズ | ウェイト | 用途 |
-|---|---|---|---|
-| `--text-xs` | 12px | 400 | バッジ・ラベル・補足 |
-| `--text-sm` | 14px | 400 | 補助テキスト・表のセル |
-| `--text-base` | 16px | 400 | 本文（基準） |
-| `--text-lg` | 18px | 500 | 強調本文・小見出し |
-| `--text-xl` | 22px | 600 | セクション見出し（h3） |
-| `--text-2xl` | 28px | 700 | ページ見出し（h2） |
-| `--text-3xl` | 36px | 700 | 画面タイトル（h1）|
+コンポーネント内でのテキスト装飾には Vuetify の utility クラスを使用する。
 
-### 行間
-
-本文: `1.7`（日本語混在のため広めに設定）
-見出し: `1.3`
+| クラス | 用途 |
+|---|---|
+| `text-h1` 〜 `text-h6` | 見出し |
+| `text-body-1` | 本文（16px） |
+| `text-body-2` | 補助テキスト（14px） |
+| `text-caption` | ラベル・補足（12px） |
+| `font-weight-bold` | 太字 |
+| `text-medium-emphasis` | 補助テキストの色（muted） |
+| `text-disabled` | 無効状態のテキスト |
 
 ---
 
 ## スペーシング
 
-8px グリッドを基準とする。
+Vuetify の spacing utility（`ma-*` / `pa-*`）を使用する。1単位 = 4px。
 
-| 変数名 | 値 | 用途の例 |
+| クラス例 | 値 | 用途の例 |
 |---|---|---|
-| `--space-1` | 4px | アイコンとテキストの間 |
-| `--space-2` | 8px | インライン要素間・パディング最小 |
-| `--space-3` | 12px | フォームラベルとフィールドの間 |
-| `--space-4` | 16px | コンポーネント内パディング基準 |
-| `--space-6` | 24px | カード内パディング・セクション間 |
-| `--space-8` | 32px | セクション間・大きな余白 |
-| `--space-12` | 48px | ページセクション間 |
-| `--space-16` | 64px | ページトップ余白 |
+| `pa-1` / `ma-1` | 4px | アイコンとテキストの隙間 |
+| `pa-2` / `ma-2` | 8px | 密集したリスト項目 |
+| `pa-4` / `ma-4` | 16px | カード内パディング基準 |
+| `pa-6` / `ma-6` | 24px | セクション間の余白 |
+| `pa-8` / `ma-8` | 32px | ページ上部の余白 |
 
----
-
-## ボーダーと角丸
-
-| 変数名 | 値 | 用途 |
-|---|---|---|
-| `--radius-sm` | 4px | バッジ・タグ |
-| `--radius-md` | 8px | ボタン・入力フィールド |
-| `--radius-lg` | 12px | カード |
-| `--radius-xl` | 16px | モーダル |
-| `--border-width` | 1px | 標準ボーダー |
+方向指定: `mt-` (top)、`mb-` (bottom)、`ml-` (left)、`mr-` (right)、`mx-` (水平)、`my-` (垂直)
 
 ---
 
@@ -138,81 +147,105 @@ UIは世界観を感じさせつつも、管理ツールとして情報が読み
 ### ボタン
 
 ```html
-<!-- 主要アクション（村を作成する など） -->
-<button class="btn btn-primary">村を作成する</button>
+<!-- 主要アクション（1画面に1つまで） -->
+<v-btn color="primary" @click="onCreate">村を作成する</v-btn>
 
-<!-- 中立アクション（キャンセル など） -->
-<button class="btn btn-secondary">キャンセル</button>
+<!-- 中立アクション -->
+<v-btn variant="outlined" @click="onCancel">キャンセル</v-btn>
 
-<!-- 危険アクション（削除 など） -->
-<button class="btn btn-danger">削除する</button>
+<!-- 危険アクション -->
+<v-btn color="error" @click="onDelete">削除する</v-btn>
 
 <!-- ローディング状態 -->
-<button class="btn btn-primary" disabled aria-busy="true">
-  <span class="btn-spinner" aria-hidden="true"></span>
-  作成中...
-</button>
+<v-btn color="primary" :loading="isSubmitting" @click="onCreate">
+  村を作成する
+</v-btn>
 ```
 
 **ルール:**
-- 1画面に `btn-primary` は1つまで（主アクションを明確にする）
-- 送信中は `disabled` + `aria-busy="true"` を必ず付与する
+- 1画面に `color="primary"` のボタンは1つまで
+- ローディング中は `:loading="true"` を使用する（`disabled` の手動設定は不要）
 - アイコンのみのボタンは `aria-label` を付与する
 
 ### フォームフィールド
 
 ```html
-<div class="form-field">
-  <label class="form-label" for="village-name">
-    村名
-    <span class="form-required" aria-label="必須">*</span>
-  </label>
-  <input
-    id="village-name"
-    class="form-input"
-    type="text"
-    maxlength="128"
-    aria-describedby="village-name-error"
-  />
-  <p id="village-name-error" class="form-error" role="alert">
-    村名を入力してください
-  </p>
-</div>
+<v-text-field
+  v-model="villageName"
+  label="村名"
+  :rules="[rules.required, rules.maxLength]"
+  maxlength="128"
+  counter
+  required
+/>
+```
+
+```typescript
+const rules = {
+  required: (v: string) => !!v || '村名を入力してください',
+  maxLength: (v: string) => v.length <= 128 || '村名は128文字以内で入力してください',
+}
 ```
 
 **ルール:**
-- `label` は必ず対応する `input` の `id` を `for` で参照する
-- エラーメッセージは `role="alert"` + `aria-describedby` で支援技術に伝える
-- エラー状態の `input` には `aria-invalid="true"` を付与する
+- バリデーションルールは `packages/schema` の Zod スキーマと一致させる
+- `counter` を付与して文字数を視覚的にフィードバックする
+- フィールドのエラーメッセージは Vuetify の `:rules` に委ねる（独自 `<p>` タグは使わない）
 
 ### カード
 
 ```html
-<!-- 村カード -->
-<article class="card">
-  <header class="card-header">
-    <h3 class="card-title">エルムの村</h3>
-  </header>
-  <div class="card-body">
-    <p class="card-meta">作成日: 2026-05-05</p>
-  </div>
-  <footer class="card-footer">
-    <a href="/villages/1" class="btn btn-secondary btn-sm">詳細を見る</a>
-  </footer>
-</article>
+<v-card>
+  <v-card-title>エルムの村</v-card-title>
+  <v-card-subtitle>作成日: 2026-05-05</v-card-subtitle>
+  <v-card-actions>
+    <v-btn variant="text" color="primary" :to="`/villages/${village.id}`">
+      詳細を見る
+    </v-btn>
+  </v-card-actions>
+</v-card>
 ```
 
-### アラート・フィードバック
+### アラート・スナックバー
 
 ```html
-<!-- 成功 -->
-<div class="alert alert-success" role="status">村を作成しました。</div>
+<!-- ページ内固定アラート（フォームエラーなど） -->
+<v-alert type="error" variant="tonal">入力内容を確認してください。</v-alert>
+<v-alert type="success" variant="tonal">村を作成しました。</v-alert>
 
-<!-- エラー -->
-<div class="alert alert-error" role="alert">入力内容を確認してください。</div>
+<!-- 一時的な通知はスナックバーを使用 -->
+<v-snackbar v-model="showSnackbar" color="success">
+  村を作成しました。
+</v-snackbar>
+```
 
-<!-- 警告 -->
-<div class="alert alert-warning" role="status">この操作は取り消せません。</div>
+**ルール:**
+- フォームのエラーサマリーは `v-alert type="error"`
+- 操作完了の一時通知は `v-snackbar`
+- 警告確認ダイアログは `v-dialog` + `v-card` で構成する
+
+### リスト・テーブル
+
+```html
+<!-- 村一覧（カードグリッド） -->
+<v-container>
+  <v-row>
+    <v-col v-for="village in villages" :key="village.id" cols="12" sm="6" md="4">
+      <VillageCard :village="village" />
+    </v-col>
+  </v-row>
+</v-container>
+
+<!-- 空状態 -->
+<v-empty-state
+  icon="mdi-castle"
+  title="村がありません"
+  text="最初の村を作成しましょう。"
+>
+  <template #actions>
+    <v-btn color="primary" to="/villages/new">村を作成する</v-btn>
+  </template>
+</v-empty-state>
 ```
 
 ---
@@ -222,9 +255,9 @@ UIは世界観を感じさせつつも、管理ツールとして情報が読み
 | 種別 | 命名形式 | 例 |
 |---|---|---|
 | ページ（View） | `<名詞>View.vue` | `VillageListView.vue` |
-| 機能コンポーネント | `<名詞><動作>.vue` or `<名詞><説明>.vue` | `VillageCard.vue`, `VillageCreateForm.vue` |
-| 汎用UIコンポーネント | `Base<名前>.vue` | `BaseButton.vue`, `BaseInput.vue` |
-| レイアウトコンポーネント | `The<名前>.vue` | `TheHeader.vue`, `TheSidebar.vue` |
+| 機能コンポーネント | `<名詞><説明>.vue` | `VillageCard.vue`, `VillageCreateForm.vue` |
+| 汎用UIコンポーネント | `Base<名前>.vue` | `BaseConfirmDialog.vue`（Vuetify にない独自UIのみ） |
+| レイアウトコンポーネント | `The<名前>.vue` | `TheHeader.vue`, `TheNavigation.vue` |
 
 **ファイル配置:**
 
@@ -232,24 +265,25 @@ UIは世界観を感じさせつつも、管理ツールとして情報が読み
 src/
 ├── views/          # ルーターが参照するページコンポーネント
 ├── components/
-│   ├── base/       # BaseButton.vue など汎用UI
 │   ├── village/    # VillageCard.vue など機能別
+│   ├── base/       # BaseConfirmDialog.vue など Vuetify にない独自UI のみ
 │   └── layout/     # TheHeader.vue など
 ├── stores/         # Pinia ストア（<対象名>.ts）
 ├── composables/    # use<機能名>.ts
 └── types/          # 型定義
 ```
 
+Vuetify のコンポーネント（`v-btn`、`v-text-field` など）は `base/` に再ラップしない。
+直接使用する。
+
 ### Props / Emits の規約
 
 ```typescript
-// Props は defineProps で型定義を明示する
 const props = defineProps<{
   village: Village
   isLoading?: boolean
 }>()
 
-// Emits はイベント名をケバブケースで定義する
 const emit = defineEmits<{
   'village-created': [village: Village]
   'form-cancel': []
@@ -260,20 +294,22 @@ const emit = defineEmits<{
 
 ## CSS 設計方針
 
-- グローバルスタイルは `src/assets/base.css`（変数定義）と `src/assets/main.css`（リセット・レイアウト）のみ
-- コンポーネント固有のスタイルは `<style scoped>` に書く
-- `scoped` の外に書く必要がある場合は `:deep()` を使用し、その理由をコメントで明記する
-- クラス名は BEM に近い平易な命名を使用する（厳密な BEM でなくてよい）
-- CSS Custom Properties（変数）は必ず `base.css` で定義したものを使用する。マジックナンバーの直書き禁止
+- **Vuetify のコンポーネントを優先する。** スタイルを当てるために独自コンポーネントを作らない
+- **追加 CSS は最小限に。** Vuetify の props・variant・color で解決できるものは CSS を書かない
+- **コンポーネント固有の追加スタイルは `<style scoped>` に書く**
+- **`scoped` の外へのスタイル適用が必要な場合は `:deep()` を使い、その理由をコメントで明記する**
+- **テーマカラー外の色のハードコード禁止。** 必ず `color="primary"` 等の Vuetify カラー名を使用する
+- **グローバル CSS は `src/assets/main.css` のみ。** 見出しフォント(`Cinzel`)の適用もここで行う
 
 ---
 
-## アクセシビリティ最低基準
+## アクセシビリティ
 
-- テキストと背景のコントラスト比: 本文は **4.5:1 以上**、大きな見出しは **3:1 以上**
-- キーボード操作: Tab キーですべての操作ができること
-- フォーカスリング: `:focus-visible` を非表示にしない
-- 画像・アイコン: 意味を持つものは `alt` または `aria-label` を付与する
+Vuetify は ARIA 属性をコンポーネントに組み込んでいるが、以下は開発者が責任を持つこと。
+
+- テキストと背景のコントラスト比: 本文 **4.5:1 以上**、大見出し **3:1 以上**
+- アイコンのみのボタン: `aria-label` を必ず付与する（`<v-btn icon aria-label="削除">` 等）
+- フォームの `:rules` エラーは Vuetify が `aria-describedby` を自動設定するため、独自エラー要素を重複追加しない
 
 ---
 
@@ -281,4 +317,4 @@ const emit = defineEmits<{
 
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
-| PBI-001 | 2026-05-05 | 初版作成。カラーパレット・タイポグラフィ・スペーシング・コンポーネントパターン・命名規則を定義 |
+| PBI-001 | 2026-05-05 | 初版作成（Vuetify 3 採用。カラーパレット・タイポグラフィ・コンポーネントパターン・命名規則を定義） |
