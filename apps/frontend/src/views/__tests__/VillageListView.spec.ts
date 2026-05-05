@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { createVuetify } from 'vuetify'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
@@ -43,9 +44,10 @@ describe('VillageListView', () => {
     expect(wrapper.text()).toContain('村を作成する')
   })
 
-  it('ローディング中はプログレスサークルを表示する', () => {
+  it('ローディング中はプログレスサークルを表示する', async () => {
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     const wrapper = mountView()
+    await nextTick()
     expect(wrapper.find('[data-testid="loading"]').exists()).toBe(true)
   })
 
