@@ -1,41 +1,19 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  vi,
-} from 'vitest';
-import type { StartedTestContainer } from 'testcontainers';
-import mysql from 'mysql2/promise';
-import type { MySql2Database } from 'drizzle-orm/mysql2';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { ListVillagesResponseSchema } from '@repo/schema';
 import type * as ListVillagesModule from '../../src/handlers/listVillages';
 import * as schema from '../../src/db/schema';
-import { setupMysqlContainer } from '../helpers/mysql-setup';
+import { useMysqlContainer } from '../helpers/use-mysql-container';
 import { mockDbClient } from '../helpers/db-mock';
 
-let container: StartedTestContainer;
-let pool: mysql.Pool;
-let testDb: MySql2Database<typeof schema>;
+const ctx = useMysqlContainer();
 let handler: typeof ListVillagesModule.handler;
-
-beforeAll(async () => {
-  ({ container, pool, testDb } = await setupMysqlContainer());
-});
-
-afterAll(async () => {
-  await pool?.end();
-  await container?.stop();
-});
 
 describe('listVillages handler - 統合テスト', () => {
   beforeEach(async () => {
-    await testDb.delete(schema.villages);
+    await ctx.db.delete(schema.villages);
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(testDb));
+    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
     ({ handler } = await import('../../src/handlers/listVillages'));
   });
 
@@ -51,7 +29,7 @@ describe('listVillages handler - 統合テスト', () => {
   });
 
   it('自分の村のみ返す', async () => {
-    await testDb.insert(schema.villages).values([
+    await ctx.db.insert(schema.villages).values([
       { name: '勇者の村', ownerId: 'user-1' },
       { name: '魔王の村', ownerId: 'user-2' },
     ]);
@@ -64,12 +42,12 @@ describe('listVillages handler - 統合テスト', () => {
     expect(result.statusCode).toBe(200);
     const { villages } = ListVillagesResponseSchema.parse(JSON.parse(result.body));
     expect(villages).toHaveLength(1);
-    expect(villages[0].name).toBe('勇者の村');
-    expect(villages[0].ownerId).toBe('user-1');
+    expect(villages.at(0)?.name).toBe('勇者の村');
+    expect(villages.at(0)?.ownerId).toBe('user-1');
   });
 
   it('他ユーザーの村を含まない', async () => {
-    await testDb.insert(schema.villages).values([
+    await ctx.db.insert(schema.villages).values([
       { name: '魔王の村', ownerId: 'user-2' },
     ]);
 
@@ -84,9 +62,9 @@ describe('listVillages handler - 統合テスト', () => {
   });
 
   it('村は作成日時の降順（最新順）で返す', async () => {
-    await testDb.insert(schema.villages).values({ name: '古い村', ownerId: 'user-1' });
+    await ctx.db.insert(schema.villages).values({ name: '古い村', ownerId: 'user-1' });
     await new Promise((r) => setTimeout(r, 1100));
-    await testDb.insert(schema.villages).values({ name: '新しい村', ownerId: 'user-1' });
+    await ctx.db.insert(schema.villages).values({ name: '新しい村', ownerId: 'user-1' });
 
     const result = await handler(
       { headers: { 'X-User-Id': 'user-1' } } as unknown as APIGatewayProxyEvent,

@@ -1,40 +1,18 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  vi,
-} from 'vitest';
-import type { StartedTestContainer } from 'testcontainers';
-import mysql from 'mysql2/promise';
-import type { MySql2Database } from 'drizzle-orm/mysql2';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import type * as ItemsModule from '../../src/handlers/items';
 import * as schema from '../../src/db/schema';
-import { setupMysqlContainer } from '../helpers/mysql-setup';
+import { useMysqlContainer } from '../helpers/use-mysql-container';
 import { mockDbClient } from '../helpers/db-mock';
 
-let container: StartedTestContainer;
-let pool: mysql.Pool;
-let testDb: MySql2Database<typeof schema>;
+const ctx = useMysqlContainer();
 let handler: typeof ItemsModule.handler;
-
-beforeAll(async () => {
-  ({ container, pool, testDb } = await setupMysqlContainer());
-});
-
-afterAll(async () => {
-  await pool?.end();
-  await container?.stop();
-});
 
 describe('items handler', () => {
   beforeEach(async () => {
-    await testDb.delete(schema.items);
+    await ctx.db.delete(schema.items);
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(testDb));
+    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
     ({ handler } = await import('../../src/handlers/items'));
   });
 
@@ -46,7 +24,7 @@ describe('items handler', () => {
   });
 
   it('データが存在する場合、全itemsを返す', async () => {
-    await testDb.insert(schema.items).values([
+    await ctx.db.insert(schema.items).values([
       { name: '炎の剣', description: '炎を纏った魔法の剣', rarity: 'rare', price: 5000 },
       { name: '回復薬', description: 'HPを100回復する', rarity: 'common', price: 100 },
     ]);

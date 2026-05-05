@@ -1,43 +1,21 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  vi,
-} from 'vitest';
-import type { StartedTestContainer } from 'testcontainers';
-import mysql from 'mysql2/promise';
-import type { MySql2Database } from 'drizzle-orm/mysql2';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { CreateVillageResponseSchema, ListVillagesResponseSchema } from '@repo/schema';
 import type * as CreateVillageModule from '../../src/handlers/createVillage';
 import type * as ListVillagesModule from '../../src/handlers/listVillages';
 import * as schema from '../../src/db/schema';
-import { setupMysqlContainer } from '../helpers/mysql-setup';
+import { useMysqlContainer } from '../helpers/use-mysql-container';
 import { mockDbClient } from '../helpers/db-mock';
 
-let container: StartedTestContainer;
-let pool: mysql.Pool;
-let testDb: MySql2Database<typeof schema>;
+const ctx = useMysqlContainer();
 let createVillage: typeof CreateVillageModule.handler;
 let listVillages: typeof ListVillagesModule.handler;
 
-beforeAll(async () => {
-  ({ container, pool, testDb } = await setupMysqlContainer());
-});
-
-afterAll(async () => {
-  await pool?.end();
-  await container?.stop();
-});
-
 describe('village API 統合テスト', () => {
   beforeEach(async () => {
-    await testDb.delete(schema.villages);
+    await ctx.db.delete(schema.villages);
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(testDb));
+    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
     ({ handler: createVillage } = await import('../../src/handlers/createVillage'));
     ({ handler: listVillages } = await import('../../src/handlers/listVillages'));
   });
@@ -58,7 +36,7 @@ describe('village API 統合テスト', () => {
     expect(village.ownerId).toBe('user-1');
     expect(village.createdAt).toBeDefined();
 
-    const rows = await testDb.select().from(schema.villages);
+    const rows = await ctx.db.select().from(schema.villages);
     expect(rows).toHaveLength(1);
     expect(rows.at(0)?.ownerId).toBe('user-1');
   });
@@ -77,7 +55,7 @@ describe('village API 統合テスト', () => {
     expect(r1.statusCode).toBe(201);
     expect(r2.statusCode).toBe(201);
 
-    const rows = await testDb.select().from(schema.villages);
+    const rows = await ctx.db.select().from(schema.villages);
     expect(rows).toHaveLength(2);
   });
 
@@ -94,7 +72,7 @@ describe('village API 統合テスト', () => {
     const { village } = CreateVillageResponseSchema.parse(JSON.parse(result.body));
     expect(village.ownerId).toBe('user-1');
 
-    const rows = await testDb.select().from(schema.villages);
+    const rows = await ctx.db.select().from(schema.villages);
     expect(rows.at(0)?.ownerId).toBe('user-1');
   });
 

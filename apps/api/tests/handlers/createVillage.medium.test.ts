@@ -1,41 +1,19 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  vi,
-} from 'vitest';
-import type { StartedTestContainer } from 'testcontainers';
-import mysql from 'mysql2/promise';
-import type { MySql2Database } from 'drizzle-orm/mysql2';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { CreateVillageResponseSchema } from '@repo/schema';
 import type * as CreateVillageModule from '../../src/handlers/createVillage';
 import * as schema from '../../src/db/schema';
-import { setupMysqlContainer } from '../helpers/mysql-setup';
+import { useMysqlContainer } from '../helpers/use-mysql-container';
 import { mockDbClient } from '../helpers/db-mock';
 
-let container: StartedTestContainer;
-let pool: mysql.Pool;
-let testDb: MySql2Database<typeof schema>;
+const ctx = useMysqlContainer();
 let handler: typeof CreateVillageModule.handler;
-
-beforeAll(async () => {
-  ({ container, pool, testDb } = await setupMysqlContainer());
-});
-
-afterAll(async () => {
-  await pool?.end();
-  await container?.stop();
-});
 
 describe('createVillage handler - 統合テスト', () => {
   beforeEach(async () => {
-    await testDb.delete(schema.villages);
+    await ctx.db.delete(schema.villages);
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(testDb));
+    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
     ({ handler } = await import('../../src/handlers/createVillage'));
   });
 
