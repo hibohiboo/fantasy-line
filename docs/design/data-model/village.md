@@ -39,8 +39,6 @@ CREATE TABLE `villages` (
   `created_at` TIMESTAMP      NOT NULL DEFAULT (NOW()),
   CONSTRAINT `villages_id` PRIMARY KEY (`id`)
 );
-
-CREATE INDEX `villages_owner_id_idx` ON `villages` (`owner_id`);
 ```
 
 **カラム定義:**
@@ -49,13 +47,13 @@ CREATE INDEX `villages_owner_id_idx` ON `villages` (`owner_id`);
 |---|---|---|---|
 | id | SERIAL (BIGINT UNSIGNED) | PRIMARY KEY, AUTO_INCREMENT | 村の一意識別子 |
 | name | VARCHAR(128) | NOT NULL | 村名（最大128文字） |
-| owner_id | VARCHAR(255) | NOT NULL, INDEX | 管理者ユーザーID（JWT の sub または同等の識別子） |
+| owner_id | VARCHAR(255) | NOT NULL | 管理者ユーザーID（JWT の sub または同等の識別子） |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | 作成日時 |
 
 **設計方針:**
 
 - `owner_id` は文字列型とし、認証プロバイダの識別子形式に依存しない設計にする
-- `owner_id` にインデックスを設け、ユーザーごとの村一覧取得のクエリ性能を確保する
+- `owner_id` のインデックスは現時点では作成しない。想定ユーザー数・データ量については [performance.md](../non-functional/performance.md) を参照し、スケール要件が変わった時点で追加する
 
 ORM スキーマの実装コードはコードが正本であるため、このドキュメントには記載しない。
 PBI ごとの初期実装スニペットは `docs/sprints/` 配下の実装ノートを参照すること。
@@ -83,4 +81,4 @@ PBI ごとの初期実装スニペットは `docs/sprints/` 配下の実装ノ�
 
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
-| PBI-001 | 2026-05-05 | villages テーブル新規追加、CRUD 表初版作成 |
+| PBI-001 | 2026-05-05 | villages テーブル新規追加、CRUD 表初版作成、owner_id インデックスを性能要件を踏まえ保留 |
