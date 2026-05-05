@@ -50,9 +50,20 @@
 - 同じセットアップが繰り返されている場合はヘルパーに切り出す
 - Small/Medium/Large の分類が適切かを再確認し、必要なら移動する
 - テスト自体が壊れやすい（実装詳細に依存している）場合は抽象度を上げる
+- **レスポンスのスキーマ検証**: レスポンスボディをパースするテストは `JSON.parse()` 後に `XXXResponseSchema.parse()` を通すこと。フィールドの個別アサートだけではスキーマ変更を検知できない（詳細: `docs/design/non-functional/testing.md`）
 
 `npm run test` で引き続き通過を確認してからリファクタリングを完了とする。
 `npm run lint` でlintを確認する。
+
+# 共有スキーマ（packages/schema）を実装する場合
+
+`packages/schema` にスキーマを追加・変更するときは以下を必ず確認すること。
+
+1. **OpenAPI との整合性確認**: `docs/design/openapi/openapi.yaml` を読み、フィールド名・型・必須有無が一致しているか確認する
+2. **DB スキーマとレスポンス スキーマを分ける**: 日付型などは DB レイヤー（`z.date()`）と API レスポンス（`z.string()`）で型が異なる。`XxxSchema`（DB 用）と `XxxResponseSchema`（JSON レスポンス用）を別に定義すること
+3. **レスポンス スキーマの命名**: API レスポンスとして JSON.parse されるものは `XxxResponseSchema` / `XxxResponseType` とし、`CreateXxxResponseSchema` / `ListXxxResponseSchema` に組み込む
+
+---
 
 # フロントエンドコンポーネントを実装する場合
 

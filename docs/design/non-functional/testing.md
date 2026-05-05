@@ -55,6 +55,53 @@ createVillage ハンドラー
 
 ---
 
+## レスポンスのスキーマ検証
+
+API ハンドラーのテストでレスポンスボディをパースする際は、`JSON.parse()` 後に `XXXResponseSchema.parse()` を通すこと。
+フィールドを個別に `expect` するだけでは、フィールドの追加・削除・型変更をテストが検知できない。
+
+```typescript
+// ✅ 良い例（echo.small.test.ts のパターン）
+const parsed = CreateVillageResponseSchema.parse(JSON.parse(result.body));
+expect(parsed.village.name).toBe('勇者の村');
+
+// ❌ 悪い例（スキーマ変更を検知できない）
+const { village } = JSON.parse(result.body);
+expect(village.name).toBe('勇者の村');
+```
+
+スキーマのパースが失敗した時点でテストが落ちるため、API レスポンスとフロントエンドの型の乖離を早期に検出できる。
+
+---
+
+## DB スキーマと API レスポンス スキーマの分離
+
+DB 行の型と JSON レスポンスの型は一致しない場合がある。代表例が日付型：
+
+| レイヤー | `createdAt` の型 | 理由 |
+|---|---|---|
+| Drizzle 返却値（DB） | `Date` オブジェクト | MySQL の timestamp は Date に変換される |
+| JSON レスポンス（API） | `string`（ISO 8601） | `JSON.stringify` が Date を文字列に変換する |
+| OpenAPI 定義 | `string` / `format: date-time` | JSON の仕様に従う |
+
+`packages/schema` でスキーマを定義するときは **DB 用** と **レスポンス用** を分けること。
+
+```typescript
+// DB 行用（Drizzle の返却値）
+export const VillageSchema = z.object({
+  createdAt: z.date(),   // Date オブジェクト
+});
+
+// API レスポンス用（JSON.parse 後、フロントエンドが受け取る値）
+export const VillageResponseSchema = z.object({
+  createdAt: z.string(), // ISO 8601 文字列（OpenAPI の string/format:date-time に対応）
+});
+```
+
+**新しいリソースのスキーマを作成するときは必ず `docs/design/openapi/openapi.yaml` を確認し、フィールド型を合わせること。**
+
+---
+
 ## テスト種別と受け入れ条件の確認方法
 
 Gherkin シナリオは**ユーザーの操作**を記述している。そのため受け入れ条件の最終確認はブラウザを通じた E2E テストで行う。
@@ -110,3 +157,4 @@ API 統合テストが通っていても E2E が通っていなければ PBI 完
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-001 | 2026-05-05 | 初版作成。「責務が生まれた場所でテスト」の原則・レイヤー別責務表・実装計画への適用方法を定義 |
+| PBI-001 | 2026-05-05 | レスポンスのスキーマ検証パターン（`XXXResponseSchema.parse()`）と DB スキーマ・API レスポンス スキーマの分離方針を追加 |
