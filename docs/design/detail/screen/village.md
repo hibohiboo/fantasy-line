@@ -82,17 +82,27 @@ defineProps<{ village: VillageResponse }>()
 
 ### 日付フォーマット
 
+`yyyy-MM-dd HH:mm:ss` 形式の日本時間（JST / Asia/Tokyo）で表示する。
+
 ```typescript
-const formattedDate = computed(() =>
-  new Date(village.createdAt).toLocaleDateString('ja-JP', {
+const formattedDate = computed(() => {
+  const d = new Date(props.village.createdAt)
+  const parts = new Intl.DateTimeFormat('ja-JP', {
+    timeZone: 'Asia/Tokyo',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  })
-)
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(d)
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`
+})
 ```
 
-`village.createdAt` は ISO 8601 文字列（API レスポンス）であるため `new Date()` でパースする。
+`village.createdAt` は ISO 8601 文字列（API レスポンス）であるため `new Date()` でパースする。`Intl.DateTimeFormat` の `timeZone: 'Asia/Tokyo'` を明示することで、実行環境のシステムタイムゾーンに依存しない。
 
 ---
 
@@ -169,3 +179,4 @@ async function onSubmit() {
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-001 | 2026-05-05 | 初版作成。村一覧・村作成の開発者向け画面設計（コンポーネント構成・Pinia 連携・バリデーション仕様） |
+| PBI-001 | 2026-05-06 | 日付フォーマットを `yyyy-MM-dd HH:mm:ss`（JST / `Intl.DateTimeFormat` + `formatToParts`）に変更 |
