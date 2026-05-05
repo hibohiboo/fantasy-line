@@ -152,6 +152,26 @@ export class InfraStack extends cdk.Stack {
     );
     auroraCluster.secret!.grantRead(itemsFunction);
 
+    const createVillageFunction = new lambdaNodejs.NodejsFunction(
+      this,
+      'CreateVillageFunction',
+      {
+        ...lambdaDefaults,
+        entry: path.join(__dirname, '../../apps/api/src/handlers/createVillage.ts'),
+      },
+    );
+    auroraCluster.secret!.grantRead(createVillageFunction);
+
+    const listVillagesFunction = new lambdaNodejs.NodejsFunction(
+      this,
+      'ListVillagesFunction',
+      {
+        ...lambdaDefaults,
+        entry: path.join(__dirname, '../../apps/api/src/handlers/listVillages.ts'),
+      },
+    );
+    auroraCluster.secret!.grantRead(listVillagesFunction);
+
     const migrationFunction = new lambdaNodejs.NodejsFunction(
       this,
       'migrationFunction',
@@ -193,6 +213,16 @@ export class InfraStack extends cdk.Stack {
     itemsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(itemsFunction),
+    );
+
+    const villagesResource = api.root.addResource('villages');
+    villagesResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(createVillageFunction),
+    );
+    villagesResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(listVillagesFunction),
     );
 
     // -- Outputs
