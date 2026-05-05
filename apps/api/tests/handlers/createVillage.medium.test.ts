@@ -11,6 +11,7 @@ import type { StartedTestContainer } from 'testcontainers';
 import mysql from 'mysql2/promise';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
+import { CreateVillageResponseSchema } from '@repo/schema';
 import type * as CreateVillageModule from '../../src/handlers/createVillage';
 import * as schema from '../../src/db/schema';
 import { setupMysqlContainer } from '../helpers/mysql-setup';
@@ -48,7 +49,7 @@ describe('createVillage handler - 統合テスト', () => {
     );
 
     expect(result.statusCode).toBe(201);
-    const { village } = JSON.parse(result.body);
+    const { village } = CreateVillageResponseSchema.parse(JSON.parse(result.body));
     expect(village.id).toBeDefined();
     expect(village.name).toBe('勇者の村');
     expect(village.ownerId).toBe('user-1');
