@@ -1,0 +1,10 @@
+{
+  "name": "fantasy-line-lambda-layer",
+  "version": "1.0.0",
+  "description": "Shared npm dependencies for Fantasy Line Lambda functions",
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "mysql2": "^3.22.3",
+    "zod": "^4.4.2"
+  }
+}

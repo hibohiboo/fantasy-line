@@ -6,6 +6,8 @@ import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as path from 'path';
+import { execSync } from 'child_process';
+import { mkdirSync, copyFileSync } from 'fs';
 
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -113,6 +115,43 @@ export class InfraStack extends cdk.Stack {
       ec2.Port.tcp(AURORA_PORT),
     );
 
+    // -- Lambda Layer --
+    const layerDir = path.join(__dirname, '../layer');
+    const sharedDepsLayer = new lambda.LayerVersion(this, 'SharedDepsLayer', {
+      layerVersionName: 'fantasy-line-shared-deps',
+      code: lambda.Code.fromAsset(layerDir, {
+        bundling: {
+          image: lambda.Runtime.NODEJS_24_X.bundlingImage,
+          command: [
+            'bash',
+            '-c',
+            'mkdir -p /asset-output/nodejs && cp /asset-input/package.json /asset-output/nodejs/ && cd /asset-output/nodejs && npm install --omit=dev --no-package-lock',
+          ],
+          local: {
+            tryBundle(outputDir: string) {
+              try {
+                mkdirSync(path.join(outputDir, 'nodejs'), { recursive: true });
+                copyFileSync(
+                  path.join(layerDir, 'package.json'),
+                  path.join(outputDir, 'nodejs', 'package.json'),
+                );
+                execSync('npm install --omit=dev --no-package-lock', {
+                  cwd: path.join(outputDir, 'nodejs'),
+                  stdio: 'inherit',
+                });
+                return true;
+              } catch {
+                return false;
+              }
+            },
+          },
+        },
+      }),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_24_X],
+      compatibleArchitectures: [lambda.Architecture.ARM_64, lambda.Architecture.X86_64],
+      description: 'Shared npm dependencies: drizzle-orm, mysql2, zod',
+    });
+
     // -- Lambda Functions --
     const lambdaDefaults: Omit<lambdaNodejs.NodejsFunctionProps, 'entry'> = {
       runtime: lambda.Runtime.NODEJS_24_X,
@@ -125,12 +164,13 @@ export class InfraStack extends cdk.Stack {
       environment: {
         DB_SECRET_ARN: auroraCluster.secret!.secretArn,
       },
+      layers: [sharedDepsLayer],
       projectRoot: path.join(__dirname, '../..'),
       bundling: {
         minify: true,
         sourceMap: false,
         target: 'node24',
-        externalModules: ['@aws-sdk/*'],
+        externalModules: ['@aws-sdk/*', 'drizzle-orm', 'mysql2', 'zod'],
       },
     };
 
