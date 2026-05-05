@@ -3,7 +3,7 @@ import {
   APIGatewayProxyResult,
   Context,
 } from 'aws-lambda';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { villages } from '../db/schema';
 import { json } from '../http';
@@ -21,7 +21,8 @@ export const handler = async (
   const result = await db
     .select()
     .from(villages)
-    .where(eq(villages.ownerId, ownerId));
+    .where(eq(villages.ownerId, ownerId))
+    .orderBy(desc(villages.createdAt));
 
   console.log(JSON.stringify({ level: 'info', action: 'listVillages', count: result.length, ownerId }));
 
