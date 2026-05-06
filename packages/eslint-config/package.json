@@ -28,5 +28,8 @@
     }
   },
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "jsonc-parser": "^3.3.1"
+  }
 }

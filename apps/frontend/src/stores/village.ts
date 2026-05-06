@@ -26,7 +26,7 @@ export const useVillageStore = defineStore('village', () => {
       }
       const data = await res.json()
       villages.value = data.villages
-    } catch (e) {
+    } catch {
       error.value = '通信エラーが発生しました'
     } finally {
       isLoading.value = false
@@ -51,7 +51,7 @@ export const useVillageStore = defineStore('village', () => {
       }
       const data = await res.json()
       return data.village
-    } catch (e) {
+    } catch {
       error.value = '通信エラーが発生しました'
       return null
     } finally {
