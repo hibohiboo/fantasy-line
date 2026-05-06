@@ -21,10 +21,10 @@
     "@repo/schema": "*",
     "drizzle-orm": "^0.45.2",
     "mysql2": "^3.22.3",
-    "zod": "^4.4.2"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@aws-sdk/client-secrets-manager": "^3.1041.0",
+    "@aws-sdk/client-secrets-manager": "^3.1044.0",
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@types/aws-lambda": "^8.10.161",
