@@ -14,7 +14,7 @@
 |---|---|---|---|
 | 0 | [認証](00-authentication/) | PBI-014 | ✅ 前提 |
 | 1 | [村の管理](01-village-management/) | PBI-001, 002 | ✅ |
-| 2 | [住人の管理](02-resident-management/) | PBI-003, 004 | ✅ |
+| 2 | [住人の管理](02-resident-management/) | PBI-003, 004, 015 | ✅ / Phase 2 |
 | 3 | [職業・生活リズム](03-job-schedule/) | PBI-005, 006 | ✅ |
 | 4 | [1日シミュレーション](04-daily-simulation/) | PBI-007, 008 | ✅ 最重要 |
 | 5 | [可視化・統計](05-visualization/) | PBI-009, 010 | Phase 2 |
@@ -43,6 +43,7 @@
 |---|---|---|
 | [PBI-003](02-resident-management/PBI-003.md) | 住人を登録する | MVP |
 | [PBI-004](02-resident-management/PBI-004.md) | 住人の詳細情報を編集する | MVP |
+| [PBI-015](02-resident-management/PBI-015.md) | 住人を削除する | Phase 2 |
 
 ### エピック 3 — 職業・生活リズム
 
