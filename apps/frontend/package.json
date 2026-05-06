@@ -6,6 +6,7 @@
   "scripts": {
     "ncu": "ncu -u",
     "dev": "vite",
+    "dev:mock": "vite --mode mock",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "test:unit": "vitest",
@@ -35,6 +36,7 @@
     "eslint": "^10.3.0",
     "jiti": "^2.6.1",
     "jsdom": "^29.1.1",
+    "msw": "^2.14.3",
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.62.0",
     "prettier": "3.8.3",
@@ -47,5 +49,10 @@
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }
