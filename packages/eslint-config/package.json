@@ -15,6 +15,7 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "eslint-plugin-vue": "^10.9.0",
     "globals": "^17.6.0",
+    "jsonc-parser": "^3.3.1",
     "typescript-eslint": "^8.59.1"
   },
   "exports": {
@@ -28,8 +29,5 @@
     }
   },
   "private": true,
-  "type": "module",
-  "dependencies": {
-    "jsonc-parser": "^3.3.1"
-  }
+  "type": "module"
 }
