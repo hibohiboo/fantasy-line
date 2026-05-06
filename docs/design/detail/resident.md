@@ -30,90 +30,15 @@
 
 ## 処理フロー詳細
 
-### 住人を登録する
+認証・ユーザーID 取得・権限チェックの共通パターンは [api-architecture.md](../non-functional/api-architecture.md) を参照。
 
-```mermaid
-sequenceDiagram
-    actor Admin as 管理者
-    participant FE as Vue 3 フロントエンド
-    participant API as Lambda (createResident)
-    participant DB as Aurora PostgreSQL
+住人管理の各エンドポイントが使用するパターン:
 
-    Admin->>FE: 「住人を追加」ボタンを押す
-    FE-->>Admin: 住人登録フォームに遷移
-
-    Admin->>FE: 名前・読み・生年月日・村を入力して「登録」を押す
-    FE->>FE: フロントエンドバリデーション<br/>（名前必須・読みカタカナ・生年月日必須）
-
-    alt バリデーションエラー
-        FE-->>Admin: エラーメッセージ表示（リクエスト送信なし）
-    else バリデーション通過
-        FE->>API: POST /api/residents<br/>{ name, nameKana, birthDate, villageId }<br/>Authorization: Bearer <token>
-        API->>API: リクエストボディのバリデーション
-        alt バリデーションエラー
-            API-->>FE: 400 Bad Request<br/>{ error: { fieldErrors: {...} } }
-            FE-->>Admin: エラーメッセージ表示
-        else バリデーション通過
-            API->>API: ownerId = 認証ユーザーID を取得
-            API->>DB: SELECT owner_id FROM villages WHERE id = villageId
-            DB-->>API: villages レコード
-            alt 村が存在しない or 権限なし
-                API-->>FE: 403 Forbidden
-                FE-->>Admin: エラーメッセージ表示
-            else 権限あり
-                API->>DB: INSERT INTO residents (name, name_kana, birth_date, village_id)
-                DB-->>API: 挿入されたID
-                API->>DB: SELECT * FROM residents WHERE id = ?
-                DB-->>API: residents レコード
-                API-->>FE: 201 Created<br/>{ resident: { id, name, nameKana, birthDate, villageId, createdAt } }
-                FE-->>Admin: 住人一覧画面に遷移
-            end
-        end
-    end
-```
-
-### 住人一覧を取得する（全体）
-
-```mermaid
-sequenceDiagram
-    actor Admin as 管理者
-    participant FE as Vue 3 フロントエンド
-    participant API as Lambda (listResidents)
-    participant DB as Aurora PostgreSQL
-
-    Admin->>FE: 住人一覧ページ（/residents）を開く
-    FE->>API: GET /api/residents<br/>Authorization: Bearer <token>
-    API->>API: 認証ユーザーID を取得
-    API->>DB: SELECT residents.* FROM residents<br/>JOIN villages ON residents.village_id = villages.id<br/>WHERE villages.owner_id = ?<br/>ORDER BY residents.name_kana ASC
-    DB-->>API: 住人レコード一覧（village情報含む）
-    API-->>FE: 200 OK<br/>{ residents: [...] }
-    FE-->>Admin: 住人一覧を表示（所属村名あり）
-```
-
-### 村別住人一覧を取得する
-
-```mermaid
-sequenceDiagram
-    actor Admin as 管理者
-    participant FE as Vue 3 フロントエンド
-    participant API as Lambda (listVillageResidents)
-    participant DB as Aurora PostgreSQL
-
-    Admin->>FE: 村別住人一覧ページ（/villages/:id/residents）を開く
-    FE->>API: GET /api/villages/:id/residents<br/>Authorization: Bearer <token>
-    API->>API: 認証ユーザーID・村ID を取得
-    API->>DB: SELECT owner_id FROM villages WHERE id = ?
-    DB-->>API: villages レコード
-    alt 村が存在しない or 権限なし
-        API-->>FE: 403 Forbidden
-        FE-->>Admin: エラーメッセージ表示
-    else 権限あり
-        API->>DB: SELECT * FROM residents<br/>WHERE village_id = ?<br/>ORDER BY name_kana ASC
-        DB-->>API: 住人レコード一覧
-        API-->>FE: 200 OK<br/>{ residents: [...] }
-        FE-->>Admin: 村別住人一覧を表示（所属村名なし）
-    end
-```
+| エンドポイント | 使用パターン |
+|---|---|
+| POST /api/residents | 代表パターン 2（認証 + 村所有権チェック + 書き込み） |
+| GET /api/residents | 代表パターン 3（認証 + 読み取り）。villages INNER JOIN で `owner_id` 絞り込み |
+| GET /api/villages/:id/residents | 代表パターン 2 の読み取り変形（権限チェック後に SELECT） |
 
 ---
 
@@ -398,8 +323,10 @@ async function createResident(input: CreateResidentInput): Promise<Resident>
 
 ### 生年月日の扱い
 
-- DB では `VARCHAR(10)` として `YYYY-MM-DD` 文字列で保存する（日付型は不使用）
-- 理由: シミュレーションで年齢の「目安」として使うため、タイムゾーン変換の影響を受けない文字列型を採用する
+- DB では `DATE` 型で保存する
+- Drizzle ORM の `date('birth_date', { mode: 'string' })` を使用し、DB から "YYYY-MM-DD" 文字列として取得する（`mode: 'string'` により Date オブジェクト変換を経由しないため、タイムゾーン変換の影響を受けない）
+- API リクエスト / レスポンスともに "YYYY-MM-DD" 文字列で扱う
+- タイムゾーン方針の全体は [api-architecture.md](../non-functional/api-architecture.md) を参照
 - バリデーションは Zod でフォーマット検査のみ行う（未来日・無効日付の厳密チェックは行わない）
 
 ### 権限チェックの実装
