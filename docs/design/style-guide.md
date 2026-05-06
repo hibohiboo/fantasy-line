@@ -233,11 +233,6 @@ function validateName(v: string): true | string {
 <v-card>
   <v-card-title>エルムの村</v-card-title>
   <v-card-subtitle>作成日: 2026-05-05 09:00:00</v-card-subtitle>
-  <v-card-actions>
-    <v-btn variant="text" color="primary" :to="`/villages/${village.id}`">
-      詳細を見る
-    </v-btn>
-  </v-card-actions>
 </v-card>
 ```
 
