@@ -3,8 +3,8 @@ import type { VillageResponse } from '@repo/schema'
 
 let nextId = 3
 const db: VillageResponse[] = [
-  { id: 1, name: 'サンプルの村', ownerId: 'mock-user', createdAt: '2026-05-01T00:00:00.000Z' },
-  { id: 2, name: 'テストの里', ownerId: 'mock-user', createdAt: '2026-05-02T00:00:00.000Z' },
+  { id: 1, name: 'サンプルの村', ownerId: 'mock-user-1', createdAt: '2026-05-01T00:00:00.000Z' },
+  { id: 2, name: 'テストの里', ownerId: 'mock-user-1', createdAt: '2026-05-02T00:00:00.000Z' },
 ]
 
 export const handlers = [
