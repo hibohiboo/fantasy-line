@@ -187,6 +187,40 @@ E2E レイヤーでは「UI がユーザーに正しいフィードバックを�
 
 ---
 
+## フロントエンドのモック開発（MSW）
+
+フロントエンド単体でバックエンドなしに動作確認するには MSW（Mock Service Worker）を使用する。
+
+### 起動方法
+
+```bash
+cd apps/frontend
+npm run dev:mock   # ✅ 正しい（vite --mode mock）
+npm run mock:dev   # ❌ 存在しないスクリプト名
+```
+
+`dev:mock` スクリプトは `vite --mode mock` を実行し、`.env.mock` を読み込む。
+`.env.mock` に `VITE_USE_MOCK=true` が設定されているため、`main.ts` が MSW ワーカーを起動する。
+
+### しくみ
+
+```
+ブラウザ
+  └── Service Worker（mockServiceWorker.js）
+        ├── ハンドラーが一致 → モックレスポンスを返す
+        └── 一致しない → 実ネットワークへ（onUnhandledRequest: 'bypass'）
+```
+
+- `public/mockServiceWorker.js` が存在しないと MSW は動かない（`npx msw init public/` で生成）
+- MSW がインターセプトしたリクエストは DevTools の Network タブで **XHR/Fetch ではなく Service Worker** として表示される。フィルタを「All」にして確認すること
+
+### ハンドラー（`src/mocks/handlers.ts`）を書くときの注意
+
+- モックデータの `ownerId` はストア側の `getUserId()` デフォルト値（`'mock-user-1'`）と一致させる
+- ルートガードが `localStorage.getItem('userId')` を確認するため、`/villages` などの `requiresAuth: true` ルートはログイン（HomeView の「始める」ボタン）を経由しないとアクセスできない。ブラウザコンソールで `localStorage.setItem('userId', 'mock-user-1')` を実行することでもバイパス可能
+
+---
+
 ## 変更履歴
 
 | PBI | 変更日 | 変更内容 |
@@ -195,3 +229,4 @@ E2E レイヤーでは「UI がユーザーに正しいフィードバックを�
 | PBI-001 | 2026-05-05 | レスポンスのスキーマ検証パターン（`XXXResponseSchema.parse()`）と DB スキーマ・API レスポンス スキーマの分離方針を追加 |
 | PBI-001 | 2026-05-06 | フロントエンドの Small / Medium / Large 分類基準を追加（Small: 単一コンポーネント・ストア、Medium: View 結合テスト、Large: Playwright E2E） |
 | PBI-001 | 2026-05-06 | E2E テストでの `maxlength` 制約確認方針を追加。HTML 制約を無効化した強制入力はしない。バリデーション詳細は Small（Zod スキーマ）テストの責務。 |
+| PBI-001 | 2026-05-06 | MSW を使ったフロントエンドモック開発の起動手順・しくみ・ハンドラー注意事項を追加 |

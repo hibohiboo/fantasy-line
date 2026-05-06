@@ -47,6 +47,30 @@ API・インフラ担当の開発者。新しいエンドポイント実装時�
 
 ---
 
+## HTTP ヘッダーへのユーザー入力の扱い
+
+HTTP ヘッダーの値は **ISO-8859-1 の範囲内**でなければならない（RFC 7230）。
+ユーザーが入力した文字列（日本語など非 ASCII 文字を含む可能性がある値）をそのままヘッダーにセットすると、ブラウザが `TypeError: Failed to execute 'fetch'` を投げる。
+
+**方針: フロントエンドはヘッダー値を `encodeURIComponent` でエンコードし、受信側は `decodeURIComponent` でデコードする。**
+
+```typescript
+// フロントエンド送信側（village.ts）
+function userHeaders(): Record<string, string> {
+  return { 'X-User-Id': encodeURIComponent(localStorage.getItem('userId') ?? 'mock-user-1') }
+}
+
+// MSW ハンドラー受信側（handlers.ts）
+const ownerId = decodeURIComponent(request.headers.get('X-User-Id') ?? '')
+
+// バックエンド受信側（本番 API）
+const ownerId = decodeURIComponent(c.req.header('X-User-Id') ?? '')
+```
+
+同じヘッダーを複数箇所でセットするときは、ヘッダー生成を1関数に集約してエンコード漏れを防ぐこと。
+
+---
+
 ## 秘密情報の扱い
 
 - DB 接続文字列・API キーなどは環境変数で管理し、コードにハードコードしない
@@ -60,3 +84,4 @@ API・インフラ担当の開発者。新しいエンドポイント実装時�
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-001 | 2026-05-05 | 初版作成。認証モック方針・認可原則・バリデーション責務・秘密情報取り扱いを定義 |
+| PBI-001 | 2026-05-06 | HTTP ヘッダーへのユーザー入力エンコーディング方針を追加（`encodeURIComponent` / `decodeURIComponent`） |
