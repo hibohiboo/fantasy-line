@@ -6,6 +6,8 @@ import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as path from 'path';
+import { execSync } from 'child_process';
+import { mkdirSync, copyFileSync, existsSync } from 'fs';
 
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -113,6 +115,28 @@ export class InfraStack extends cdk.Stack {
       ec2.Port.tcp(AURORA_PORT),
     );
 
+    // -- Lambda Layer --
+    // CDK の bundling 機構（temp dir → rename）は Windows で EPERM になるため使わない。
+    // 代わりに CDK staging より前に layer/nodejs/ へ直接 npm install し、
+    // fromAsset でそのまま zip する方式を採用している。
+    const layerDir = path.join(__dirname, '../layer');
+    const nodejsDir = path.join(layerDir, 'nodejs');
+    mkdirSync(nodejsDir, { recursive: true });
+    copyFileSync(path.join(layerDir, 'package.json'), path.join(nodejsDir, 'package.json'));
+    // node_modules が存在しない場合のみ npm install を実行する。
+    // CI では cdk コマンド実行前に `npm install --omit=dev` を layer/nodejs/ で事前実行しておくこと。
+    if (!existsSync(path.join(nodejsDir, 'node_modules'))) {
+      execSync('npm install --omit=dev', { cwd: nodejsDir, stdio: 'inherit' });
+    }
+
+    const sharedDepsLayer = new lambda.LayerVersion(this, 'SharedDepsLayer', {
+      layerVersionName: 'fantasy-line-shared-deps',
+      code: lambda.Code.fromAsset(layerDir),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_24_X],
+      compatibleArchitectures: [lambda.Architecture.ARM_64, lambda.Architecture.X86_64],
+      description: 'Shared npm dependencies: drizzle-orm, mysql2, zod',
+    });
+
     // -- Lambda Functions --
     const lambdaDefaults: Omit<lambdaNodejs.NodejsFunctionProps, 'entry'> = {
       runtime: lambda.Runtime.NODEJS_24_X,
@@ -125,12 +149,13 @@ export class InfraStack extends cdk.Stack {
       environment: {
         DB_SECRET_ARN: auroraCluster.secret!.secretArn,
       },
+      layers: [sharedDepsLayer],
       projectRoot: path.join(__dirname, '../..'),
       bundling: {
         minify: true,
         sourceMap: false,
         target: 'node24',
-        externalModules: ['@aws-sdk/*'],
+        externalModules: ['@aws-sdk/*', 'drizzle-orm', 'mysql2', 'zod'],
       },
     };
 
@@ -151,6 +176,26 @@ export class InfraStack extends cdk.Stack {
       },
     );
     auroraCluster.secret!.grantRead(itemsFunction);
+
+    const createVillageFunction = new lambdaNodejs.NodejsFunction(
+      this,
+      'CreateVillageFunction',
+      {
+        ...lambdaDefaults,
+        entry: path.join(__dirname, '../../apps/api/src/handlers/createVillage.ts'),
+      },
+    );
+    auroraCluster.secret!.grantRead(createVillageFunction);
+
+    const listVillagesFunction = new lambdaNodejs.NodejsFunction(
+      this,
+      'ListVillagesFunction',
+      {
+        ...lambdaDefaults,
+        entry: path.join(__dirname, '../../apps/api/src/handlers/listVillages.ts'),
+      },
+    );
+    auroraCluster.secret!.grantRead(listVillagesFunction);
 
     const migrationFunction = new lambdaNodejs.NodejsFunction(
       this,
@@ -183,16 +228,28 @@ export class InfraStack extends cdk.Stack {
       restApiName: 'Fantasy Line API',
     });
 
-    const echoResource = api.root.addResource('echo');
+    const apiResource = api.root.addResource('api');
+
+    const echoResource = apiResource.addResource('echo');
     echoResource.addMethod(
       'ANY',
       new apigateway.LambdaIntegration(echoFunction),
     );
 
-    const itemsResource = api.root.addResource('items');
+    const itemsResource = apiResource.addResource('items');
     itemsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(itemsFunction),
+    );
+
+    const villagesResource = apiResource.addResource('villages');
+    villagesResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(createVillageFunction),
+    );
+    villagesResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(listVillagesFunction),
     );
 
     // -- Outputs

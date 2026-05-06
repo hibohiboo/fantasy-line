@@ -1,0 +1,238 @@
+openapi: 3.1.0
+info:
+  title: Fantasy Line API
+  version: 0.1.0
+  description: ファンタジー世界の村管理サービス API
+
+servers:
+  - url: https://{apiId}.execute-api.ap-northeast-1.amazonaws.com/prod
+    description: 本番環境 (AWS API Gateway)
+    variables:
+      apiId:
+        default: xxxxxxxxxx
+  - url: http://localhost:5173
+    description: ローカル開発環境 (Vite dev server + proxy → SAM Local or MSW)
+
+paths:
+  /api/echo:
+    get:
+      summary: エコー（疎通確認用）
+      operationId: echo
+      parameters:
+        - in: query
+          name: message
+          schema:
+            type: string
+      responses:
+        '200':
+          description: クエリパラメータをそのまま返す
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /api/villages:
+    post:
+      summary: 村を作成する
+      operationId: createVillage
+      description: ログイン中のユーザーを管理者として村を新規作成する
+      x-pbi: PBI-001
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVillageInput'
+            examples:
+              normal:
+                summary: 通常リクエスト
+                value:
+                  name: エルムの村
+      responses:
+        '201':
+          description: 村の作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateVillageResponse'
+              examples:
+                created:
+                  summary: 作成成功レスポンス
+                  value:
+                    village:
+                      id: 1
+                      name: エルムの村
+                      ownerId: user-123
+                      createdAt: '2026-05-05T00:00:00.000Z'
+        '400':
+          description: バリデーションエラーまたはJSONパース失敗
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                emptyName:
+                  summary: 村名が空の場合
+                  value:
+                    error:
+                      fieldErrors:
+                        name:
+                          - String must contain at least 1 character(s)
+                invalidJson:
+                  summary: JSONが不正な場合
+                  value:
+                    error: Invalid JSON
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      summary: 自分の村一覧を取得する
+      operationId: listVillages
+      description: ログイン中のユーザーが管理者として登録されている村のみを、作成日時の降順（最新順）で返す
+      x-pbi: PBI-001
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 村一覧の取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListVillagesResponse'
+              examples:
+                withVillages:
+                  summary: 村が存在する場合
+                  value:
+                    villages:
+                      - id: 2
+                        name: オークの村
+                        ownerId: user-123
+                        createdAt: '2026-05-06T00:00:00.000Z'
+                      - id: 1
+                        name: エルムの村
+                        ownerId: user-123
+                        createdAt: '2026-05-05T00:00:00.000Z'
+                empty:
+                  summary: 村が存在しない場合
+                  value:
+                    villages: []
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT トークン（PBI-014 実装前はモック認証）
+
+  schemas:
+    CreateVillageInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: 村名（1〜128文字）
+          example: エルムの村
+
+    Village:
+      type: object
+      required:
+        - id
+        - name
+        - ownerId
+        - createdAt
+      properties:
+        id:
+          type: integer
+          description: 村の一意識別子
+          example: 1
+        name:
+          type: string
+          description: 村名
+          example: エルムの村
+        ownerId:
+          type: string
+          description: 管理者ユーザーID
+          example: user-123
+        createdAt:
+          type: string
+          format: date-time
+          description: 作成日時（ISO 8601）
+          example: '2026-05-05T00:00:00.000Z'
+
+    CreateVillageResponse:
+      type: object
+      required:
+        - village
+      properties:
+        village:
+          $ref: '#/components/schemas/Village'
+
+    ListVillagesResponse:
+      type: object
+      required:
+        - villages
+      properties:
+        villages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Village'
+
+    ValidationErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          properties:
+            fieldErrors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+            formErrors:
+              type: array
+              items:
+                type: string
+
+    SimpleErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: 未認証
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SimpleErrorResponse'
+          example:
+            error: Unauthorized
+
+    Forbidden:
+      description: 権限なし
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SimpleErrorResponse'
+          example:
+            error: Forbidden

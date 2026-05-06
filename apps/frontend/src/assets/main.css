@@ -1,4 +1,13 @@
 @import './base.css';
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
+
+:root {
+  --font-heading: 'Cinzel', 'Georgia', serif;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading);
+}
 
 #app {
   max-width: 1280px;

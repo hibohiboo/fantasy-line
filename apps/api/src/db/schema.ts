@@ -1,5 +1,15 @@
 import { int, mysqlTable, serial, timestamp, varchar } from 'drizzle-orm/mysql-core';
 
+export const villages = mysqlTable('villages', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 128 }).notNull(),
+  ownerId: varchar('owner_id', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export type Village = typeof villages.$inferSelect;
+export type NewVillage = typeof villages.$inferInsert;
+
 export const items = mysqlTable('items', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
