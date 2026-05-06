@@ -15,7 +15,7 @@ function makeVillage(id: number, name: string, ownerId: string): VillageMock {
 async function mockVillagesApi(page: Page, villages: VillageMock[]): Promise<void> {
   // nextId は呼び出しごとに独立したクロージャで管理し、テスト間で共有しない
   let nextId = 1
-  await page.route('**/villages', async (route) => {
+  await page.route('**/api/villages', async (route) => {
     if (route.request().method() === 'POST') {
       const body = await route.request().postDataJSON() as { name: string }
       const userId = route.request().headers()['x-user-id'] ?? 'test-user-1'
@@ -93,7 +93,7 @@ test.describe('村を作成する', () => {
       makeVillage(2, 'ユーザーBの村', 'user-b'),
     ]
 
-    await page.route('**/villages', async (route) => {
+    await page.route('**/api/villages', async (route) => {
       if (route.request().resourceType() === 'document') {
         await route.continue()
         return

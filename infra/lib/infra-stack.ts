@@ -228,19 +228,21 @@ export class InfraStack extends cdk.Stack {
       restApiName: 'Fantasy Line API',
     });
 
-    const echoResource = api.root.addResource('echo');
+    const apiResource = api.root.addResource('api');
+
+    const echoResource = apiResource.addResource('echo');
     echoResource.addMethod(
       'ANY',
       new apigateway.LambdaIntegration(echoFunction),
     );
 
-    const itemsResource = api.root.addResource('items');
+    const itemsResource = apiResource.addResource('items');
     itemsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(itemsFunction),
     );
 
-    const villagesResource = api.root.addResource('villages');
+    const villagesResource = apiResource.addResource('villages');
     villagesResource.addMethod(
       'POST',
       new apigateway.LambdaIntegration(createVillageFunction),

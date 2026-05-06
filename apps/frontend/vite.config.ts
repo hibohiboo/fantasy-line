@@ -19,7 +19,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/villages': 'http://localhost:3000',
+      '/api': 'http://localhost:3000',
     },
   },
 })

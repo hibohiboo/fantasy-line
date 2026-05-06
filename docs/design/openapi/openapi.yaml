@@ -10,11 +10,11 @@ servers:
     variables:
       apiId:
         default: xxxxxxxxxx
-  - url: http://localhost:3000
-    description: ローカル開発環境 (SAM Local)
+  - url: http://localhost:5173
+    description: ローカル開発環境 (Vite dev server + proxy → SAM Local or MSW)
 
 paths:
-  /echo:
+  /api/echo:
     get:
       summary: エコー（疎通確認用）
       operationId: echo
@@ -34,7 +34,7 @@ paths:
                   message:
                     type: string
 
-  /villages:
+  /api/villages:
     post:
       summary: 村を作成する
       operationId: createVillage

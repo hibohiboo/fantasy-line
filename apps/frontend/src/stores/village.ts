@@ -17,7 +17,7 @@ export const useVillageStore = defineStore('village', () => {
     isLoading.value = true
     error.value = null
     try {
-      const res = await fetch(`${API_BASE}/villages`, {
+      const res = await fetch(`${API_BASE}/api/villages`, {
         headers: { 'X-User-Id': getUserId() },
       })
       if (!res.ok) {
@@ -37,7 +37,7 @@ export const useVillageStore = defineStore('village', () => {
     isLoading.value = true
     error.value = null
     try {
-      const res = await fetch(`${API_BASE}/villages`, {
+      const res = await fetch(`${API_BASE}/api/villages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -33,7 +33,7 @@ fantasy-line はファンタジー世界の村を「生きたシミュレーシ�
 
 ```
 Browser (Vue 3 + Pinia + Vue Router)
-    │  POST /villages          GET /villages
+    │  POST /api/villages     GET /api/villages
     ▼
 API Gateway
     │
@@ -57,7 +57,7 @@ Drizzle ORM ── Aurora MySQL (AWS RDS)
 2. 村名入力フォームが表示される
 3. 村名を入力して「作成」ボタンを押す
 4. フロントエンドがバリデーションを実行する（1〜128文字）
-5. `POST /villages` にリクエストを送信する
+5. `POST /api/villages` にリクエストを送信する
 6. API がバリデーションを実行し、村を DB に保存する
 7. 作成ユーザーを管理者として villages テーブルに記録する
 8. 村一覧画面に遷移し、新しい村が一覧に表示される
@@ -77,8 +77,8 @@ Drizzle ORM ── Aurora MySQL (AWS RDS)
 
 | メソッド | パス | 説明 | 詳細 |
 |---|---|---|---|
-| POST | /villages | 村を作成する | [OpenAPI仕様](../openapi/openapi.yaml) |
-| GET | /villages | 自分の村一覧を取得する | [OpenAPI仕様](../openapi/openapi.yaml) |
+| POST | /api/villages | 村を作成する | [OpenAPI仕様](../openapi/openapi.yaml) |
+| GET | /api/villages | 自分の村一覧を取得する | [OpenAPI仕様](../openapi/openapi.yaml) |
 
 ## データモデル概要
 
@@ -104,3 +104,4 @@ Drizzle ORM ── Aurora MySQL (AWS RDS)
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-001 | 2026-05-05 | 村管理機能の初期設計（村の作成・一覧表示・権限ガード） |
+| PBI-001 | 2026-05-06 | APIパスに `/api/` プレフィックスを追加（`/villages` → `/api/villages`） |
