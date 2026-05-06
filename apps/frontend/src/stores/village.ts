@@ -4,8 +4,8 @@ import type { VillageResponse } from '@repo/schema'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
-function getUserId(): string {
-  return localStorage.getItem('userId') ?? 'mock-user-1'
+function userHeaders(): Record<string, string> {
+  return { 'X-User-Id': encodeURIComponent(localStorage.getItem('userId') ?? 'mock-user-1') }
 }
 
 export const useVillageStore = defineStore('village', () => {
@@ -18,7 +18,7 @@ export const useVillageStore = defineStore('village', () => {
     error.value = null
     try {
       const res = await fetch(`${API_BASE}/api/villages`, {
-        headers: { 'X-User-Id': getUserId() },
+        headers: userHeaders(),
       })
       if (!res.ok) {
         error.value = `サーバーエラー: ${res.status}`
@@ -26,7 +26,8 @@ export const useVillageStore = defineStore('village', () => {
       }
       const data = await res.json()
       villages.value = data.villages
-    } catch {
+    } catch (e) {
+      console.error(e)
       error.value = '通信エラーが発生しました'
     } finally {
       isLoading.value = false
@@ -41,7 +42,7 @@ export const useVillageStore = defineStore('village', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': getUserId(),
+          ...userHeaders(),
         },
         body: JSON.stringify({ name }),
       })

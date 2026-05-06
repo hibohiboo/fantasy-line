@@ -9,12 +9,12 @@ const db: VillageResponse[] = [
 
 export const handlers = [
   http.get('/api/villages', ({ request }) => {
-    const ownerId = request.headers.get('X-User-Id') ?? ''
+    const ownerId = decodeURIComponent(request.headers.get('X-User-Id') ?? '')
     return HttpResponse.json({ villages: db.filter(v => v.ownerId === ownerId) })
   }),
 
   http.post('/api/villages', async ({ request }) => {
-    const ownerId = request.headers.get('X-User-Id') ?? ''
+    const ownerId = decodeURIComponent(request.headers.get('X-User-Id') ?? '')
     const { name } = await request.json() as { name: string }
     const village: VillageResponse = { id: nextId++, name, ownerId, createdAt: new Date().toISOString() }
     db.push(village)
