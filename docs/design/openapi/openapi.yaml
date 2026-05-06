@@ -34,6 +34,167 @@ paths:
                   message:
                     type: string
 
+  /api/residents:
+    post:
+      summary: 住人を登録する
+      operationId: createResident
+      description: ログイン中のユーザーが管理する村に住人を新規登録する。villageId の村が存在しない、または権限がない場合は 403 を返す
+      x-pbi: PBI-003
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateResidentInput'
+            examples:
+              normal:
+                summary: 通常リクエスト
+                value:
+                  name: タロウ
+                  nameKana: タロウ
+                  birthDate: '2000-01-15'
+                  villageId: 1
+      responses:
+        '201':
+          description: 住人の登録成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateResidentResponse'
+              examples:
+                created:
+                  summary: 登録成功レスポンス
+                  value:
+                    resident:
+                      id: 1
+                      name: タロウ
+                      nameKana: タロウ
+                      birthDate: '2000-01-15'
+                      villageId: 1
+                      createdAt: '2026-05-06T00:00:00.000Z'
+        '400':
+          description: バリデーションエラーまたはJSONパース失敗
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/SimpleErrorResponse'
+              examples:
+                emptyName:
+                  summary: 名前が空の場合
+                  value:
+                    error:
+                      fieldErrors:
+                        name:
+                          - String must contain at least 1 character(s)
+                invalidKana:
+                  summary: 読みがカタカナ以外の場合
+                  value:
+                    error:
+                      fieldErrors:
+                        nameKana:
+                          - 読みはカタカナで入力してください
+                missingVillageId:
+                  summary: villageId がない場合
+                  value:
+                    error:
+                      fieldErrors:
+                        villageId:
+                          - Required
+                invalidJson:
+                  summary: JSONが不正な場合
+                  value:
+                    error: Invalid JSON
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    get:
+      summary: 全住人一覧を取得する
+      operationId: listResidents
+      description: ログイン中のユーザーが管理するすべての村の住人を、読み（nameKana）の昇順で返す
+      x-pbi: PBI-003
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 住人一覧の取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResidentsResponse'
+              examples:
+                withResidents:
+                  summary: 住人が存在する場合
+                  value:
+                    residents:
+                      - id: 1
+                        name: アキコ
+                        nameKana: アキコ
+                        birthDate: '1995-03-10'
+                        villageId: 1
+                        villageName: エルムの村
+                        createdAt: '2026-05-06T00:00:00.000Z'
+                      - id: 2
+                        name: タロウ
+                        nameKana: タロウ
+                        birthDate: '2000-01-15'
+                        villageId: 1
+                        villageName: エルムの村
+                        createdAt: '2026-05-06T01:00:00.000Z'
+                empty:
+                  summary: 住人が存在しない場合
+                  value:
+                    residents: []
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/villages/{id}/residents:
+    get:
+      summary: 村別住人一覧を取得する
+      operationId: listVillageResidents
+      description: 指定した村に所属する住人を読み（nameKana）の昇順で返す。村の所有者以外は 403 を返す
+      x-pbi: PBI-003
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: 村ID
+      responses:
+        '200':
+          description: 村別住人一覧の取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListVillageResidentsResponse'
+              examples:
+                withResidents:
+                  summary: 住人が存在する場合
+                  value:
+                    residents:
+                      - id: 1
+                        name: アキコ
+                        nameKana: アキコ
+                        birthDate: '1995-03-10'
+                        villageId: 1
+                        createdAt: '2026-05-06T00:00:00.000Z'
+                empty:
+                  summary: 住人が存在しない場合
+                  value:
+                    residents: []
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /api/villages:
     post:
       summary: 村を作成する
@@ -135,6 +296,114 @@ components:
       description: JWT トークン（PBI-014 実装前はモック認証）
 
   schemas:
+    CreateResidentInput:
+      type: object
+      required:
+        - name
+        - nameKana
+        - birthDate
+        - villageId
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: 住人名（1〜128文字）
+          example: タロウ
+        nameKana:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: '^[ァ-ヴー]+$'
+          description: 読み（全角カタカナのみ、1〜128文字）
+          example: タロウ
+        birthDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: 生年月日（YYYY-MM-DD 形式）
+          example: '2000-01-15'
+        villageId:
+          type: integer
+          minimum: 1
+          description: 所属村ID
+          example: 1
+
+    Resident:
+      type: object
+      required:
+        - id
+        - name
+        - nameKana
+        - birthDate
+        - villageId
+        - createdAt
+      properties:
+        id:
+          type: integer
+          description: 住人の一意識別子
+          example: 1
+        name:
+          type: string
+          description: 住人名
+          example: タロウ
+        nameKana:
+          type: string
+          description: 読み（全角カタカナ）
+          example: タロウ
+        birthDate:
+          type: string
+          description: 生年月日（YYYY-MM-DD 形式）
+          example: '2000-01-15'
+        villageId:
+          type: integer
+          description: 所属村ID
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          description: 作成日時（ISO 8601）
+          example: '2026-05-06T00:00:00.000Z'
+
+    ResidentWithVillage:
+      allOf:
+        - $ref: '#/components/schemas/Resident'
+        - type: object
+          required:
+            - villageName
+          properties:
+            villageName:
+              type: string
+              description: 所属村名
+              example: エルムの村
+
+    CreateResidentResponse:
+      type: object
+      required:
+        - resident
+      properties:
+        resident:
+          $ref: '#/components/schemas/Resident'
+
+    ListResidentsResponse:
+      type: object
+      required:
+        - residents
+      properties:
+        residents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResidentWithVillage'
+
+    ListVillageResidentsResponse:
+      type: object
+      required:
+        - residents
+      properties:
+        residents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Resident'
+
     CreateVillageInput:
       type: object
       required:

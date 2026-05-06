@@ -66,10 +66,13 @@ PBI ごとの初期実装スニペットは `docs/sprints/` 配下の実装ノ�
 
 各ユースケース（API エンドポイント）がどのテーブルに対して何の操作を行うかを示す。
 
-| ユースケース / エンドポイント | villages | （将来テーブル） |
+| ユースケース / エンドポイント | villages | residents |
 |---|---|---|
-| POST /villages（村を作成する） | **C** | — |
-| GET /villages（村一覧を取得する） | **R** | — |
+| POST /api/villages（村を作成する） | **C** | — |
+| GET /api/villages（村一覧を取得する） | **R** | — |
+| POST /api/residents（住人を登録する） | **R**（権限確認） | **C** |
+| GET /api/residents（全住人一覧を取得する） | **R**（JOIN） | **R** |
+| GET /api/villages/:id/residents（村別住人一覧） | **R**（権限確認） | **R** |
 
 凡例: **C** = Create（INSERT）, **R** = Read（SELECT）, **U** = Update（UPDATE）, **D** = Delete（DELETE）
 
@@ -82,3 +85,4 @@ PBI ごとの初期実装スニペットは `docs/sprints/` 配下の実装ノ�
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-001 | 2026-05-05 | villages テーブル新規追加、CRUD 表初版作成、owner_id インデックスを性能要件を踏まえ保留 |
+| PBI-003 | 2026-05-06 | CRUD 表に residents テーブルへの操作を追加 |
