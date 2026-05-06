@@ -7,7 +7,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import { mkdirSync, copyFileSync } from 'fs';
+import { mkdirSync, copyFileSync, existsSync } from 'fs';
 
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -123,7 +123,11 @@ export class InfraStack extends cdk.Stack {
     const nodejsDir = path.join(layerDir, 'nodejs');
     mkdirSync(nodejsDir, { recursive: true });
     copyFileSync(path.join(layerDir, 'package.json'), path.join(nodejsDir, 'package.json'));
-    execSync('npm install --omit=dev', { cwd: nodejsDir, stdio: 'inherit' });
+    // node_modules が存在しない場合のみ npm install を実行する。
+    // CI では cdk コマンド実行前に `npm install --omit=dev` を layer/nodejs/ で事前実行しておくこと。
+    if (!existsSync(path.join(nodejsDir, 'node_modules'))) {
+      execSync('npm install --omit=dev', { cwd: nodejsDir, stdio: 'inherit' });
+    }
 
     const sharedDepsLayer = new lambda.LayerVersion(this, 'SharedDepsLayer', {
       layerVersionName: 'fantasy-line-shared-deps',

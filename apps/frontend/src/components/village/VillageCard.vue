@@ -4,9 +4,6 @@
     <v-card-subtitle class="text-body-medium text-medium-emphasis">
       作成日: {{ formattedDate }}
     </v-card-subtitle>
-    <v-card-actions>
-      <v-btn variant="text" color="primary" :to="`/villages/${village.id}`"> 詳細を見る </v-btn>
-    </v-card-actions>
   </v-card>
 </template>
 

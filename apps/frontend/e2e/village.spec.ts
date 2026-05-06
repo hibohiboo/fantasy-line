@@ -13,7 +13,8 @@ function makeVillage(id: number, name: string, ownerId: string): VillageMock {
 }
 
 async function mockVillagesApi(page: Page, villages: VillageMock[]): Promise<void> {
-  let nextId = villages.length + 1
+  // nextId は呼び出しごとに独立したクロージャで管理し、テスト間で共有しない
+  let nextId = 1
   await page.route('**/villages', async (route) => {
     if (route.request().method() === 'POST') {
       const body = await route.request().postDataJSON() as { name: string }

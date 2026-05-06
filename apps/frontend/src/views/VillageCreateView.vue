@@ -61,8 +61,8 @@ function validateName(v: string): true | string {
 }
 
 async function onSubmit() {
-  const { valid } = await form.value!.validate()
-  if (!valid) return
+  const result = await form.value?.validate()
+  if (!result?.valid) return
 
   isSubmitting.value = true
   apiError.value = null

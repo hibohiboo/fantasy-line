@@ -14,6 +14,11 @@ export const handler = async (
   event: APIGatewayProxyEvent,
   _context: Context,
 ): Promise<APIGatewayProxyResult> => {
+  const ownerId = event.headers?.['X-User-Id'];
+  if (!ownerId) {
+    return json(401, { error: 'Unauthorized' });
+  }
+
   let body: unknown;
   try {
     body = JSON.parse(event.body ?? '');
@@ -24,11 +29,6 @@ export const handler = async (
   const parsed = CreateVillageSchema.safeParse(body);
   if (!parsed.success) {
     return json(400, { error: z.flattenError(parsed.error) });
-  }
-
-  const ownerId = event.headers?.['X-User-Id'];
-  if (!ownerId) {
-    return json(401, { error: 'Unauthorized' });
   }
 
   const db = await getDb();

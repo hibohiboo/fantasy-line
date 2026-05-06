@@ -39,7 +39,7 @@ async function buildDb() {
   }
 
   const pool = mysql.createPool({
-    host: process.env.DB_HOST ?? 'host.docker.internal',
+    host: process.env.DB_HOST ?? 'host.docker.internal', // infra/package.json の local-api スクリプトからの実行を想定
     port: Number(process.env.DB_PORT ?? '3306'),
     user: process.env.DB_USER ?? 'testuser',
     password: process.env.DB_PASSWORD ?? 'testpass',
