@@ -21,3 +21,15 @@ export const items = mysqlTable('items', {
 
 export type Item = typeof items.$inferSelect;
 export type NewItem = typeof items.$inferInsert;
+
+export const residents = mysqlTable('residents', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 128 }).notNull(),
+  nameKana: varchar('name_kana', { length: 128 }).notNull(),
+  birthDate: date('birth_date', { mode: 'string' }).notNull(),
+  villageId: bigint('village_id', { mode: 'number' }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export type Resident = typeof residents.$inferSelect;
+export type NewResident = typeof residents.$inferInsert;
