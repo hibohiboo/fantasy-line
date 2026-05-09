@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
 export const CreateResidentSchema = z.object({
-  name: z.string().min(1),
-  nameKana: z.string().min(1),
-  birthDate: z.string(),
+  name: z.string().min(1).max(128),
+  nameKana: z.string().min(1).max(128).regex(/^[ァ-ヴー]+$/),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   villageId: z.number().int().min(1),
 });
 
+// DB 行レベルの型（Drizzle が返す Date オブジェクトを使用）
 export const ResidentSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -16,6 +17,7 @@ export const ResidentSchema = z.object({
   createdAt: z.date(),
 });
 
+// API レスポンス用の型（JSON シリアライズ後の文字列になる。OpenAPI Resident.createdAt: string / format: date-time に対応）
 export const ResidentResponseSchema = z.object({
   id: z.number(),
   name: z.string(),
