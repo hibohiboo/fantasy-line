@@ -119,9 +119,9 @@ describe('ResidentCreateView', () => {
     }
     vi.spyOn(store, 'createResident').mockResolvedValue(mockResident)
     const inputs = wrapper.findAll('input')
-    await inputs[0].setValue('田中太郎')
-    await inputs[1].setValue('タナカタロウ')
-    await inputs[2].setValue('2000-01-15')
+    await inputs[0]!.setValue('田中太郎')
+    await inputs[1]!.setValue('タナカタロウ')
+    await inputs[2]!.setValue('2000-01-15')
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/residents')

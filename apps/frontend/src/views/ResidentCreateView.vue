@@ -69,16 +69,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { storeToRefs } from 'pinia'
 import { useResidentStore } from '@/stores/resident'
 import { useVillageStore } from '@/stores/village'
 import { CreateResidentSchema } from '@repo/schema'
+import type { VillageResponse } from '@repo/schema'
 
 const router = useRouter()
 const residentStore = useResidentStore()
 const villageStore = useVillageStore()
-
-const { villages } = storeToRefs(villageStore)
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const name = ref('')
@@ -88,7 +86,7 @@ const villageId = ref<number | null>(null)
 const isSubmitting = ref(false)
 const apiError = ref<string | null>(null)
 
-const villageItems = computed(() => villages.value)
+const villageItems = computed(() => villageStore.villages as unknown as VillageResponse[])
 
 onMounted(() => villageStore.fetchVillages())
 
@@ -112,7 +110,7 @@ function validateNameKana(v: string): true | string {
   const issue = result.error.issues[0]
   if (issue?.code === 'too_small') return '読みは必須です'
   if (issue?.code === 'too_big') return '読みは128文字以内で入力してください'
-  if (issue?.code === 'invalid_string' || issue?.code === 'invalid_format') return '読みはカタカナで入力してください'
+  if (issue?.code === 'invalid_format') return '読みはカタカナで入力してください'
   return '入力内容を確認してください'
 }
 
@@ -144,7 +142,7 @@ async function onSubmit() {
       villageId: villageId.value,
     })
     if (resident === null) {
-      apiError.value = residentStore.error ?? '住人の登録に失敗しました。再試行してください。'
+      apiError.value = (residentStore.error as unknown as string | null) ?? '住人の登録に失敗しました。再試行してください。'
       return
     }
     router.push('/residents')

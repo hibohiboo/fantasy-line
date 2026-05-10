@@ -45,9 +45,12 @@ async function bootstrap() {
   }
 
   const app = createApp(App)
-  app.use(createPinia())
-  app.use(router)
-  app.use(vuetify)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app.use(createPinia() as any)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app.use(router as any)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app.use(vuetify as any)
   app.mount('#app')
 }
 

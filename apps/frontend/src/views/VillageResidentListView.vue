@@ -29,15 +29,16 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import { useResidentStore } from '@/stores/resident'
 import ResidentList from '@/components/resident/ResidentList.vue'
+import type { ResidentResponse } from '@repo/schema'
 
 const route = useRoute()
 const store = useResidentStore()
-const { villageResidents, isLoading, error } = storeToRefs(store)
-const isError = computed(() => error.value !== null)
+const villageResidents = computed(() => store.villageResidents as unknown as ResidentResponse[])
+const isLoading = computed(() => store.isLoading as unknown as boolean)
+const isError = computed(() => (store.error as unknown as string | null) !== null)
 
 onMounted(() => {
   const villageId = Number(route.params.id)
