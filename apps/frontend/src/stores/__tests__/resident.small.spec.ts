@@ -104,7 +104,7 @@ describe('useResidentStore', () => {
     })
 
     it('fetchVillageResidents は villageId を含む URL で API を呼ぶ', async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
+      const mockFetch = vi.fn<() => Promise<{ ok: boolean; json: () => Promise<{ residents: ResidentResponse[] }> }>>().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ residents: [] }),
       })
