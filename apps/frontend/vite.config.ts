@@ -9,7 +9,8 @@ import vuetify from 'vite-plugin-vuetify'
 export default defineConfig({
   plugins: [
     vue(),
-    vuetify({ autoImport: true }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vuetify({ autoImport: true }) as any,
     vueDevTools(),
   ],
   resolve: {
