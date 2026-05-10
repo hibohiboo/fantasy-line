@@ -2,40 +2,24 @@ import {
   describe,
   it,
   expect,
-  beforeAll,
-  afterAll,
   beforeEach,
   vi,
 } from 'vitest';
 // バリデーションエラー（400）ケースは DB 不要のため tests/handlers/createItem.small.test.ts で管理
-import type { StartedTestContainer } from 'testcontainers';
-import mysql from 'mysql2/promise';
-import type { MySql2Database } from 'drizzle-orm/mysql2';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import type * as CreateItemModule from '../../src/handlers/createItem';
 import * as schema from '../../src/db/schema';
-import { setupMysqlContainer } from '../helpers/mysql-setup';
+import { useMysqlContainer } from '../helpers/use-mysql-container';
 import { mockDbClient } from '../helpers/db-mock';
 
-let container: StartedTestContainer;
-let pool: mysql.Pool;
-let testDb: MySql2Database<typeof schema>;
+const ctx = useMysqlContainer();
 let handler: typeof CreateItemModule.handler;
-
-beforeAll(async () => {
-  ({ container, pool, testDb } = await setupMysqlContainer());
-});
-
-afterAll(async () => {
-  await pool?.end();
-  await container?.stop();
-});
 
 describe('createItem handler', () => {
   beforeEach(async () => {
-    await testDb.delete(schema.items);
+    await ctx.db.delete(schema.items);
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(testDb));
+    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
     ({ handler } = await import('../../src/handlers/createItem'));
   });
 

@@ -9,6 +9,11 @@ const validBody = {
   villageId: 1,
 };
 
+// db-mock.ts は単純な select/insert チェーンを提供するが、createResident では
+// "village SELECT → 権限チェック → resident INSERT → resident SELECT" と
+// 同一リクエスト内で select を2回呼ぶ。db-mock.ts はこの複合チェーンに非対応のため
+// ここでは early-return ケース（401/400/403）専用の最小モックを独自実装している。
+// 正常系（201）は Medium テスト（createResident.medium.test.ts）で担保する。（R4/R6）
 function buildSelectChain(villageRows: unknown[]) {
   return {
     from: () => ({ where: () => Promise.resolve(villageRows) }),

@@ -6,6 +6,8 @@ import * as schema from '../../src/db/schema';
 import { useMysqlContainer } from '../helpers/use-mysql-container';
 import { mockDbClient } from '../helpers/db-mock';
 
+// バリデーションエラー（400）ケースは DB 不要のため tests/handlers/createVillage.small.test.ts で管理
+
 const ctx = useMysqlContainer();
 let handler: typeof CreateVillageModule.handler;
 
@@ -33,17 +35,4 @@ describe('createVillage handler - 統合テスト', () => {
     expect(village.ownerId).toBe('user-1');
     expect(village.createdAt).toBeDefined();
   });
-
-  it('バリデーションエラーのリクエストで400を返す', async () => {
-    const result = await handler(
-      {
-        body: JSON.stringify({ name: '' }),
-        headers: { 'X-User-Id': 'user-1' },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(400);
-  });
-
 });

@@ -16,7 +16,7 @@ export const items = mysqlTable('items', {
   description: varchar('description', { length: 1000 }),
   rarity: varchar('rarity', { length: 50 }).notNull().default('common'),
   price: int('price').notNull().default(0),
-  createdAt: timestamp('created_at').defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 export type Item = typeof items.$inferSelect;
