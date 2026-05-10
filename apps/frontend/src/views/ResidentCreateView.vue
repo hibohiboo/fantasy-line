@@ -112,7 +112,7 @@ function validateNameKana(v: string): true | string {
   const issue = result.error.issues[0]
   if (issue?.code === 'too_small') return '読みは必須です'
   if (issue?.code === 'too_big') return '読みは128文字以内で入力してください'
-  if (issue?.code === 'invalid_string') return '読みはカタカナで入力してください'
+  if (issue?.code === 'invalid_string' || issue?.code === 'invalid_format') return '読みはカタカナで入力してください'
   return '入力内容を確認してください'
 }
 
