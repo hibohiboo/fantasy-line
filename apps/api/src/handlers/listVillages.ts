@@ -8,6 +8,7 @@ import { getDb } from '../db/client';
 import { villages } from '../db/schema';
 import { json } from '../http';
 import { getOwnerId } from '../auth';
+import { logInfo } from '../logger';
 
 export const handler = async (
   event: APIGatewayProxyEvent,
@@ -24,7 +25,7 @@ export const handler = async (
     .where(eq(villages.ownerId, ownerId))
     .orderBy(desc(villages.createdAt));
 
-  console.log(JSON.stringify({ level: 'info', action: 'listVillages', count: result.length, ownerId }));
+  logInfo({ action: 'listVillages', count: result.length, ownerId });
 
   return json(200, { villages: result });
 };

@@ -9,6 +9,7 @@ import { CreateItemSchema } from '@repo/schema';
 import { getDb } from '../db/client';
 import { items } from '../db/schema';
 import { json } from '../http';
+import { logInfo } from '../logger';
 
 // items テーブルはユーザー所有リソースでないため認証チェック不要
 export const handler = async (
@@ -36,13 +37,7 @@ export const handler = async (
     .from(items)
     .where(eq(items.id, inserted.id));
 
-  console.log(
-    JSON.stringify({
-      level: 'info',
-      action: 'createItem',
-      itemId: inserted.id,
-    }),
-  );
+  logInfo({ action: 'createItem', itemId: inserted.id });
 
   return json(201, { item: created });
 };

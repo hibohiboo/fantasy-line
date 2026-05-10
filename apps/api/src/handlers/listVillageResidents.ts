@@ -8,6 +8,7 @@ import { getDb } from '../db/client';
 import { villages, residents } from '../db/schema';
 import { json } from '../http';
 import { getOwnerId } from '../auth';
+import { logInfo } from '../logger';
 
 export const handler = async (
   event: APIGatewayProxyEvent,
@@ -43,15 +44,7 @@ export const handler = async (
     .where(eq(residents.villageId, villageId))
     .orderBy(asc(residents.nameKana));
 
-  console.log(
-    JSON.stringify({
-      level: 'info',
-      action: 'listVillageResidents',
-      villageId,
-      count: rows.length,
-      ownerId,
-    }),
-  );
+  logInfo({ action: 'listVillageResidents', villageId, count: rows.length, ownerId });
 
   return json(200, { residents: rows });
 };

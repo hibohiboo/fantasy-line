@@ -10,6 +10,7 @@ import { getDb } from '../db/client';
 import { villages, residents } from '../db/schema';
 import { json } from '../http';
 import { getOwnerId } from '../auth';
+import { logInfo } from '../logger';
 
 export const handler = async (
   event: APIGatewayProxyEvent,
@@ -58,15 +59,7 @@ export const handler = async (
     .from(residents)
     .where(eq(residents.id, inserted.id));
 
-  console.log(
-    JSON.stringify({
-      level: 'info',
-      action: 'createResident',
-      residentId: inserted.id,
-      villageId: parsed.data.villageId,
-      ownerId,
-    }),
-  );
+  logInfo({ action: 'createResident', residentId: inserted.id, villageId: parsed.data.villageId, ownerId });
 
   return json(201, { resident: created });
 };
