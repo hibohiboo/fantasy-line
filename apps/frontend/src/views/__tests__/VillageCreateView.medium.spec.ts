@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
-import { createPinia, setActivePinia } from 'pinia'
+import { createTestingPinia } from '@pinia/testing'
 import { createRouter, createWebHistory } from 'vue-router'
 import VillageCreateView from '../VillageCreateView.vue'
+import { useVillageStore } from '@/stores/village'
 
 const vuetify = createVuetify()
 
@@ -19,13 +20,23 @@ function makeRouter() {
 
 function mountView(router = makeRouter()) {
   return mount(VillageCreateView, {
-    global: { plugins: [vuetify, createPinia(), router] },
+    global: {
+      plugins: [
+        vuetify,
+        createTestingPinia({
+          initialState: { village: {} },
+          stubActions: true,
+          createSpy: vi.fn,
+        }),
+        router,
+      ],
+    },
+    attachTo: document.body,
   })
 }
 
 describe('VillageCreateView', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
     vi.restoreAllMocks()
   })
 
@@ -35,6 +46,7 @@ describe('VillageCreateView', () => {
     expect(wrapper.find('input').exists()).toBe(true)
     expect(wrapper.text()).toContain('作成する')
     expect(wrapper.text()).toContain('キャンセル')
+    wrapper.unmount()
   })
 
   it('空文字で送信するとバリデーションエラーが表示され遷移しない', async () => {
@@ -42,8 +54,10 @@ describe('VillageCreateView', () => {
     const wrapper = mountView(router)
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
+    await flushPromises()
     expect(wrapper.text()).toContain('村名を入力してください')
     expect(router.currentRoute.value.path).toBe('/')
+    wrapper.unmount()
   })
 
   it('129文字で送信するとバリデーションエラーが表示され遷移しない', async () => {
@@ -52,22 +66,26 @@ describe('VillageCreateView', () => {
     await wrapper.find('input').setValue('あ'.repeat(129))
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
+    await flushPromises()
     expect(wrapper.text()).toContain('128文字以内')
     expect(router.currentRoute.value.path).toBe('/')
+    wrapper.unmount()
   })
 
   it('正常送信後に /villages へリダイレクトする', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        village: { id: 1, name: 'テスト村', ownerId: 'user-1', createdAt: '2026-05-05T00:00:00.000Z' },
-      }),
-    }))
     const router = makeRouter()
     const wrapper = mountView(router)
+    const store = useVillageStore()
+    vi.spyOn(store, 'createVillage').mockResolvedValue({
+      id: 1,
+      name: 'テスト村',
+      ownerId: 'user-1',
+      createdAt: '2026-05-05T00:00:00.000Z',
+    })
     await wrapper.find('input').setValue('テスト村')
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/villages')
+    wrapper.unmount()
   })
 })
