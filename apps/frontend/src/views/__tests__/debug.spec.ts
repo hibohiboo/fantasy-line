@@ -1,61 +1,42 @@
-import { describe, it, expect, vi } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import { nextTick, getCurrentInstance } from 'vue'
-import * as vueModule from 'vue'
-import { createVuetify } from 'vuetify'
-import { createPinia, setActivePinia } from 'pinia'
-import { createRouter, createWebHistory } from 'vue-router'
-import VillageListView from '../VillageListView.vue'
-import { useVillageStore } from '@/stores/village'
+import { describe, it, expect } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { ref, defineComponent, watch } from 'vue'
 
-const vuetify = createVuetify()
+describe('minimal vue reactivity test', () => {
+  it('basic ref with watch callback', async () => {
+    const externalRef = ref<string[]>([])
+    let watchCalled = false
+    let watchValue: string[] = []
 
-function makeRouter() {
-  return createRouter({
-    history: createWebHistory(),
-    routes: [
-      { path: '/', component: { template: '<div />' } },
-      { path: '/villages/new', component: { template: '<div />' } },
-    ],
-  })
-}
-
-describe('debug VillageListView', () => {
-  it('withDirectives trace', async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        villages: [{ id: 1, name: 'テスト村', ownerId: 'u1', createdAt: '2026-05-05T00:00:00.000Z' }],
-      }),
-    })
-    vi.stubGlobal('fetch', mockFetch)
-
-    // Spy on withDirectives
-    const origWithDirectives = vueModule.withDirectives
-    const withDirectivesSpy = vi.spyOn(vueModule, 'withDirectives').mockImplementation((...args) => {
-      const inst = getCurrentInstance()
-      if (!inst) {
-        console.error('withDirectives called outside render function! Stack:', new Error().stack?.split('\n').slice(1, 5).join('\n'))
-      }
-      return origWithDirectives(...args)
+    const TestComponent = defineComponent({
+      template: `<div><span v-if="items.length === 0">empty</span><span v-else>{{ items[0] }}</span></div>`,
+      setup() {
+        watch(externalRef, (newVal) => {
+          watchCalled = true
+          watchValue = newVal
+          console.log('watch called, newVal:', JSON.stringify(newVal))
+        })
+        return { items: externalRef }
+      },
     })
 
-    const pinia = createPinia()
-    setActivePinia(pinia)
+    const wrapper = mount(TestComponent)
 
-    const wrapper = mount(VillageListView, {
-      global: { plugins: [vuetify, pinia, makeRouter()] },
-    })
-    await flushPromises()
-    await nextTick()
+    console.log('before:', wrapper.html())
 
-    const store = useVillageStore()
-    console.log('store.villages:', JSON.stringify(store.villages))
-    console.log('wrapper text:', wrapper.text())
+    externalRef.value = ['hello']
 
-    withDirectivesSpy.mockRestore()
+    console.log('watchCalled after ref update (sync):', watchCalled)
 
-    expect(store.villages).toHaveLength(1)
-    expect(wrapper.text()).toContain('テスト村')
+    // Manually flush microtasks
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    console.log('watchCalled after microtasks:', watchCalled)
+    console.log('wrapper.html() after microtasks:', wrapper.html())
+
+    expect(watchCalled).toBe(true)
+    expect(wrapper.text()).toBe('hello')
   })
 })
