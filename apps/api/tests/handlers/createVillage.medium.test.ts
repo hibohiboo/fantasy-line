@@ -46,15 +46,4 @@ describe('createVillage handler - 統合テスト', () => {
     expect(result.statusCode).toBe(400);
   });
 
-  it('X-User-Idヘッダーがない場合は401を返す', async () => {
-    const result = await handler(
-      {
-        body: JSON.stringify({ name: '勇者の村' }),
-        headers: {},
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(401);
-  });
 });

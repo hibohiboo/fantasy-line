@@ -67,22 +67,6 @@ describe('createResident handler - ハンドラー固有のケース', () => {
     );
   });
 
-  it('X-User-Idヘッダーがない場合は401を返す', async () => {
-    vi.doMock('../../src/db/client', () => makeMockDb([]));
-    const { handler } = await import('../../src/handlers/createResident') as typeof CreateResidentModule;
-
-    const result = await handler(
-      {
-        body: JSON.stringify(validBody),
-        headers: {},
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(401);
-    expect(JSON.parse(result.body).error).toBe('Unauthorized');
-  });
-
   it('他ユーザーの村へ登録しようとした場合は403を返す', async () => {
     const otherUserVillage = [{ id: 1, name: '他者の村', ownerId: 'user-2', createdAt: new Date() }];
     vi.doMock('../../src/db/client', () => makeMockDb(otherUserVillage));

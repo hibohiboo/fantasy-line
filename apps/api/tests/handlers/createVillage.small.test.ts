@@ -36,16 +36,4 @@ describe('createVillage handler - ハンドラー固有のケース', () => {
     );
   });
 
-  it('X-User-Idヘッダーがない場合は401を返す', async () => {
-    const result = await handler(
-      {
-        body: JSON.stringify({ name: '勇者の村' }),
-        headers: {},
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(401);
-    expect(JSON.parse(result.body).error).toBe('Unauthorized');
-  });
 });

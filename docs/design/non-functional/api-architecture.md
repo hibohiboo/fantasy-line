@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-05-06
+last_updated: 2026-05-10
 ---
 
 # API アーキテクチャ — リクエスト処理の代表パターン
@@ -17,10 +17,25 @@ API ハンドラーを実装する開発者。認証・ユーザーID 取得・�
 
 | フェーズ | 取得元 | 実装 |
 |---|---|---|
-| 開発中（PBI-014 前） | リクエストヘッダー `X-User-Id` | `decodeURIComponent(req.headers['x-user-id'] ?? '')` |
-| 本番（PBI-014 後） | API Gateway Authorizer | `event.requestContext.authorizer.userId` |
+| 開発中（PBI-014 前） | リクエストヘッダー `X-User-Id` | `apps/api/src/auth.ts` の `getOwnerId(event)` を呼び出す |
+| 本番（PBI-014 後） | API Gateway Authorizer | `event.requestContext.authorizer.userId`（PBI-014 で `auth.ts` を差し替え） |
 
 ヘッダーが存在しない場合（開発中）または Authorizer が通過しない場合（本番）は `401 Unauthorized` を返す。
+
+### `getOwnerId` の使い方
+
+すべての認証が必要なハンドラーで以下のパターンを使う。直接ヘッダーを参照しないこと。
+
+```typescript
+import { getOwnerId } from '../auth';
+
+const ownerIdOrError = getOwnerId(event);
+if (typeof ownerIdOrError !== 'string') return ownerIdOrError; // 401 を早期リターン
+const ownerId = ownerIdOrError;
+```
+
+`getOwnerId` のユニットテストは `apps/api/tests/small/auth.test.ts` に集約されているため、
+各ハンドラーのテストで 401 ケースを個別に書く必要はない。
 
 ---
 
@@ -139,3 +154,4 @@ sequenceDiagram
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-003 | 2026-05-06 | 初版作成。代表パターン3種・認証方式・タイムゾーン方針を定義 |
+| PBI-003 | 2026-05-10 | 認証チェックを `src/auth.ts` の `getOwnerId()` に共通化。使い方・テスト方針を追記 |

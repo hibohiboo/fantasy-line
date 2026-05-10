@@ -78,12 +78,4 @@ describe('listVillages handler - 統合テスト', () => {
     expect(villages.at(1)?.name).toBe('古い村');
   });
 
-  it('X-User-Idヘッダーがない場合は401を返す', async () => {
-    const result = await handler(
-      { headers: {} } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(401);
-  });
 });

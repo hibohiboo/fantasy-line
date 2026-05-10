@@ -59,18 +59,6 @@ describe('createResident handler - 統合テスト', () => {
     expect(rows).toHaveLength(1);
   });
 
-  it('X-User-Idヘッダーがない場合は401を返す', async () => {
-    const result = await handler(
-      {
-        body: JSON.stringify({ ...validBody, villageId: ownedVillageId }),
-        headers: {},
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(401);
-  });
-
   it('バリデーションエラーのリクエストで400を返す', async () => {
     const result = await handler(
       {
