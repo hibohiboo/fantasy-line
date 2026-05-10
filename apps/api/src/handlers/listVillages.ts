@@ -12,7 +12,7 @@ import { logInfo } from '../logger';
 
 export const handler = async (
   event: APIGatewayProxyEvent,
-  _context: Context,
+  context: Context,
 ): Promise<APIGatewayProxyResult> => {
   const ownerIdResult = getOwnerId(event);
   if (typeof ownerIdResult !== 'string') return ownerIdResult;
@@ -25,7 +25,7 @@ export const handler = async (
     .where(eq(villages.ownerId, ownerId))
     .orderBy(desc(villages.createdAt));
 
-  logInfo({ action: 'listVillages', count: result.length, ownerId });
+  logInfo({ message: '村一覧を取得しました', requestId: context.awsRequestId, userId: ownerId, count: result.length });
 
   return json(200, { villages: result });
 };

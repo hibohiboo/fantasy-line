@@ -14,7 +14,7 @@ import { logInfo } from '../logger';
 // items テーブルはユーザー所有リソースでないため認証チェック不要
 export const handler = async (
   event: APIGatewayProxyEvent,
-  _context: Context,
+  context: Context,
 ): Promise<APIGatewayProxyResult> => {
   let body: unknown;
   try {
@@ -37,7 +37,7 @@ export const handler = async (
     .from(items)
     .where(eq(items.id, inserted.id));
 
-  logInfo({ action: 'createItem', itemId: inserted.id });
+  logInfo({ message: 'アイテムを作成しました', requestId: context.awsRequestId, itemId: inserted.id });
 
   return json(201, { item: created });
 };

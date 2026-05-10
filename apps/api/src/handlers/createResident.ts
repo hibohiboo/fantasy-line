@@ -14,7 +14,7 @@ import { logInfo } from '../logger';
 
 export const handler = async (
   event: APIGatewayProxyEvent,
-  _context: Context,
+  context: Context,
 ): Promise<APIGatewayProxyResult> => {
   const ownerIdResult = getOwnerId(event);
   if (typeof ownerIdResult !== 'string') return ownerIdResult;
@@ -59,7 +59,7 @@ export const handler = async (
     .from(residents)
     .where(eq(residents.id, inserted.id));
 
-  logInfo({ action: 'createResident', residentId: inserted.id, villageId: parsed.data.villageId, ownerId });
+  logInfo({ message: '住人を登録しました', requestId: context.awsRequestId, userId: ownerId, villageId: parsed.data.villageId, residentId: inserted.id });
 
   return json(201, { resident: created });
 };
