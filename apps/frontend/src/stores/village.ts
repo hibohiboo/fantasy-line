@@ -9,19 +9,19 @@ export const useVillageStore = defineStore('village', () => {
 
   async function fetchVillages(): Promise<void> {
     await withLoading(async () => {
-      const res = await apiFetch('/api/villages')
-      villages.value = (await res.json()).villages
+      const { villages: data } = await apiFetch<{ villages: VillageResponse[] }>('/api/villages')
+      villages.value = data
     })
   }
 
   async function createVillage(name: string): Promise<VillageResponse | null> {
     return withLoading(async () => {
-      const res = await apiFetch('/api/villages', {
+      const { village } = await apiFetch<{ village: VillageResponse }>('/api/villages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       })
-      return (await res.json()).village as VillageResponse
+      return village
     })
   }
 

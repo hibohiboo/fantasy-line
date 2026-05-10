@@ -10,26 +10,26 @@ export const useResidentStore = defineStore('resident', () => {
 
   async function fetchResidents(): Promise<void> {
     await withLoading(async () => {
-      const res = await apiFetch('/api/residents')
-      residents.value = (await res.json()).residents
+      const { residents: data } = await apiFetch<{ residents: ResidentWithVillageResponse[] }>('/api/residents')
+      residents.value = data
     })
   }
 
   async function fetchVillageResidents(villageId: number): Promise<void> {
     await withLoading(async () => {
-      const res = await apiFetch(`/api/villages/${villageId}/residents`)
-      villageResidents.value = (await res.json()).residents
+      const { residents: data } = await apiFetch<{ residents: ResidentResponse[] }>(`/api/villages/${villageId}/residents`)
+      villageResidents.value = data
     })
   }
 
   async function createResident(input: CreateResidentInput): Promise<ResidentResponse | null> {
     return withLoading(async () => {
-      const res = await apiFetch('/api/residents', {
+      const { resident } = await apiFetch<{ resident: ResidentResponse }>('/api/residents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       })
-      return (await res.json()).resident as ResidentResponse
+      return resident
     })
   }
 

@@ -10,13 +10,13 @@ export function useApiState() {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
+  async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
     const res = await fetch(`${API_BASE}${url}`, {
       ...init,
       headers: { ...userHeaders(), ...(init?.headers as Record<string, string>) },
     })
     if (!res.ok) throw new Error(`サーバーエラー: ${res.status}`)
-    return res
+    return res.json()
   }
 
   async function withLoading<T>(fn: () => Promise<T>): Promise<T | null> {
