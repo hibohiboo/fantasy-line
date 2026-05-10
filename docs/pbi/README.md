@@ -37,6 +37,7 @@
 |---|---|---|
 | [PBI-001](01-village-management/PBI-001.md) | 村を作成する | MVP |
 | [PBI-002](01-village-management/PBI-002.md) | 村の基本設定を編集する | MVP |
+| [PBI-017](01-village-management/PBI-017.md) | 村作成フォームのフロントエンドテストを修正する | Phase 2 |
 
 ### エピック 2 — 住人の管理
 

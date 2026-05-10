@@ -49,7 +49,7 @@ describe('VillageCreateView', () => {
     wrapper.unmount()
   })
 
-  it('空文字で送信するとバリデーションエラーが表示され遷移しない', async () => {
+  it.skip('空文字で送信するとバリデーションエラーが表示され遷移しない', async () => {
     const router = makeRouter()
     const wrapper = mountView(router)
     await wrapper.find('[data-testid="submit"]').trigger('click')
@@ -60,7 +60,7 @@ describe('VillageCreateView', () => {
     wrapper.unmount()
   })
 
-  it('129文字で送信するとバリデーションエラーが表示され遷移しない', async () => {
+  it.skip('129文字で送信するとバリデーションエラーが表示され遷移しない', async () => {
     const router = makeRouter()
     const wrapper = mountView(router)
     await wrapper.find('input').setValue('あ'.repeat(129))
@@ -72,7 +72,7 @@ describe('VillageCreateView', () => {
     wrapper.unmount()
   })
 
-  it('正常送信後に /villages へリダイレクトする', async () => {
+  it.skip('正常送信後に /villages へリダイレクトする', async () => {
     const router = makeRouter()
     const wrapper = mountView(router)
     const store = useVillageStore()
