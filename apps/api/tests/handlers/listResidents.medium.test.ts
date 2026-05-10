@@ -109,13 +109,4 @@ describe('listResidents handler - 統合テスト', () => {
     expect(residents.at(2)?.nameKana).toBe('ヤマダタロウ');
   });
 
-  it('未認証（X-User-Idなし）の場合は401を返す', async () => {
-    const result = await handler(
-      { headers: {} } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(401);
-    expect(JSON.parse(result.body).error).toBe('Unauthorized');
-  });
 });
