@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useResidentStore } from '../resident'
-import type { ResidentWithVillageResponse, ResidentResponse, CreateResidentInput } from '@repo/schema'
+import type {
+  ResidentWithVillageResponse,
+  ResidentResponse,
+  CreateResidentInput,
+} from '@repo/schema'
 
 const mockResidentWithVillage: ResidentWithVillageResponse = {
   id: 1,
@@ -37,10 +41,13 @@ describe('useResidentStore', () => {
 
   describe('fetchResidents', () => {
     it('GET /api/residents のレスポンスを residents ステートに反映する', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ residents: [mockResidentWithVillage] }),
-      }))
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ residents: [mockResidentWithVillage] }),
+        }),
+      )
 
       const store = useResidentStore()
       await store.fetchResidents()
@@ -49,10 +56,13 @@ describe('useResidentStore', () => {
     })
 
     it('fetchResidents 完了後に isLoading が false になる', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ residents: [] }),
-      }))
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ residents: [] }),
+        }),
+      )
 
       const store = useResidentStore()
       await store.fetchResidents()
@@ -61,10 +71,13 @@ describe('useResidentStore', () => {
     })
 
     it('APIエラー時に error ステートを設定する', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-      }))
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 500,
+        }),
+      )
 
       const store = useResidentStore()
       await store.fetchResidents()
@@ -76,10 +89,13 @@ describe('useResidentStore', () => {
 
   describe('fetchVillageResidents', () => {
     it('GET /api/villages/:id/residents のレスポンスを villageResidents ステートに反映する', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ residents: [mockResident] }),
-      }))
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ residents: [mockResident] }),
+        }),
+      )
 
       const store = useResidentStore()
       await store.fetchVillageResidents(1)
@@ -88,7 +104,7 @@ describe('useResidentStore', () => {
     })
 
     it('fetchVillageResidents は villageId を含む URL で API を呼ぶ', async () => {
-      const mockFetch = vi.fn<() => Promise<{ ok: boolean; json: () => Promise<{ residents: ResidentResponse[] }> }>>().mockResolvedValue({
+      const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ residents: [] }),
       })
@@ -97,15 +113,20 @@ describe('useResidentStore', () => {
       const store = useResidentStore()
       await store.fetchVillageResidents(42)
 
-      const calledUrl: string = mockFetch.mock.calls[0][0]
-      expect(calledUrl).toContain('/api/villages/42/residents')
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/villages/42/residents'),
+        expect.any(Object),
+      )
     })
 
     it('fetchVillageResidents 完了後に isLoading が false になる', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ residents: [] }),
-      }))
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ residents: [] }),
+        }),
+      )
 
       const store = useResidentStore()
       await store.fetchVillageResidents(1)
@@ -116,10 +137,13 @@ describe('useResidentStore', () => {
 
   describe('createResident', () => {
     it('POST /api/residents を呼び出し作成した住人を返す', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ resident: mockResident }),
-      }))
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ resident: mockResident }),
+        }),
+      )
 
       const store = useResidentStore()
       const result = await store.createResident(mockCreateInput)
@@ -128,10 +152,13 @@ describe('useResidentStore', () => {
     })
 
     it('APIエラー時に error ステートを設定し null を返す', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        ok: false,
-        status: 403,
-      }))
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 403,
+        }),
+      )
 
       const store = useResidentStore()
       const result = await store.createResident(mockCreateInput)
