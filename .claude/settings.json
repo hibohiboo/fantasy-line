@@ -2,7 +2,11 @@
   "mcpServers": {
     "azure-devops": {
       "command": "npx",
-      "args": ["-y", "@azure-devops/mcp", "hibohiboo"]
+      "args": [
+        "-y",
+        "@azure-devops/mcp",
+        "hibohiboo"
+      ]
     },
     "azure-devops-mcp": {
       "type": "http",
@@ -10,7 +14,10 @@
     },
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
     },
     "serena": {
       "command": "uvx",
@@ -25,18 +32,28 @@
     },
     "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ],
       "env": {
         "CONTEXT7_API_KEY": ""
       }
     },
     "aws-iac": {
       "command": "uvx",
-      "args": ["awslabs.aws-iac-mcp-server@latest"],
+      "args": [
+        "awslabs.aws-iac-mcp-server@latest"
+      ],
       "env": {
         "AWS_PROFILE": "default",
         "FASTMCP_LOG_LEVEL": "ERROR"
       }
     }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)"
+    ]
   }
 }
