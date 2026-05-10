@@ -221,10 +221,6 @@ describe('resident API 統合テスト', () => {
     // nameKana 昇順
     expect(residents.at(0)?.nameKana).toBe('アベイチロウ');
     expect(residents.at(1)?.nameKana).toBe('ヤマダタロウ');
-
-    // villageName を含まない（ListVillageResidentsResponseSchema でパースできていれば担保）
-    const body = JSON.parse(result.body) as { residents: Record<string, unknown>[] };
-    expect(body.residents.at(0)).not.toHaveProperty('villageName');
   });
 
   it('POST /residents で他ユーザーの villageId → 403・DB に保存されない', async () => {
