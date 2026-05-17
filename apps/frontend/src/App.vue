@@ -14,6 +14,9 @@ import { RouterView } from 'vue-router'
         <v-btn to="/villages" variant="text" color="white">
           村一覧
         </v-btn>
+        <v-btn to="/residents" variant="text" color="white">
+          住人一覧
+        </v-btn>
       </template>
     </v-app-bar>
     <v-main>

@@ -1,7 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import VillageListView from '../views/VillageListView.vue'
-import VillageCreateView from '../views/VillageCreateView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -9,7 +6,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView,
+      component: () => import('../views/HomeView.vue'),
     },
     {
       path: '/about',
@@ -19,13 +16,31 @@ const router = createRouter({
     {
       path: '/villages',
       name: 'village-list',
-      component: VillageListView,
+      component: () => import('../views/VillageListView.vue'),
       meta: { requiresAuth: true },
     },
     {
       path: '/villages/new',
       name: 'village-create',
-      component: VillageCreateView,
+      component: () => import('../views/VillageCreateView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/residents',
+      name: 'resident-list',
+      component: () => import('../views/ResidentListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/residents/new',
+      name: 'resident-create',
+      component: () => import('../views/ResidentCreateView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/villages/:id/residents',
+      name: 'village-resident-list',
+      component: () => import('../views/VillageResidentListView.vue'),
       meta: { requiresAuth: true },
     },
   ],

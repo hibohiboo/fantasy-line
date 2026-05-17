@@ -8,29 +8,24 @@ import { z } from 'zod';
 import { CreateItemSchema } from '@repo/schema';
 import { getDb } from '../db/client';
 import { items } from '../db/schema';
+import { json } from '../http';
+import { logInfo } from '../logger';
 
+// items テーブルはユーザー所有リソースでないため認証チェック不要
 export const handler = async (
   event: APIGatewayProxyEvent,
-  _context: Context,
+  context: Context,
 ): Promise<APIGatewayProxyResult> => {
   let body: unknown;
   try {
     body = JSON.parse(event.body ?? '');
   } catch {
-    return {
-      statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Invalid JSON' }),
-    };
+    return json(400, { error: 'Invalid JSON' });
   }
 
   const parsed = CreateItemSchema.safeParse(body);
   if (!parsed.success) {
-    return {
-      statusCode: 400,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: z.flattenError(parsed.error) }),
-    };
+    return json(400, { error: z.flattenError(parsed.error) });
   }
 
   const db = await getDb();
@@ -42,9 +37,7 @@ export const handler = async (
     .from(items)
     .where(eq(items.id, inserted.id));
 
-  return {
-    statusCode: 201,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ item: created }),
-  };
+  logInfo({ message: 'アイテムを作成しました', requestId: context.awsRequestId, itemId: inserted.id });
+
+  return json(201, { item: created });
 };

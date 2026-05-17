@@ -1,0 +1,62 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx drizzle-kit *)",
+      "Bash(node -e \"const { z } = require\\('zod'\\); const schema = z.string\\(\\).min\\(1\\).max\\(128\\).regex\\(/^[ァ-ヴー]+$/\\); const result = schema.safeParse\\('たろう'\\); console.log\\(JSON.stringify\\(result.error?.issues, null, 2\\)\\);\")",
+      "Bash(echo \"EXIT_CODE: $?\")"
+    ]
+  },
+  "mcpServers": {
+    "azure-devops": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@azure-devops/mcp",
+        "hibohiboo"
+      ]
+    },
+    "azure-devops-mcp": {
+      "type": "http",
+      "url": "https://mcp.dev.azure.com/hibohiboo"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ],
+      "env": {
+        "CONTEXT7_API_KEY": ""
+      }
+    },
+    "aws-iac": {
+      "command": "uvx",
+      "args": [
+        "awslabs.aws-iac-mcp-server@latest"
+      ],
+      "env": {
+        "AWS_PROFILE": "default",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    }
+  }
+}

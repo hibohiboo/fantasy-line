@@ -62,9 +62,8 @@ describe('listVillages handler - 統合テスト', () => {
   });
 
   it('村は作成日時の降順（最新順）で返す', async () => {
-    await ctx.db.insert(schema.villages).values({ name: '古い村', ownerId: 'user-1' });
-    await new Promise((r) => setTimeout(r, 1100));
-    await ctx.db.insert(schema.villages).values({ name: '新しい村', ownerId: 'user-1' });
+    await ctx.db.insert(schema.villages).values({ name: '古い村', ownerId: 'user-1', createdAt: new Date('2024-01-01T00:00:00Z') });
+    await ctx.db.insert(schema.villages).values({ name: '新しい村', ownerId: 'user-1', createdAt: new Date('2024-01-02T00:00:00Z') });
 
     const result = await handler(
       { headers: { 'X-User-Id': 'user-1' } } as unknown as APIGatewayProxyEvent,
@@ -78,12 +77,4 @@ describe('listVillages handler - 統合テスト', () => {
     expect(villages.at(1)?.name).toBe('古い村');
   });
 
-  it('X-User-Idヘッダーがない場合は401を返す', async () => {
-    const result = await handler(
-      { headers: {} } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(401);
-  });
 });

@@ -69,7 +69,7 @@ async function onSubmit() {
   try {
     const result = await store.createVillage(villageName.value)
     if (result === null) {
-      apiError.value = store.error ?? '村の作成に失敗しました。再試行してください。'
+      apiError.value = (store.error as unknown as string | null) ?? '村の作成に失敗しました。再試行してください。'
       return
     }
     router.push('/villages')

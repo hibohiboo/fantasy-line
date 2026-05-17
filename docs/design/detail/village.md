@@ -27,6 +27,8 @@
 
 ## 処理フロー詳細
 
+認証・ユーザーID 取得・権限チェックの共通パターンは [api-architecture.md](../non-functional/api-architecture.md) を参照。
+
 ### 村を作成する
 
 ```mermaid

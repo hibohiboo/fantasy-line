@@ -11,9 +11,7 @@ export function useMysqlContainer(): { db: MySql2Database<typeof schema> } {
   let pool: mysql.Pool;
 
   beforeAll(async () => {
-    let testDb: MySql2Database<typeof schema>;
-    ({ container, pool, testDb } = await setupMysqlContainer());
-    ctx.db = testDb;
+    ({ container, pool, testDb: ctx.db } = await setupMysqlContainer());
   });
 
   afterAll(async () => {

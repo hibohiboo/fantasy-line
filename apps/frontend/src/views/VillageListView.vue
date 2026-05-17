@@ -49,13 +49,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useVillageStore } from '@/stores/village'
 import VillageCard from '@/components/village/VillageCard.vue'
+import type { VillageResponse } from '@repo/schema'
 
 const store = useVillageStore()
-const { villages, isLoading, error } = storeToRefs(store)
-const isError = computed(() => error.value !== null)
+const villages = computed(() => store.villages as unknown as VillageResponse[])
+const isLoading = computed(() => store.isLoading as unknown as boolean)
+const isError = computed(() => (store.error as unknown as string | null) !== null)
 
 onMounted(() => store.fetchVillages())
 </script>

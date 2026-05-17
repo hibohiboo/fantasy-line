@@ -197,6 +197,36 @@ export class InfraStack extends cdk.Stack {
     );
     auroraCluster.secret!.grantRead(listVillagesFunction);
 
+    const createResidentFunction = new lambdaNodejs.NodejsFunction(
+      this,
+      'CreateResidentFunction',
+      {
+        ...lambdaDefaults,
+        entry: path.join(__dirname, '../../apps/api/src/handlers/createResident.ts'),
+      },
+    );
+    auroraCluster.secret!.grantRead(createResidentFunction);
+
+    const listResidentsFunction = new lambdaNodejs.NodejsFunction(
+      this,
+      'ListResidentsFunction',
+      {
+        ...lambdaDefaults,
+        entry: path.join(__dirname, '../../apps/api/src/handlers/listResidents.ts'),
+      },
+    );
+    auroraCluster.secret!.grantRead(listResidentsFunction);
+
+    const listVillageResidentsFunction = new lambdaNodejs.NodejsFunction(
+      this,
+      'ListVillageResidentsFunction',
+      {
+        ...lambdaDefaults,
+        entry: path.join(__dirname, '../../apps/api/src/handlers/listVillageResidents.ts'),
+      },
+    );
+    auroraCluster.secret!.grantRead(listVillageResidentsFunction);
+
     const migrationFunction = new lambdaNodejs.NodejsFunction(
       this,
       'migrationFunction',
@@ -250,6 +280,23 @@ export class InfraStack extends cdk.Stack {
     villagesResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(listVillagesFunction),
+    );
+
+    const residentsResource = apiResource.addResource('residents');
+    residentsResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(createResidentFunction),
+    );
+    residentsResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(listResidentsFunction),
+    );
+
+    const villageByIdResource = villagesResource.addResource('{id}');
+    const villageResidentsResource = villageByIdResource.addResource('residents');
+    villageResidentsResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(listVillageResidentsFunction),
     );
 
     // -- Outputs

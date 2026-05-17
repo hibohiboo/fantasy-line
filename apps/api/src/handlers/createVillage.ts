@@ -9,15 +9,16 @@ import { CreateVillageSchema } from '@repo/schema';
 import { getDb } from '../db/client';
 import { villages } from '../db/schema';
 import { json } from '../http';
+import { getOwnerId } from '../auth';
+import { logInfo } from '../logger';
 
 export const handler = async (
   event: APIGatewayProxyEvent,
-  _context: Context,
+  context: Context,
 ): Promise<APIGatewayProxyResult> => {
-  const ownerId = event.headers?.['X-User-Id'];
-  if (!ownerId) {
-    return json(401, { error: 'Unauthorized' });
-  }
+  const ownerIdResult = getOwnerId(event);
+  if (typeof ownerIdResult !== 'string') return ownerIdResult;
+  const ownerId = ownerIdResult;
 
   let body: unknown;
   try {
@@ -43,7 +44,7 @@ export const handler = async (
     .from(villages)
     .where(eq(villages.id, inserted.id));
 
-  console.log(JSON.stringify({ level: 'info', action: 'createVillage', villageId: inserted.id, ownerId }));
+  logInfo({ message: '村を作成しました', requestId: context.awsRequestId, userId: ownerId, villageId: inserted.id });
 
   return json(201, { village: created });
 };

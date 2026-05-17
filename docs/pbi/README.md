@@ -14,11 +14,12 @@
 |---|---|---|---|
 | 0 | [認証](00-authentication/) | PBI-014 | ✅ 前提 |
 | 1 | [村の管理](01-village-management/) | PBI-001, 002 | ✅ |
-| 2 | [住人の管理](02-resident-management/) | PBI-003, 004 | ✅ |
+| 2 | [住人の管理](02-resident-management/) | PBI-003, 004, 015 | ✅ / Phase 2 |
 | 3 | [職業・生活リズム](03-job-schedule/) | PBI-005, 006 | ✅ |
 | 4 | [1日シミュレーション](04-daily-simulation/) | PBI-007, 008 | ✅ 最重要 |
 | 5 | [可視化・統計](05-visualization/) | PBI-009, 010 | Phase 2 |
 | 6 | [魔力システム](06-mana-system/) | PBI-011, 012, 013 | Phase 2-3 |
+| — | [インフラ・基盤](00-infrastructure/) | PBI-016 | Phase 2 |
 
 ---
 
@@ -36,6 +37,7 @@
 |---|---|---|
 | [PBI-001](01-village-management/PBI-001.md) | 村を作成する | MVP |
 | [PBI-002](01-village-management/PBI-002.md) | 村の基本設定を編集する | MVP |
+| [PBI-017](01-village-management/PBI-017.md) | 村作成フォームのフロントエンドテストを修正する | Phase 2 |
 
 ### エピック 2 — 住人の管理
 
@@ -43,6 +45,7 @@
 |---|---|---|
 | [PBI-003](02-resident-management/PBI-003.md) | 住人を登録する | MVP |
 | [PBI-004](02-resident-management/PBI-004.md) | 住人の詳細情報を編集する | MVP |
+| [PBI-015](02-resident-management/PBI-015.md) | 住人を削除する | Phase 2 |
 
 ### エピック 3 — 職業・生活リズム
 
@@ -72,6 +75,12 @@
 | [PBI-011](06-mana-system/PBI-011.md) | 家ごとの魔力消費を定義する | Phase 2 |
 | [PBI-012](06-mana-system/PBI-012.md) | 魔力消費をシミュレーションする | Phase 2 |
 | [PBI-013](06-mana-system/PBI-013.md) | 魔力消費の統計を可視化する | Phase 3 |
+
+### インフラ・基盤
+
+| PBI | タイトル | 優先度 |
+|---|---|---|
+| [PBI-016](00-infrastructure/PBI-016.md) | villages・residents の ID を UUID v7 に移行する | Phase 2 |
 
 ---
 
