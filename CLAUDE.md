@@ -7,7 +7,7 @@
 
 | 用途 | 場所 |
 |---|---|
-| リポジトリ横断ルール（全体に常時適用） | `.claude/instructions/*.md`（ルート `CLAUDE.md` から `@path` で参照） |
+| リポジトリ横断ルール（全体に常時適用） | `.claude/instructions/*.md`（ルート `CLAUDE.md` に `@.claude/instructions/ファイル名.md` と記述して自動ロード） |
 | パッケージ・ディレクトリ固有のルール | 各ディレクトリ配下の `CLAUDE.md` |
 | スキル（特定タスクの詳細ワークフロー） | `.claude/skills/*/SKILL.md` |
 | スラッシュコマンド（人間が明示的に呼び出す手順） | `.claude/commands/*.md` |
@@ -71,8 +71,10 @@ npm workspaces を使用。
 - AWS Budgets の設定を前提とする
 
 ## フォルダ構成の原則
+詳細は下記を参照。
 
-詳細は `.claude/instructions/folder-structure.md` を参照する。
+@.claude/instructions/folder-structure.md
+
 
 最低限守る原則のみここに残す。
 
@@ -81,7 +83,7 @@ npm workspaces を使用。
 - 技術レイヤー別フォルダ（`handlers/`・`services/`・`repositories/` 等）をアプリ直下のトップレベルには作らない。必要なら機能フォルダの内側に閉じ込める
 - `shared` には複数機能から本当に共有されるものだけを置く
 - 関連する型・schema・テスト・実装はできるだけ近くに置く
-
+- 
 ## TypeScript strict 前提
 
 - 全パッケージで TypeScript strict を有効にする
