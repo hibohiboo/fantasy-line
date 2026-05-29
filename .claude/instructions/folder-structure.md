@@ -68,25 +68,26 @@ apps/ranking-api/src
 
 これらを新たに導入する場合は ADR で背景・代替案・採用しない条件を明示する。
 
-## 7. `packages/shared` の方針
+## 7. `packages/` 共有パッケージの方針
+
+このプロジェクトでは共有パッケージとして `packages/schema` を使用する（`packages/shared` は使わない）。
 
 ```txt
-packages/shared/
+packages/schema/
   - src/
-    - types/
-    - schemas/
-    - utils/
+    - village.ts    # Zod スキーマ・型
+    - resident.ts
+    - index.ts
   - package.json
 ```
 
-`shared` に **置いてよい** もの:
+`packages/schema` に **置いてよい** もの:
 
-- API レスポンス型
-- 共通 schema
-- URL に関する純粋関数
-- 複数アプリから自然に参照される型
+- API リクエスト/レスポンスの Zod スキーマ
+- 共通型定義（`z.infer<>` 由来）
+- 複数アプリから自然に参照されるスキーマ・型
 
-`shared` に **置かない** もの:
+`packages/schema` に **置かない** もの:
 
 - Vue コンポーネント
 - AWS SDK に依存するコード
@@ -94,7 +95,7 @@ packages/shared/
 - API 専用ロジック
 - 1つの機能でしか使わないコード
 
-`shared` は便利な置き場ではなく、明確に共有されるものだけを置く。
+`packages/schema` は便利な置き場ではなく、明確に複数アプリで共有されるスキーマのみを置く。
 
 ## 8. `tools/` の推奨構成
 
