@@ -4,7 +4,18 @@
       "Bash(npm run *)",
       "Bash(npx drizzle-kit *)",
       "Bash(node -e \"const { z } = require\\('zod'\\); const schema = z.string\\(\\).min\\(1\\).max\\(128\\).regex\\(/^[ァ-ヴー]+$/\\); const result = schema.safeParse\\('たろう'\\); console.log\\(JSON.stringify\\(result.error?.issues, null, 2\\)\\);\")",
-      "Bash(echo \"EXIT_CODE: $?\")"
+      "Bash(echo \"EXIT_CODE: $?\")",
+      "Bash(mkdir -p /d/projects/fantasy-line/.claude/skills/api-design /d/projects/fantasy-line/.claude/skills/aws-cdk-patterns /d/projects/fantasy-line/.claude/skills/aws-cost-review /d/projects/fantasy-line/.claude/skills/backend-patterns /d/projects/fantasy-line/.claude/skills/ci-debugging /d/projects/fantasy-line/.claude/skills/code-review /d/projects/fantasy-line/.claude/skills/coding-standards /d/projects/fantasy-line/.claude/skills/doc-coauthoring /d/projects/fantasy-line/.claude/skills/frontend-patterns /d/projects/fantasy-line/.claude/skills/security-review /d/projects/fantasy-line/.claude/skills/tdd-workflow /d/projects/fantasy-line/.claude/skills/webapp-testing /d/projects/fantasy-line/.claude/agents && echo \"done\")",
+      "Edit(/.claude/skills/api-design/**)",
+      "Edit(/.claude/skills/aws-cdk-patterns/**)",
+      "Edit(/.claude/skills/aws-cost-review/**)",
+      "Edit(/.claude/skills/backend-patterns/**)",
+      "Edit(/.claude/skills/ci-debugging/**)",
+      "Edit(/.claude/skills/code-review/**)",
+      "Edit(/.claude/skills/doc-coauthoring/**)"
+    ],
+    "additionalDirectories": [
+      "D:\\projects\\fantasy-line\\.claude\\skills"
     ]
   },
   "mcpServers": {

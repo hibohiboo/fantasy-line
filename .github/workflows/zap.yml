@@ -1,0 +1,97 @@
+name: OWASP ZAP Baseline Scan
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # 毎週月曜日 03:00 UTC
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: zap-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "24"
+
+jobs:
+  zap-scan:
+    name: OWASP ZAP Baseline
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build API
+        run: npm run build --workspace=apps/api
+
+      - name: Start API server
+        working-directory: apps/api
+        run: |
+          nohup node --import tsx/esm src/local-server.ts > /tmp/api.log 2>&1 &
+          echo "API_PID=$!" >> $GITHUB_ENV
+
+          # サーバ起動待機（最大30秒）
+          ready=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3001/hello > /dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            echo "API server did not become ready in time"
+            echo "--- /tmp/api.log ---"
+            cat /tmp/api.log || true
+            exit 1
+          fi
+        env:
+          CORS_ALLOW_ORIGIN: "*"
+
+      - name: Health check before ZAP
+        run: |
+          if ! curl -fsS http://localhost:3001/hello > /dev/null; then
+            echo "API server is not reachable before ZAP"
+            echo "--- /tmp/api.log ---"
+            cat /tmp/api.log || true
+            exit 1
+          fi
+
+      - name: Run ZAP Baseline Scan
+        run: |
+          chmod a+w "$PWD"
+          docker pull ghcr.io/zaproxy/zaproxy:stable -q
+          # exit code 2 = WARN-only（fail_action: false 相当）は許容し、exit code 1 = FAIL のみ失敗とする
+          docker run -v "$PWD:/zap/wrk/:rw" --network=host -t ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://localhost:3001/hello -J report_json.json -w report_md.md -r report_html.html -a -c tools/zap/rules.tsv \
+            || { code=$?; [ "$code" -eq 2 ] && echo "ZAP WARN-only (exit 2), continuing." || exit "$code"; }
+
+      - name: Upload ZAP report artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-scan
+          path: |
+            report_json.json
+            report_md.md
+            report_html.html
+          if-no-files-found: error
+
+      - name: Stop API server
+        if: always()
+        run: |
+          kill "$API_PID" 2>/dev/null || true
