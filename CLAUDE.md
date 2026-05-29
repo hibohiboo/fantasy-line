@@ -74,6 +74,9 @@ npm workspaces を使用。
 詳細は下記を参照。
 
 @.claude/instructions/folder-structure.md
+@.claude/instructions/api.md
+@.claude/instructions/frontend.md
+@.claude/instructions/infra.md
 
 
 最低限守る原則のみここに残す。
@@ -86,6 +89,9 @@ npm workspaces を使用。
 - 
 ## TypeScript strict 前提
 
+@.claude/instructions/typescript.md
+@.claude/instructions/coding.md
+
 - 全パッケージで TypeScript strict を有効にする
 - `any` は原則禁止。やむを得ない場合は理由をコードコメントで明示する
 - 外部入力（ユーザー入力・S3 JSON・API レスポンス・環境変数等）は `unknown` で受けて schema validation で絞り込む
@@ -94,19 +100,23 @@ npm workspaces を使用。
 
 ## テスト重視
 
+@.claude/instructions/testing.md
+
 - テストなしの実装変更は避ける
 - 単体テストは Vitest を中心に、機能フォルダ内に近接配置する
 - 全記事 VRT は行わない（コスト・時間・メンテ性の観点）
 - ローカルで CI と同じ検証コマンドが実行できる構成を維持する
-- 詳細は `.claude/instructions/testing.md` および `.claude/skills/webapp-testing/SKILL.md`・`.claude/skills/tdd-workflow/SKILL.md` を参照する
+- 詳細は `.claude/skills/webapp-testing/SKILL.md`・`.claude/skills/tdd-workflow/SKILL.md` も参照する
 
 ## セキュリティ重視
+
+@.claude/instructions/security.md
+@.claude/instructions/docs.md
 
 - 入力検証・出力エンコードのサニタイズを徹底する
 - 秘密情報をリポジトリに含めない（`.env` は `.gitignore` に含めること）
 - CDK では cdk-nag を導入し、警告を放置しない
 - API Gateway + Lambda は OWASP ZAP の検査対象として扱う
-- 詳細は `.claude/instructions/security.md` を参照する
 
 ## 新規ライブラリ導入時の判断基準
 
