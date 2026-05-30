@@ -79,7 +79,7 @@ bundling: {
 
 ## Lambda 関数の追加手順
 
-1. `apps/api/src/handlers/<ハンドラー名>.ts` にハンドラーを実装する
+1. `apps/api/src/<feature>/<ハンドラー名>.ts` にハンドラーを実装する（feature は `village` / `resident` / `item` / `echo` など機能名）
 2. `infra/lib/infra-stack.ts` に `NodejsFunction` を `lambdaDefaults` を使って定義する
 3. DB へのアクセスが必要な場合は `auroraCluster.secret!.grantRead(<function>)` を追加する
 4. API Gateway リソースにメソッドを追加する（新規パスの場合は `api.root.addResource(...)` も追加）
@@ -92,3 +92,4 @@ bundling: {
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-001 | 2026-05-05 | 初版作成。Lambda Layer（SharedDepsLayer）導入、createVillage・listVillages Lambda 追加 |
+| PBI-019 | 2026-05-30 | Lambda追加手順のハンドラーパスを `src/handlers/` → `src/<feature>/` に更新 |

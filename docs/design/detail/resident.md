@@ -14,9 +14,9 @@
 |---|---|---|
 | スキーマ共有 | `packages/schema/src/resident.ts` | 新規 |
 | スキーマ共有 | `packages/schema/src/index.ts` | エクスポート追加 |
-| API ハンドラー | `apps/api/src/handlers/createResident.ts` | 新規 |
-| API ハンドラー | `apps/api/src/handlers/listResidents.ts` | 新規 |
-| API ハンドラー | `apps/api/src/handlers/listVillageResidents.ts` | 新規 |
+| API ハンドラー | `apps/api/src/resident/createResident.ts` | 新規 |
+| API ハンドラー | `apps/api/src/resident/listResidents.ts` | 新規 |
+| API ハンドラー | `apps/api/src/resident/listVillageResidents.ts` | 新規 |
 | DB スキーマ | `apps/api/src/db/schema.ts` | residents テーブル追加 |
 | DB マイグレーション | `apps/api/drizzle/` 配下に新規 SQL | 新規 |
 | インフラ | `infra/lib/infra-stack.ts` | Lambda・API Gateway リソース追加 |
@@ -372,3 +372,4 @@ async function createResident(input: CreateResidentInput): Promise<Resident>
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-003 | 2026-05-06 | 住人管理機能の初期詳細設計（登録・全体一覧・村別一覧・権限ガード） |
+| PBI-019 | 2026-05-30 | ハンドラーパスを `src/handlers/` → `src/resident/` に更新（feature別フォルダ構成への移行） |
