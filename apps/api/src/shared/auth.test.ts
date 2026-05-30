@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getOwnerId } from '../../src/auth';
+import { getOwnerId } from './auth';
 
 function makeEvent(headers: Record<string, string>): APIGatewayProxyEvent {
   return { headers } as unknown as APIGatewayProxyEvent;

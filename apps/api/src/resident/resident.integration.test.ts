@@ -5,12 +5,12 @@ import {
   ListResidentsResponseSchema,
   ListVillageResidentsResponseSchema,
 } from '@repo/schema';
-import type * as CreateResidentModule from '../../src/handlers/createResident';
-import type * as ListResidentsModule from '../../src/handlers/listResidents';
-import type * as ListVillageResidentsModule from '../../src/handlers/listVillageResidents';
-import * as schema from '../../src/db/schema';
-import { useMysqlContainer } from '../helpers/use-mysql-container';
-import { mockDbClient } from '../helpers/db-mock';
+import type * as CreateResidentModule from './createResident';
+import type * as ListResidentsModule from './listResidents';
+import type * as ListVillageResidentsModule from './listVillageResidents';
+import * as schema from '../db/schema';
+import { useMysqlContainer } from '../shared/use-mysql-container';
+import { mockDbClient } from '../shared/db-mock';
 
 const ctx = useMysqlContainer();
 let createResident: typeof CreateResidentModule.handler;
@@ -35,10 +35,10 @@ describe('resident API 統合テスト', () => {
     ownedVillageId = inserted!.id;
 
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
-    ({ handler: createResident } = await import('../../src/handlers/createResident') as typeof CreateResidentModule);
-    ({ handler: listResidents } = await import('../../src/handlers/listResidents') as typeof ListResidentsModule);
-    ({ handler: listVillageResidents } = await import('../../src/handlers/listVillageResidents') as typeof ListVillageResidentsModule);
+    vi.doMock('../db/client', () => mockDbClient(ctx.db));
+    ({ handler: createResident } = await import('./createResident') as typeof CreateResidentModule);
+    ({ handler: listResidents } = await import('./listResidents') as typeof ListResidentsModule);
+    ({ handler: listVillageResidents } = await import('./listVillageResidents') as typeof ListVillageResidentsModule);
   });
 
   it('POST /residents → 201・DB に正しく保存・レスポンスに必要フィールドが含まれる', async () => {

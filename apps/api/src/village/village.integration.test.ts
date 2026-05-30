@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { CreateVillageResponseSchema, ListVillagesResponseSchema } from '@repo/schema';
-import type * as CreateVillageModule from '../../src/handlers/createVillage';
-import type * as ListVillagesModule from '../../src/handlers/listVillages';
-import * as schema from '../../src/db/schema';
-import { useMysqlContainer } from '../helpers/use-mysql-container';
-import { mockDbClient } from '../helpers/db-mock';
+import type * as CreateVillageModule from './createVillage';
+import type * as ListVillagesModule from './listVillages';
+import * as schema from '../db/schema';
+import { useMysqlContainer } from '../shared/use-mysql-container';
+import { mockDbClient } from '../shared/db-mock';
 
 const ctx = useMysqlContainer();
 let createVillage: typeof CreateVillageModule.handler;
@@ -15,9 +15,9 @@ describe('village API 統合テスト', () => {
   beforeEach(async () => {
     await ctx.db.delete(schema.villages);
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
-    ({ handler: createVillage } = await import('../../src/handlers/createVillage'));
-    ({ handler: listVillages } = await import('../../src/handlers/listVillages'));
+    vi.doMock('../db/client', () => mockDbClient(ctx.db));
+    ({ handler: createVillage } = await import('./createVillage'));
+    ({ handler: listVillages } = await import('./listVillages'));
   });
 
   it('POST /villages → 201・DB に owner_id 付きで保存・レスポンスに必要フィールドが含まれる', async () => {

@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as CreateVillageModule from '../../src/handlers/createVillage';
-import { mockDbClient } from '../helpers/db-mock';
+import type * as CreateVillageModule from './createVillage';
+import { mockDbClient } from '../shared/db-mock';
 
 let handler: typeof CreateVillageModule.handler;
 
 beforeAll(async () => {
-  vi.doMock('../../src/db/client', () => mockDbClient({}));
-  ({ handler } = await import('../../src/handlers/createVillage'));
+  vi.doMock('../db/client', () => mockDbClient({}));
+  ({ handler } = await import('./createVillage'));
 });
 
 describe('createVillage handler - ハンドラー固有のケース', () => {

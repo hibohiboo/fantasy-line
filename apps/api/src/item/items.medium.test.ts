@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as ItemsModule from '../../src/handlers/items';
-import * as schema from '../../src/db/schema';
-import { useMysqlContainer } from '../helpers/use-mysql-container';
-import { mockDbClient } from '../helpers/db-mock';
+import type * as ItemsModule from './items';
+import * as schema from '../db/schema';
+import { useMysqlContainer } from '../shared/use-mysql-container';
+import { mockDbClient } from '../shared/db-mock';
 
 const ctx = useMysqlContainer();
 let handler: typeof ItemsModule.handler;
@@ -12,8 +12,8 @@ describe('items handler', () => {
   beforeEach(async () => {
     await ctx.db.delete(schema.items);
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
-    ({ handler } = await import('../../src/handlers/items'));
+    vi.doMock('../db/client', () => mockDbClient(ctx.db));
+    ({ handler } = await import('./items'));
   });
 
   it('データが存在しない場合、空のitemsを返す', async () => {

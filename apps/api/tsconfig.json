@@ -9,5 +9,5 @@
     "types": ["node"]
   },
   "exclude": ["drizzle.config.ts", "node_modules"],
-  "include": ["src", "tests"]
+  "include": ["src"]
 }

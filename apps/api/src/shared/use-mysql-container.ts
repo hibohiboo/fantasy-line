@@ -2,7 +2,7 @@ import { beforeAll, afterAll } from 'vitest';
 import type { StartedTestContainer } from 'testcontainers';
 import type mysql from 'mysql2/promise';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
-import * as schema from '../../src/db/schema';
+import * as schema from '../db/schema';
 import { setupMysqlContainer } from './mysql-setup';
 
 export function useMysqlContainer(): { db: MySql2Database<typeof schema> } {

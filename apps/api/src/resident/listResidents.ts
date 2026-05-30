@@ -6,9 +6,9 @@ import {
 import { eq, asc } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { villages, residents } from '../db/schema';
-import { json } from '../http';
-import { getOwnerId } from '../auth';
-import { logInfo } from '../logger';
+import { json } from '../shared/http';
+import { getOwnerId } from '../shared/auth';
+import { logInfo } from '../shared/logger';
 
 export const handler = async (
   event: APIGatewayProxyEvent,

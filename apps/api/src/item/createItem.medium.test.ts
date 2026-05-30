@@ -5,12 +5,12 @@ import {
   beforeEach,
   vi,
 } from 'vitest';
-// バリデーションエラー（400）ケースは DB 不要のため tests/handlers/createItem.small.test.ts で管理
+// バリデーションエラー（400）ケースは DB 不要のため createItem.small.test.ts で管理
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as CreateItemModule from '../../src/handlers/createItem';
-import * as schema from '../../src/db/schema';
-import { useMysqlContainer } from '../helpers/use-mysql-container';
-import { mockDbClient } from '../helpers/db-mock';
+import type * as CreateItemModule from './createItem';
+import * as schema from '../db/schema';
+import { useMysqlContainer } from '../shared/use-mysql-container';
+import { mockDbClient } from '../shared/db-mock';
 
 const ctx = useMysqlContainer();
 let handler: typeof CreateItemModule.handler;
@@ -19,8 +19,8 @@ describe('createItem handler', () => {
   beforeEach(async () => {
     await ctx.db.delete(schema.items);
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
-    ({ handler } = await import('../../src/handlers/createItem'));
+    vi.doMock('../db/client', () => mockDbClient(ctx.db));
+    ({ handler } = await import('./createItem'));
   });
 
   it('正常なリクエストでアイテムを作成して201を返す', async () => {

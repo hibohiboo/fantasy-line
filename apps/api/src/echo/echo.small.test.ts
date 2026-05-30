@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { EchoResponseSchema } from '@repo/schema';
-import { handler } from '../../src/handlers/echo';
+import { handler } from './echo';
 
 describe('echo handler', () => {
   it('queryStringParametersがある場合、JSON文字列として返す', async () => {

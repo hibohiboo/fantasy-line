@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { ListResidentsResponseSchema } from '@repo/schema';
-import type * as ListResidentsModule from '../../src/handlers/listResidents';
-import * as schema from '../../src/db/schema';
-import { useMysqlContainer } from '../helpers/use-mysql-container';
-import { mockDbClient } from '../helpers/db-mock';
+import type * as ListResidentsModule from './listResidents';
+import * as schema from '../db/schema';
+import { useMysqlContainer } from '../shared/use-mysql-container';
+import { mockDbClient } from '../shared/db-mock';
 
 const ctx = useMysqlContainer();
 let handler: typeof ListResidentsModule.handler;
@@ -25,8 +25,8 @@ describe('listResidents handler - 統合テスト', () => {
     ownedVillageId = inserted!.id;
 
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
-    ({ handler } = await import('../../src/handlers/listResidents') as typeof ListResidentsModule);
+    vi.doMock('../db/client', () => mockDbClient(ctx.db));
+    ({ handler } = await import('./listResidents') as typeof ListResidentsModule);
   });
 
   it('住人がいない場合は空配列を返す', async () => {

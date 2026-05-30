@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { CreateResidentResponseSchema } from '@repo/schema';
-import type * as CreateResidentModule from '../../src/handlers/createResident';
-import * as schema from '../../src/db/schema';
-import { useMysqlContainer } from '../helpers/use-mysql-container';
-import { mockDbClient } from '../helpers/db-mock';
+import type * as CreateResidentModule from './createResident';
+import * as schema from '../db/schema';
+import { useMysqlContainer } from '../shared/use-mysql-container';
+import { mockDbClient } from '../shared/db-mock';
 
 const ctx = useMysqlContainer();
 let handler: typeof CreateResidentModule.handler;
@@ -32,8 +32,8 @@ describe('createResident handler - 統合テスト', () => {
     ownedVillageId = inserted!.id;
 
     vi.resetModules();
-    vi.doMock('../../src/db/client', () => mockDbClient(ctx.db));
-    ({ handler } = await import('../../src/handlers/createResident') as typeof CreateResidentModule);
+    vi.doMock('../db/client', () => mockDbClient(ctx.db));
+    ({ handler } = await import('./createResident') as typeof CreateResidentModule);
   });
 
   it('正常なリクエストで住人を作成して201を返す', async () => {

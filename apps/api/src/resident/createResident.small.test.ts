@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as CreateResidentModule from '../../src/handlers/createResident';
+import type * as CreateResidentModule from './createResident';
 
 const validBody = {
   name: '山田太郎',
@@ -42,8 +42,8 @@ describe('createResident handler - ハンドラー固有のケース', () => {
   });
 
   it('bodyがJSONでない場合は400を返す', async () => {
-    vi.doMock('../../src/db/client', () => makeMockDb([]));
-    const { handler } = await import('../../src/handlers/createResident') as typeof CreateResidentModule;
+    vi.doMock('../db/client', () => makeMockDb([]));
+    const { handler } = await import('./createResident') as typeof CreateResidentModule;
 
     const result = await handler(
       { body: 'not json', headers: { 'X-User-Id': 'user-1' } } as unknown as APIGatewayProxyEvent,
@@ -55,8 +55,8 @@ describe('createResident handler - ハンドラー固有のケース', () => {
   });
 
   it('nameが空文字の場合は400を返す', async () => {
-    vi.doMock('../../src/db/client', () => makeMockDb([]));
-    const { handler } = await import('../../src/handlers/createResident') as typeof CreateResidentModule;
+    vi.doMock('../db/client', () => makeMockDb([]));
+    const { handler } = await import('./createResident') as typeof CreateResidentModule;
 
     const result = await handler(
       {
@@ -74,8 +74,8 @@ describe('createResident handler - ハンドラー固有のケース', () => {
 
   it('他ユーザーの村へ登録しようとした場合は403を返す', async () => {
     const otherUserVillage = [{ id: 1, name: '他者の村', ownerId: 'user-2', createdAt: new Date() }];
-    vi.doMock('../../src/db/client', () => makeMockDb(otherUserVillage));
-    const { handler } = await import('../../src/handlers/createResident') as typeof CreateResidentModule;
+    vi.doMock('../db/client', () => makeMockDb(otherUserVillage));
+    const { handler } = await import('./createResident') as typeof CreateResidentModule;
 
     const result = await handler(
       {

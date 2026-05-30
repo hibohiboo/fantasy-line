@@ -8,8 +8,8 @@ import { z } from 'zod';
 import { CreateItemSchema } from '@repo/schema';
 import { getDb } from '../db/client';
 import { items } from '../db/schema';
-import { json } from '../http';
-import { logInfo } from '../logger';
+import { json } from '../shared/http';
+import { logInfo } from '../shared/logger';
 
 // items テーブルはユーザー所有リソースでないため認証チェック不要
 export const handler = async (

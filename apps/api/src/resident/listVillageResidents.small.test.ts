@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as ListVillageResidentsModule from '../../src/handlers/listVillageResidents';
+import type * as ListVillageResidentsModule from './listVillageResidents';
 
 // createResident.small.test.ts の makeMockDb パターンを踏襲
 // early-return ケース（403）専用の最小モック
@@ -27,8 +27,8 @@ describe('listVillageResidents handler - ハンドラー固有のケース', () 
 
   it('他ユーザーの村への参照は403を返す', async () => {
     const otherUserVillage = [{ id: 1, name: '他者の村', ownerId: 'user-2', createdAt: new Date() }];
-    vi.doMock('../../src/db/client', () => makeMockDb(otherUserVillage));
-    const { handler } = await import('../../src/handlers/listVillageResidents') as typeof ListVillageResidentsModule;
+    vi.doMock('../db/client', () => makeMockDb(otherUserVillage));
+    const { handler } = await import('./listVillageResidents') as typeof ListVillageResidentsModule;
 
     const result = await handler(
       {
