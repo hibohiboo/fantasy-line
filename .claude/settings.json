@@ -12,7 +12,15 @@
       "Edit(/.claude/skills/backend-patterns/**)",
       "Edit(/.claude/skills/ci-debugging/**)",
       "Edit(/.claude/skills/code-review/**)",
-      "Edit(/.claude/skills/doc-coauthoring/**)"
+      "Edit(/.claude/skills/doc-coauthoring/**)",
+      "Edit(/docs/**)",
+      "Write(/docs/**)",
+      "Edit(/apps/**)",
+      "Write(/apps/**)",
+      "Edit(/packages/**)",
+      "Write(/packages/**)",
+      "Edit(/infra/**)",
+      "Write(/infra/**)"
     ],
     "additionalDirectories": [
       "D:\\projects\\fantasy-line\\.claude\\skills"
