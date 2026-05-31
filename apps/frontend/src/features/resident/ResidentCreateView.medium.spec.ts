@@ -2,25 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
-import { createRouter, createWebHistory } from 'vue-router'
 import ResidentCreateView from './ResidentCreateView.vue'
+import { makeRouter } from '@/test-utils/makeRouter'
 import { useResidentStore } from '@/features/resident/residentStore'
 import type { ResidentResponse } from '@repo/schema'
 
 const vuetify = createVuetify()
 
-function makeRouter() {
-  return createRouter({
-    history: createWebHistory(),
-    routes: [
-      { path: '/', component: { template: '<div />' } },
-      { path: '/residents', component: { template: '<div />' } },
-      { path: '/residents/new', component: { template: '<div />' } },
-    ],
-  })
-}
+const RESIDENT_CREATE_ROUTES = [
+  { path: '/', component: { template: '<div />' } },
+  { path: '/residents', component: { template: '<div />' } },
+  { path: '/residents/new', component: { template: '<div />' } },
+]
 
-function mountView(router = makeRouter()) {
+function mountView(router = makeRouter(RESIDENT_CREATE_ROUTES)) {
   return mount(ResidentCreateView, {
     global: {
       plugins: [
@@ -58,7 +53,7 @@ describe('ResidentCreateView', () => {
 
   it.skip('名前が空で送信 → 「名前は必須です」が表示・遷移しない', async () => {
     // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
-    const router = makeRouter()
+    const router = makeRouter(RESIDENT_CREATE_ROUTES)
     const wrapper = mountView(router)
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
@@ -70,7 +65,7 @@ describe('ResidentCreateView', () => {
 
   it.skip('読みが空で送信 → 「読みは必須です」が表示・遷移しない', async () => {
     // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
-    const router = makeRouter()
+    const router = makeRouter(RESIDENT_CREATE_ROUTES)
     const wrapper = mountView(router)
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
@@ -82,7 +77,7 @@ describe('ResidentCreateView', () => {
 
   it.skip('読みにひらがな入力で送信 → 「読みはカタカナで入力してください」が表示', async () => {
     // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
-    const router = makeRouter()
+    const router = makeRouter(RESIDENT_CREATE_ROUTES)
     const wrapper = mountView(router)
     await wrapper.find('[data-testid="name"]').setValue('テスト')
     await wrapper.find('[data-testid="nameKana"]').setValue('てすと')
@@ -95,7 +90,7 @@ describe('ResidentCreateView', () => {
 
   it.skip('生年月日が空で送信 → 「生年月日は必須です」が表示', async () => {
     // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
-    const router = makeRouter()
+    const router = makeRouter(RESIDENT_CREATE_ROUTES)
     const wrapper = mountView(router)
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
@@ -106,7 +101,7 @@ describe('ResidentCreateView', () => {
 
   it.skip('正常送信後 → /residents にリダイレクト', async () => {
     // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
-    const router = makeRouter()
+    const router = makeRouter(RESIDENT_CREATE_ROUTES)
     const wrapper = mountView(router)
     const store = useResidentStore()
     const mockResident: ResidentResponse = {

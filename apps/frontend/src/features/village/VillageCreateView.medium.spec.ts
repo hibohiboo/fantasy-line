@@ -2,23 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
-import { createRouter, createWebHistory } from 'vue-router'
 import VillageCreateView from './VillageCreateView.vue'
+import { makeRouter } from '@/test-utils/makeRouter'
 import { useVillageStore } from '@/features/village/villageStore'
 
 const vuetify = createVuetify()
 
-function makeRouter() {
-  return createRouter({
-    history: createWebHistory(),
-    routes: [
-      { path: '/', component: { template: '<div />' } },
-      { path: '/villages', component: { template: '<div />' } },
-    ],
-  })
-}
+const VILLAGE_ROUTES = [
+  { path: '/', component: { template: '<div />' } },
+  { path: '/villages', component: { template: '<div />' } },
+]
 
-function mountView(router = makeRouter()) {
+function mountView(router = makeRouter(VILLAGE_ROUTES)) {
   return mount(VillageCreateView, {
     global: {
       plugins: [
@@ -50,7 +45,7 @@ describe('VillageCreateView', () => {
   })
 
   it.skip('空文字で送信するとバリデーションエラーが表示され遷移しない', async () => {
-    const router = makeRouter()
+    const router = makeRouter(VILLAGE_ROUTES)
     const wrapper = mountView(router)
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
@@ -61,7 +56,7 @@ describe('VillageCreateView', () => {
   })
 
   it.skip('129文字で送信するとバリデーションエラーが表示され遷移しない', async () => {
-    const router = makeRouter()
+    const router = makeRouter(VILLAGE_ROUTES)
     const wrapper = mountView(router)
     await wrapper.find('input').setValue('あ'.repeat(129))
     await wrapper.find('[data-testid="submit"]').trigger('click')
@@ -73,7 +68,7 @@ describe('VillageCreateView', () => {
   })
 
   it.skip('正常送信後に /villages へリダイレクトする', async () => {
-    const router = makeRouter()
+    const router = makeRouter(VILLAGE_ROUTES)
     const wrapper = mountView(router)
     const store = useVillageStore()
     vi.spyOn(store, 'createVillage').mockResolvedValue({

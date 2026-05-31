@@ -3,18 +3,11 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
-import { createRouter, createWebHistory } from 'vue-router'
 import VillageListView from './VillageListView.vue'
+import { makeRouter } from '@/test-utils/makeRouter'
 import type { VillageResponse } from '@repo/schema'
 
 const vuetify = createVuetify()
-
-function makeRouter() {
-  return createRouter({
-    history: createWebHistory(),
-    routes: [{ path: '/', component: { template: '<div />' } }],
-  })
-}
 
 const mockVillages: VillageResponse[] = [
   { id: 1, name: 'エルムの村', ownerId: 'user-1', createdAt: '2026-05-05T00:00:00.000Z' },

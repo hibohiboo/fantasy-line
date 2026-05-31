@@ -3,21 +3,16 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
-import { createRouter, createWebHistory } from 'vue-router'
 import VillageResidentListView from './VillageResidentListView.vue'
+import { makeRouter } from '@/test-utils/makeRouter'
 import type { ResidentResponse } from '@repo/schema'
 
 const vuetify = createVuetify()
 
-function makeRouter() {
-  return createRouter({
-    history: createWebHistory(),
-    routes: [
-      { path: '/', component: { template: '<div />' } },
-      { path: '/villages/:id/residents', component: { template: '<div />' } },
-    ],
-  })
-}
+const VILLAGE_RESIDENT_ROUTES = [
+  { path: '/', component: { template: '<div />' } },
+  { path: '/villages/:id/residents', component: { template: '<div />' } },
+]
 
 const mockResidents: ResidentResponse[] = [
   {
@@ -50,7 +45,7 @@ function mountView(initialResidentState: object = {}) {
           stubActions: true,
           createSpy: vi.fn,
         }),
-        makeRouter(),
+        makeRouter(VILLAGE_RESIDENT_ROUTES),
       ],
     },
   })
