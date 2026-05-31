@@ -2,26 +2,8 @@
 
 ## 対象読者
 
-実装担当の開発者。本ドキュメントを読めば、何をどのファイルにどのように実装するかが分かる状態を目指す。
-
----
-
-## 実装影響コンポーネント一覧
-
-本 PBI で新規作成・変更が必要なファイルの一覧。
-
-| レイヤー | 対象 | 変更種別 |
-|---|---|---|
-| スキーマ共有 | `packages/schema/src/village.ts` | 新規 |
-| API ハンドラー | `apps/api/src/village/createVillage.ts` | 新規 |
-| API ハンドラー | `apps/api/src/village/listVillages.ts` | 新規 |
-| DB スキーマ | `apps/api/src/db/schema.ts` | villages テーブル追加 |
-| DB マイグレーション | `apps/api/drizzle/` 配下に新規 SQL | 新規 |
-| インフラ | `infra/lib/infra-stack.ts` | Lambda・API Gateway リソース追加 |
-| フロントエンド | `apps/frontend/src/features/village/VillageListView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/village.md)） |
-| フロントエンド | `apps/frontend/src/features/village/VillageCreateView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/village.md)） |
-| フロントエンド | `apps/frontend/src/features/village/villageStore.ts` | 新規 |
-| フロントエンド | `apps/frontend/src/router/index.ts` | ルート追加 |
+村管理機能の仕様（何を・なぜ作るか）の合意を記録したドキュメント。
+API 仕様・バリデーションルール・エラー方針・設計上の判断を確認するために参照する。
 
 ---
 
@@ -101,7 +83,7 @@ Body:
   }
 ```
 
-**バリデーション（`packages/schema/src/village.ts`）**
+**バリデーション**
 
 | フィールド | ルール | エラー時 |
 |---|---|---|
@@ -150,87 +132,50 @@ Headers:
 
 ---
 
-## Zod スキーマ（`packages/schema/src/village.ts` 新規作成）
-
-```typescript
-import { z } from 'zod';
-
-export const CreateVillageSchema = z.object({
-  name: z.string().min(1).max(128),
-});
-
-export const VillageSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  ownerId: z.string(),
-  createdAt: z.date(),
-});
-
-export const CreateVillageResponseSchema = z.object({
-  village: VillageSchema,
-});
-
-export const ListVillagesResponseSchema = z.object({
-  villages: z.array(VillageSchema),
-});
-
-export type CreateVillageInput = z.infer<typeof CreateVillageSchema>;
-export type Village = z.infer<typeof VillageSchema>;
-export type CreateVillageResponse = z.infer<typeof CreateVillageResponseSchema>;
-export type ListVillagesResponse = z.infer<typeof ListVillagesResponseSchema>;
-```
-
----
-
 ## フロントエンドコンポーネント設計
 
-### ルーティング（`apps/frontend/src/router/index.ts`）
+### ページ構成
 
-| パス | コンポーネント | 説明 |
-|---|---|---|
-| `/villages` | `VillageListView.vue` | 村一覧ページ |
-| `/villages/new` | `VillageCreateView.vue` | 村作成ページ |
+| パス | 役割 |
+|---|---|
+| `/villages` | 村一覧ページ |
+| `/villages/new` | 村作成ページ |
 
 認証ガード: PBI-014 実装前はモック認証で保護する。未認証の場合はログイン画面にリダイレクト。
 
 ---
 
-### Pinia ストア（`apps/frontend/src/features/village/villageStore.ts`）
+### フロントエンドの状態管理
 
-```typescript
-// 状態
-const villages = ref<Village[]>([])
-const isLoading = ref(false)
-const error = ref<string | null>(null)
+村一覧画面と村作成画面は状態（一覧データ・ローディング・エラー）を共有する。
+以下の状態を保持する。
 
-// アクション
-async function fetchVillages(): Promise<void>
-async function createVillage(name: string): Promise<Village>
-```
+- 自分の村一覧（GET /villages の結果）
+- ローディング状態（API 呼び出し中）
+- エラー状態（最後のリクエストが失敗したか）
+
+ページ遷移しても一覧データを再取得するのではなく、村作成後に一覧を再フェッチする。
 
 ---
 
-### VillageListView.vue
+### 村一覧画面
 
 **責務:** 村一覧の表示、村作成ページへのナビゲーション
 
 **構成:**
-- `<VillageList>` コンポーネント: 村リストを表示する
-  - Props: `villages: Village[]`
-- 「村を作成」ボタン: `/villages/new` に遷移する
+- 村リストを表示するコンポーネント
+- 「村を作成」ボタン: 村作成ページに遷移する
 - ローディング状態の表示
 - エラーメッセージの表示
 
 ---
 
-### VillageCreateView.vue
+### 村作成画面
 
 **責務:** 村作成フォームの表示と送信
 
-**Props:** なし
-
 **フォーム要素:**
-- 村名入力フィールド（`<input type="text">`, maxlength="128"）
+- 村名入力フィールド（最大 128 文字）
 - 作成ボタン（送信中はローディング表示）
 - バリデーションエラーメッセージ
 
@@ -242,7 +187,7 @@ async function createVillage(name: string): Promise<Village>
 | 村名が128文字超 | 「村名は128文字以内で入力してください」 |
 
 **送信後の動作:**
-- 成功時: `/villages` にリダイレクト
+- 成功時: 村一覧ページにリダイレクト
 - 失敗時: APIのエラーメッセージを表示
 
 ---
@@ -279,7 +224,7 @@ async function createVillage(name: string): Promise<Village>
 ### トランザクション境界
 
 - 村の INSERT は単一の SQL 文で完結するため、明示的なトランザクション管理は不要
-- Drizzle ORM の `insert().values().$returningId()` を使用して挿入後の ID を取得し、続けて SELECT する（既存の `createItem` ハンドラーと同じパターン）
+- 挿入後の ID を取得し、続けて SELECT する（既存の `createItem` ハンドラーと同じパターン）
 
 ### 一覧取得のパフォーマンス
 
@@ -297,21 +242,21 @@ async function createVillage(name: string): Promise<Village>
 
 ### ユニットテスト（small）
 
-対象: `createVillage.small.test.ts`, `listVillages.small.test.ts`
+対象: 村作成ハンドラー（小）、村一覧ハンドラー（小）
 - DB モックを使用
 - バリデーションエラーケース（400）を網羅する
 
 ### 統合テスト（medium）
 
-対象: `createVillage.medium.test.ts`, `listVillages.medium.test.ts`
+対象: 村作成ハンドラー（中）、村一覧ハンドラー（中）
 - Testcontainers の MySQL コンテナを使用
 - 正常系・異常系を DB 含めて確認する
 - 既存の `mysql-setup.ts` ヘルパーを再利用する
 
 ### フロントエンドテスト
 
-対象: `VillageCreateView.spec.ts`, `VillageListView.spec.ts`
-- `@vue/test-utils` + `vitest` でコンポーネントの動作を確認する
+対象: 村一覧コンポーネント、村作成コンポーネント
+- コンポーネントの動作を確認する
 - Pinia ストアのモックを使用する
 
 ---
@@ -323,3 +268,4 @@ async function createVillage(name: string): Promise<Village>
 | PBI-001 | 2026-05-05 | 村管理機能の初期詳細設計（作成・一覧・権限ガード） |
 | PBI-019 | 2026-05-30 | ハンドラーパスを `src/handlers/` → `src/village/` に更新（feature別フォルダ構成への移行） |
 | PBI-020 | 2026-05-31 | フロントエンドパスを `src/views/` / `src/stores/` → `src/features/village/` に更新（feature別フォルダ構成への移行） |
+| PBI-022 | 2026-05-31 | 実装コード・ファイルパスを除去し「仕様の合意記録」に再編 |
