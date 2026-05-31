@@ -110,8 +110,8 @@ Gherkin シナリオは**ユーザーの操作**を記述している。その�
 
 | 種別 | 目的 | ツール | 配置 |
 |---|---|---|---|
-| ユニット（Small） | 単一関数・クラスが仕様どおりに動く | vitest | `tests/small/` |
-| 統合（Medium） | 複数モジュール・DB を含む連携が正しい | vitest + Testcontainers | `tests/medium/`・`tests/integration/` |
+| ユニット（Small） | 単一関数・クラスが仕様どおりに動く | vitest | `src/<feature>/*.small.test.ts` |
+| 統合（Medium） | 複数モジュール・DB を含む連携が正しい | vitest + Testcontainers | `src/<feature>/*.medium.test.ts`・`src/<feature>/*.integration.test.ts` |
 | **E2E 受け入れ（Large）** | **Gherkin シナリオをユーザー操作で満たす** | **Playwright** | **`e2e/`** |
 
 ### E2E 受け入れテストのルール
@@ -138,9 +138,9 @@ API 統合テストが通っていても E2E が通っていなければ PBI 完
 
 | サイズ | 対象 | 実行速度 | 依存 | 配置・命名 |
 |---|---|---|---|---|
-| **Small** | 単一ハンドラー（DB モック） | 高速（ms） | 外部依存なし | `tests/handlers/*.small.test.ts` |
-| **Medium** | ハンドラー + 実 DB（Testcontainers） | 中速（秒） | DB 必要 | `tests/handlers/*.medium.test.ts` |
-| **Large** | 複数ハンドラーを跨ぐ統合 / E2E | 低速（秒〜分） | 実サービス・ブラウザ | `tests/integration/` / `e2e/` |
+| **Small** | 単一ハンドラー（DB モック） | 高速（ms） | 外部依存なし | `src/<feature>/*.small.test.ts` |
+| **Medium** | ハンドラー + 実 DB（Testcontainers） | 中速（秒） | DB 必要 | `src/<feature>/*.medium.test.ts` |
+| **Large** | 複数ハンドラーを跨ぐ統合 / E2E | 低速（秒〜分） | 実サービス・ブラウザ | `src/<feature>/*.integration.test.ts` / `e2e/` |
 
 ### フロントエンド（apps/frontend）
 
@@ -230,3 +230,4 @@ npm run mock:dev   # ❌ 存在しないスクリプト名
 | PBI-001 | 2026-05-06 | フロントエンドの Small / Medium / Large 分類基準を追加（Small: 単一コンポーネント・ストア、Medium: View 結合テスト、Large: Playwright E2E） |
 | PBI-001 | 2026-05-06 | E2E テストでの `maxlength` 制約確認方針を追加。HTML 制約を無効化した強制入力はしない。バリデーション詳細は Small（Zod スキーマ）テストの責務。 |
 | PBI-001 | 2026-05-06 | MSW を使ったフロントエンドモック開発の起動手順・しくみ・ハンドラー注意事項を追加 |
+| PBI-019 | 2026-05-30 | テスト配置を `tests/handlers/` / `tests/integration/` → `src/<feature>/` に更新（feature別近接配置への移行） |

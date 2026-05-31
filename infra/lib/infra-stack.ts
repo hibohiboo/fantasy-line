@@ -162,7 +162,7 @@ export class InfraStack extends cdk.Stack {
     const echoFunction = new lambdaNodejs.NodejsFunction(this, 'EchoFunction', {
       runtime: lambda.Runtime.NODEJS_24_X,
       architecture: isLocal ? undefined : lambda.Architecture.ARM_64,
-      entry: path.join(__dirname, '../../apps/api/src/handlers/echo.ts'),
+      entry: path.join(__dirname, '../../apps/api/src/echo/echo.ts'),
       projectRoot: path.join(__dirname, '../..'),
       handler: 'handler',
     });
@@ -172,7 +172,7 @@ export class InfraStack extends cdk.Stack {
       'ItemsFunction',
       {
         ...lambdaDefaults,
-        entry: path.join(__dirname, '../../apps/api/src/handlers/items.ts'),
+        entry: path.join(__dirname, '../../apps/api/src/item/items.ts'),
       },
     );
     auroraCluster.secret!.grantRead(itemsFunction);
@@ -182,7 +182,7 @@ export class InfraStack extends cdk.Stack {
       'CreateVillageFunction',
       {
         ...lambdaDefaults,
-        entry: path.join(__dirname, '../../apps/api/src/handlers/createVillage.ts'),
+        entry: path.join(__dirname, '../../apps/api/src/village/createVillage.ts'),
       },
     );
     auroraCluster.secret!.grantRead(createVillageFunction);
@@ -192,7 +192,7 @@ export class InfraStack extends cdk.Stack {
       'ListVillagesFunction',
       {
         ...lambdaDefaults,
-        entry: path.join(__dirname, '../../apps/api/src/handlers/listVillages.ts'),
+        entry: path.join(__dirname, '../../apps/api/src/village/listVillages.ts'),
       },
     );
     auroraCluster.secret!.grantRead(listVillagesFunction);
@@ -202,7 +202,7 @@ export class InfraStack extends cdk.Stack {
       'CreateResidentFunction',
       {
         ...lambdaDefaults,
-        entry: path.join(__dirname, '../../apps/api/src/handlers/createResident.ts'),
+        entry: path.join(__dirname, '../../apps/api/src/resident/createResident.ts'),
       },
     );
     auroraCluster.secret!.grantRead(createResidentFunction);
@@ -212,7 +212,7 @@ export class InfraStack extends cdk.Stack {
       'ListResidentsFunction',
       {
         ...lambdaDefaults,
-        entry: path.join(__dirname, '../../apps/api/src/handlers/listResidents.ts'),
+        entry: path.join(__dirname, '../../apps/api/src/resident/listResidents.ts'),
       },
     );
     auroraCluster.secret!.grantRead(listResidentsFunction);
@@ -222,7 +222,7 @@ export class InfraStack extends cdk.Stack {
       'ListVillageResidentsFunction',
       {
         ...lambdaDefaults,
-        entry: path.join(__dirname, '../../apps/api/src/handlers/listVillageResidents.ts'),
+        entry: path.join(__dirname, '../../apps/api/src/resident/listVillageResidents.ts'),
       },
     );
     auroraCluster.secret!.grantRead(listVillageResidentsFunction);

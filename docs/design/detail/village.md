@@ -13,14 +13,14 @@
 | レイヤー | 対象 | 変更種別 |
 |---|---|---|
 | スキーマ共有 | `packages/schema/src/village.ts` | 新規 |
-| API ハンドラー | `apps/api/src/handlers/createVillage.ts` | 新規 |
-| API ハンドラー | `apps/api/src/handlers/listVillages.ts` | 新規 |
+| API ハンドラー | `apps/api/src/village/createVillage.ts` | 新規 |
+| API ハンドラー | `apps/api/src/village/listVillages.ts` | 新規 |
 | DB スキーマ | `apps/api/src/db/schema.ts` | villages テーブル追加 |
 | DB マイグレーション | `apps/api/drizzle/` 配下に新規 SQL | 新規 |
 | インフラ | `infra/lib/infra-stack.ts` | Lambda・API Gateway リソース追加 |
-| フロントエンド | `apps/frontend/src/views/VillageListView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/village.md)） |
-| フロントエンド | `apps/frontend/src/views/VillageCreateView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/village.md)） |
-| フロントエンド | `apps/frontend/src/stores/village.ts` | 新規 |
+| フロントエンド | `apps/frontend/src/features/village/VillageListView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/village.md)） |
+| フロントエンド | `apps/frontend/src/features/village/VillageCreateView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/village.md)） |
+| フロントエンド | `apps/frontend/src/features/village/villageStore.ts` | 新規 |
 | フロントエンド | `apps/frontend/src/router/index.ts` | ルート追加 |
 
 ---
@@ -195,7 +195,7 @@ export type ListVillagesResponse = z.infer<typeof ListVillagesResponseSchema>;
 
 ---
 
-### Pinia ストア（`apps/frontend/src/stores/village.ts`）
+### Pinia ストア（`apps/frontend/src/features/village/villageStore.ts`）
 
 ```typescript
 // 状態
@@ -321,3 +321,5 @@ async function createVillage(name: string): Promise<Village>
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-001 | 2026-05-05 | 村管理機能の初期詳細設計（作成・一覧・権限ガード） |
+| PBI-019 | 2026-05-30 | ハンドラーパスを `src/handlers/` → `src/village/` に更新（feature別フォルダ構成への移行） |
+| PBI-020 | 2026-05-31 | フロントエンドパスを `src/views/` / `src/stores/` → `src/features/village/` に更新（feature別フォルダ構成への移行） |
