@@ -1,0 +1,40 @@
+{
+  "name": "@fantasy-life/api",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "test:small": "vitest run --config vitest.small.config.ts",
+    "test:medium": "vitest run --config vitest.medium.config.ts",
+    "db:up": "bash ../../docker/bin/up.sh",
+    "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
+    "db:migrate:local": "drizzle-kit push --config=drizzle.config.ts",
+    "db:seed:local": "tsx src/db/seed.ts",
+    "dev": "cd ../../infra && npm run local-api",
+    "lint": "eslint . --fix",
+    "ncu": "ncu -u"
+  },
+  "dependencies": {
+    "@repo/schema": "*",
+    "drizzle-orm": "^0.45.2",
+    "mysql2": "^3.22.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1057.0",
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@types/aws-lambda": "^8.10.161",
+    "@types/node": "^25.9.1",
+    "drizzle-kit": "^0.31.10",
+    "esbuild": "^0.28.0",
+    "eslint": "^10.4.1",
+    "testcontainers": "^12.0.1",
+    "tsx": "^4.22.4",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.7"
+  }
+}

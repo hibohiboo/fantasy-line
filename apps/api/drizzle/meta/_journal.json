@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1777788542182,
+      "tag": "0000_smiling_metal_master",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1777945821629,
+      "tag": "0001_breezy_iron_patriot",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1778367546558,
+      "tag": "0002_dark_piledriver",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1778376813818,
+      "tag": "0003_sour_the_twelve",
+      "breakpoints": true
+    }
+  ]
+}

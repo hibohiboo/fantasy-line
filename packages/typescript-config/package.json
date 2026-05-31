@@ -3,7 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
+  "scripts": {
+    "ncu": "ncu -u"
+  },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "^24.0.4",
+    "@vue/tsconfig": "^0.9.1"
+  },
+  "exports": {
+    "./base": "./base.json",
+    "./frontend": "./frontend.json",
+    "./vue-app": "./vue-app.json",
+    "./node": "./node.json"
   }
 }

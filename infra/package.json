@@ -1,0 +1,37 @@
+{
+  "name": "infra",
+  "version": "0.1.0",
+  "bin": {
+    "infra": "bin/infra.js"
+  },
+  "scripts": {
+    "ncu": "ncu -u",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "deploy": "cdk deploy",
+    "destroy": "cdk destroy",
+    "synth": "cdk synth",
+    "prelocal-api": "cross-env LOCAL_API=true npm run synth",
+    "local-api": "wsl -d Ubuntu -- bash -lc 'SAM_CLI_TELEMETRY=0 AWS_SECRET_ACCESS_KEY=dummy AWS_ACCESS_KEY_ID=dummy sam local start-api --template cdk.out/InfraStack.template.json'",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "stop-rds": "aws rds stop-db-cluster --db-cluster-identifier $(aws cloudformation describe-stack-resources --stack-name YourStackName --logical-resource-id AuroraCluster --query \"StackResources[0].PhysicalResourceId\" --output text)",
+    "start-rds": "aws rds start-db-cluster --db-cluster-identifier <リソース名>"
+  },
+  "devDependencies": {
+    "@types/jest": "^30",
+    "@types/node": "^25.9.1",
+    "aws-cdk": "2.1125.0",
+    "cross-env": "^10.1.0",
+    "esbuild": "^0.28.0",
+    "jest": "^30",
+    "ts-jest": "^29",
+    "ts-node": "^10.9.2",
+    "typescript": "~6.0.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.257.0",
+    "constructs": "^10.6.0"
+  }
+}
