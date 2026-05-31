@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
-import VillageCard from '../VillageCard.vue'
+import VillageCard from './VillageCard.vue'
 import type { VillageResponse } from '@repo/schema'
 
 const vuetify = createVuetify()

@@ -8,7 +8,7 @@ import type {
   ListVillageResidentsResponse,
   CreateResidentResponse,
 } from '@repo/schema'
-import { useApiState } from '../composables/useApiState'
+import { useApiState } from '@/shared/lib/useApiState'
 
 export const useResidentStore = defineStore('resident', () => {
   const residents = ref<ResidentWithVillageResponse[]>([])

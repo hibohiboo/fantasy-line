@@ -20,10 +20,10 @@
 | DB スキーマ | `apps/api/src/db/schema.ts` | residents テーブル追加 |
 | DB マイグレーション | `apps/api/drizzle/` 配下に新規 SQL | 新規 |
 | インフラ | `infra/lib/infra-stack.ts` | Lambda・API Gateway リソース追加 |
-| フロントエンド | `apps/frontend/src/views/ResidentListView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/resident.md)） |
-| フロントエンド | `apps/frontend/src/views/ResidentCreateView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/resident.md)） |
-| フロントエンド | `apps/frontend/src/views/VillageResidentListView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/resident.md)） |
-| フロントエンド | `apps/frontend/src/stores/resident.ts` | 新規 |
+| フロントエンド | `apps/frontend/src/features/resident/ResidentListView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/resident.md)） |
+| フロントエンド | `apps/frontend/src/features/resident/ResidentCreateView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/resident.md)） |
+| フロントエンド | `apps/frontend/src/features/resident/VillageResidentListView.vue` | 新規（詳細: [画面設計・開発者向け](./screen/resident.md)） |
+| フロントエンド | `apps/frontend/src/features/resident/residentStore.ts` | 新規 |
 | フロントエンド | `apps/frontend/src/router/index.ts` | ルート追加 |
 
 ---
@@ -218,7 +218,7 @@ export type ListVillageResidentsResponse = z.infer<typeof ListVillageResidentsRe
 
 ---
 
-### Pinia ストア（`apps/frontend/src/stores/resident.ts`）
+### Pinia ストア（`apps/frontend/src/features/resident/residentStore.ts`）
 
 ```typescript
 // 状態
@@ -373,3 +373,4 @@ async function createResident(input: CreateResidentInput): Promise<Resident>
 |---|---|---|
 | PBI-003 | 2026-05-06 | 住人管理機能の初期詳細設計（登録・全体一覧・村別一覧・権限ガード） |
 | PBI-019 | 2026-05-30 | ハンドラーパスを `src/handlers/` → `src/resident/` に更新（feature別フォルダ構成への移行） |
+| PBI-020 | 2026-05-31 | フロントエンドパスを `src/views/` / `src/stores/` → `src/features/resident/` に更新（feature別フォルダ構成への移行） |

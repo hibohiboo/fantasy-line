@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useVillageStore } from '../village'
+import { useVillageStore } from './villageStore'
 import type { VillageResponse } from '@repo/schema'
 
 const mockVillage: VillageResponse = {

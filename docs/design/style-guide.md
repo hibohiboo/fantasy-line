@@ -295,14 +295,14 @@ function validateName(v: string): true | string {
 
 ```
 src/
-├── views/          # ルーターが参照するページコンポーネント
-├── components/
-│   ├── village/    # VillageCard.vue など機能別
-│   ├── base/       # BaseConfirmDialog.vue など Vuetify にない独自UI のみ
-│   └── layout/     # TheHeader.vue など
-├── stores/         # Pinia ストア（<対象名>.ts）
-├── composables/    # use<機能名>.ts
-└── types/          # 型定義
+├── features/
+│   ├── village/    # VillageListView.vue, VillageCard.vue, villageStore.ts など
+│   └── resident/   # ResidentListView.vue, ResidentList.vue, residentStore.ts など
+├── shared/
+│   ├── ui/         # HomeView.vue など機能横断の共通ページ
+│   └── lib/        # useApiState.ts など機能横断のユーティリティ
+├── router/         # index.ts（維持）
+└── mocks/          # MSW ハンドラー（維持）
 ```
 
 Vuetify のコンポーネント（`v-btn`、`v-text-field` など）は `base/` に再ラップしない。

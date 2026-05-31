@@ -69,8 +69,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useResidentStore } from '@/stores/resident'
-import { useVillageStore } from '@/stores/village'
+import { useResidentStore } from '@/features/resident/residentStore'
+import { useVillageStore } from '@/features/village/villageStore'
 import { CreateResidentSchema } from '@repo/schema'
 import type { VillageResponse } from '@repo/schema'
 

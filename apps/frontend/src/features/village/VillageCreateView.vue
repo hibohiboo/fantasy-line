@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useVillageStore } from '@/stores/village'
+import { useVillageStore } from '@/features/village/villageStore'
 import { CreateVillageSchema } from '@repo/schema'
 
 const router = useRouter()

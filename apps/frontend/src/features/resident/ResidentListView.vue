@@ -32,8 +32,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { useResidentStore } from '@/stores/resident'
-import ResidentList from '@/components/resident/ResidentList.vue'
+import { useResidentStore } from '@/features/resident/residentStore'
+import ResidentList from '@/features/resident/ResidentList.vue'
 import type { ResidentWithVillageResponse } from '@repo/schema'
 
 const store = useResidentStore()

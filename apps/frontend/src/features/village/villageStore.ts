@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { VillageResponse, ListVillagesResponse, CreateVillageResponse } from '@repo/schema'
-import { useApiState } from '../composables/useApiState'
+import { useApiState } from '@/shared/lib/useApiState'
 
 export const useVillageStore = defineStore('village', () => {
   const villages = ref<VillageResponse[]>([])

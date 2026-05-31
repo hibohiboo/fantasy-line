@@ -30,8 +30,8 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useResidentStore } from '@/stores/resident'
-import ResidentList from '@/components/resident/ResidentList.vue'
+import { useResidentStore } from '@/features/resident/residentStore'
+import ResidentList from '@/features/resident/ResidentList.vue'
 import type { ResidentResponse } from '@repo/schema'
 
 const route = useRoute()

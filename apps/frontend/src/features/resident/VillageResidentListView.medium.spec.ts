@@ -4,8 +4,8 @@ import { nextTick } from 'vue'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
 import { createRouter, createWebHistory } from 'vue-router'
-import ResidentListView from '../ResidentListView.vue'
-import type { ResidentWithVillageResponse } from '@repo/schema'
+import VillageResidentListView from './VillageResidentListView.vue'
+import type { ResidentResponse } from '@repo/schema'
 
 const vuetify = createVuetify()
 
@@ -14,19 +14,18 @@ function makeRouter() {
     history: createWebHistory(),
     routes: [
       { path: '/', component: { template: '<div />' } },
-      { path: '/residents/new', component: { template: '<div />' } },
+      { path: '/villages/:id/residents', component: { template: '<div />' } },
     ],
   })
 }
 
-const mockResidents: ResidentWithVillageResponse[] = [
+const mockResidents: ResidentResponse[] = [
   {
     id: 1,
     name: '田中太郎',
     nameKana: 'タナカタロウ',
     birthDate: '2000-01-15',
     villageId: 1,
-    villageName: 'エルムの村',
     createdAt: '2026-05-05T00:00:00.000Z',
   },
   {
@@ -34,20 +33,19 @@ const mockResidents: ResidentWithVillageResponse[] = [
     name: '鈴木花子',
     nameKana: 'スズキハナコ',
     birthDate: '1995-06-20',
-    villageId: 2,
-    villageName: 'オークの村',
+    villageId: 1,
     createdAt: '2026-05-04T00:00:00.000Z',
   },
 ]
 
 function mountView(initialResidentState: object = {}) {
-  return mount(ResidentListView, {
+  return mount(VillageResidentListView, {
     global: {
       plugins: [
         vuetify,
         createTestingPinia({
           initialState: {
-            resident: { residents: [], isLoading: false, error: null, ...initialResidentState },
+            resident: { villageResidents: [], isLoading: false, error: null, ...initialResidentState },
           },
           stubActions: true,
           createSpy: vi.fn,
@@ -58,22 +56,17 @@ function mountView(initialResidentState: object = {}) {
   })
 }
 
-describe('ResidentListView', () => {
+describe('VillageResidentListView', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
   })
 
-  it('住人一覧が表示される（名前・読み・所属村名の列あり）', async () => {
-    const wrapper = mountView({ residents: mockResidents })
+  it('住人一覧が表示される（villageName 列なし）', async () => {
+    const wrapper = mountView({ villageResidents: mockResidents })
     await nextTick()
     expect(wrapper.text()).toContain('田中太郎')
     expect(wrapper.text()).toContain('タナカタロウ')
-    expect(wrapper.text()).toContain('エルムの村')
-  })
-
-  it('「住人を追加」ボタンが存在する', () => {
-    const wrapper = mountView()
-    expect(wrapper.text()).toContain('住人を追加')
+    expect(wrapper.text()).not.toContain('所属村')
   })
 
   it('ローディング中はプログレスサークルを表示する', async () => {

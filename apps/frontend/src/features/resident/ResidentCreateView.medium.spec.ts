@@ -3,8 +3,8 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
 import { createRouter, createWebHistory } from 'vue-router'
-import ResidentCreateView from '../ResidentCreateView.vue'
-import { useResidentStore } from '@/stores/resident'
+import ResidentCreateView from './ResidentCreateView.vue'
+import { useResidentStore } from '@/features/resident/residentStore'
 import type { ResidentResponse } from '@repo/schema'
 
 const vuetify = createVuetify()

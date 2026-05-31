@@ -49,8 +49,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { useVillageStore } from '@/stores/village'
-import VillageCard from '@/components/village/VillageCard.vue'
+import { useVillageStore } from '@/features/village/villageStore'
+import VillageCard from '@/features/village/VillageCard.vue'
 import type { VillageResponse } from '@repo/schema'
 
 const store = useVillageStore()

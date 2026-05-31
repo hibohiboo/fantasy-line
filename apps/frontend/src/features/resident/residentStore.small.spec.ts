@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useResidentStore } from '../resident'
+import { useResidentStore } from './residentStore'
 import type {
   ResidentWithVillageResponse,
   ResidentResponse,

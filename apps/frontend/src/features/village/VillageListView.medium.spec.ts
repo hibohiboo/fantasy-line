@@ -4,7 +4,7 @@ import { nextTick } from 'vue'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
 import { createRouter, createWebHistory } from 'vue-router'
-import VillageListView from '../VillageListView.vue'
+import VillageListView from './VillageListView.vue'
 import type { VillageResponse } from '@repo/schema'
 
 const vuetify = createVuetify()
