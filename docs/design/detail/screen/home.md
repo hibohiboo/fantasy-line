@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-05-06
+last_updated: 2026-05-31
 ---
 
 # 画面設計 — トップページ（開発者向け）
@@ -11,69 +11,41 @@ last_updated: 2026-05-06
 
 ---
 
-## トップページ（`HomeView.vue`）
+## トップページ
 
 ### コンポーネント構成
 
-```
-HomeView.vue
-└── v-container（max-width: 480px）
-    └── div.text-center.py-16
-        ├── h1.text-display-small「ファンタジーライン」
-        ├── p.text-body-large.text-medium-emphasis（説明文）
-        ├── [未ログイン時]
-        │   ├── v-text-field（ユーザー名入力）
-        │   └── v-btn color="primary"「始める」
-        └── [ログイン済み時]
-            ├── p.text-body-medium.text-medium-emphasis（おかえりなさいメッセージ）
-            └── v-btn color="primary" to="/villages"「村一覧を見る」
-```
+タイトル「ファンタジーライン」と説明文を表示する。
+認証状態によって以下のように表示を切り替える。
+
+- 未ログイン時: ユーザー名入力フォームと「始める」ボタンを表示する
+- ログイン済み時: おかえりなさいメッセージと「村一覧を見る」ボタンを表示する
 
 ### 認証状態の判定
 
-`localStorage.getItem('userId')` の有無で未ログイン／ログイン済みを切り替える。
+ローカルストレージに保存されたユーザー ID の有無で表示を切り替える。
 
-```typescript
-const userId = ref(localStorage.getItem('userId'))
-```
-
-`userId` が `null` → 未ログイン表示（ユーザー名入力フォーム）
-`userId` が文字列 → ログイン済み表示（「村一覧を見る」ボタン）
+- ユーザー ID が未保存: ユーザー名入力フォームを表示する
+- ユーザー ID が保存済み: 「村一覧を見る」ボタンを表示する
 
 ### 「始める」ボタンの処理
 
-```typescript
-function start() {
-  if (!inputName.value.trim()) return
-  localStorage.setItem('userId', inputName.value.trim())
-  userId.value = inputName.value.trim()
-  router.push('/villages')
-}
-```
-
-1. ユーザー名を `localStorage` に `userId` キーで保存する
-2. ルーターで `/villages` に遷移する
+1. ユーザー名をローカルストレージに保存する
+2. 村一覧ページに遷移する
 
 ### バリデーション
 
-- ユーザー名が空（空文字・スペースのみ）の場合、「始める」ボタンを `:disabled="!inputName.trim()"` で無効化する
-- `:rules` による Vuetify バリデーションは使用しない（シンプルなボタン制御で十分）
+ユーザー名が空（空文字・スペースのみ）の場合、「始める」ボタンを無効化する。
+フォームバリデーション（rules による検証）は使用しない。シンプルなボタン制御で十分なため。
 
 ---
 
-## アプリケーションレイアウト（`App.vue`）
+## アプリケーションレイアウト
 
 ### 構成
 
-```
-App.vue
-└── v-app
-    ├── v-app-bar color="primary" flat elevation="1"
-    │   ├── v-app-bar-title: RouterLink to="/"「ファンタジーライン」
-    │   └── [append slot]: v-btn to="/villages" variant="text" color="white"「村一覧」
-    └── v-main
-        └── RouterView
-```
+ヘッダーバーにアプリタイトル「ファンタジーライン」（トップページへのリンク）と「村一覧」ナビゲーションリンクを表示する。
+メインエリアに各ページのコンテンツを表示する。
 
 ### ナビゲーション
 
@@ -87,3 +59,4 @@ App.vue
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-001 | 2026-05-06 | 初版作成。トップページ・アプリレイアウトの開発者向け画面設計 |
+| PBI-023 | 2026-05-31 | 実装コード・コンポーネント名をタイトルから除去し「仕様の合意記録」に再編 |
