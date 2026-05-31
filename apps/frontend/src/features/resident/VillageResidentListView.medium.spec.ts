@@ -4,15 +4,19 @@ import { nextTick } from 'vue'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
 import VillageResidentListView from './VillageResidentListView.vue'
-import { makeRouter } from '@/test-utils/makeRouter'
 import type { ResidentResponse } from '@repo/schema'
 
-const vuetify = createVuetify()
+vi.mock('vue-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue-router')>()
+  return {
+    ...actual,
+    useRoute: vi.fn<() => { params: Record<string, string>; path: string; query: Record<string, string> }>(
+      () => ({ params: { id: '1' }, path: '/villages/1/residents', query: {} }),
+    ),
+  }
+})
 
-const VILLAGE_RESIDENT_ROUTES = [
-  { path: '/', component: { template: '<div />' } },
-  { path: '/villages/:id/residents', component: { template: '<div />' } },
-]
+const vuetify = createVuetify()
 
 const mockResidents: ResidentResponse[] = [
   {
@@ -45,7 +49,6 @@ function mountView(initialResidentState: object = {}) {
           stubActions: true,
           createSpy: vi.fn,
         }),
-        makeRouter(VILLAGE_RESIDENT_ROUTES),
       ],
     },
   })

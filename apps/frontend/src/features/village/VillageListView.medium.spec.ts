@@ -4,7 +4,6 @@ import { nextTick } from 'vue'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
 import VillageListView from './VillageListView.vue'
-import { makeRouter } from '@/test-utils/makeRouter'
 import type { VillageResponse } from '@repo/schema'
 
 const vuetify = createVuetify()
@@ -26,7 +25,6 @@ function mountView(initialVillageState: object = {}) {
           stubActions: true,
           createSpy: vi.fn,
         }),
-        makeRouter(),
       ],
     },
   })

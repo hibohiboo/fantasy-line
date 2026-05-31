@@ -3,17 +3,21 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
 import VillageCreateView from './VillageCreateView.vue'
-import { makeRouter } from '@/test-utils/makeRouter'
 import { useVillageStore } from '@/features/village/villageStore'
+
+const mockPush = vi.hoisted(() => vi.fn<(to: string) => void>())
+
+vi.mock('vue-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue-router')>()
+  return {
+    ...actual,
+    useRouter: vi.fn<() => { push: typeof mockPush }>(() => ({ push: mockPush })),
+  }
+})
 
 const vuetify = createVuetify()
 
-const VILLAGE_ROUTES = [
-  { path: '/', component: { template: '<div />' } },
-  { path: '/villages', component: { template: '<div />' } },
-]
-
-function mountView(router = makeRouter(VILLAGE_ROUTES)) {
+function mountView() {
   return mount(VillageCreateView, {
     global: {
       plugins: [
@@ -23,7 +27,6 @@ function mountView(router = makeRouter(VILLAGE_ROUTES)) {
           stubActions: true,
           createSpy: vi.fn,
         }),
-        router,
       ],
     },
     attachTo: document.body,
@@ -33,6 +36,7 @@ function mountView(router = makeRouter(VILLAGE_ROUTES)) {
 describe('VillageCreateView', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    mockPush.mockClear()
   })
 
   it('フォームが表示される', () => {
@@ -45,31 +49,31 @@ describe('VillageCreateView', () => {
   })
 
   it.skip('空文字で送信するとバリデーションエラーが表示され遷移しない', async () => {
-    const router = makeRouter(VILLAGE_ROUTES)
-    const wrapper = mountView(router)
+    // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
+    const wrapper = mountView()
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('村名を入力してください')
-    expect(router.currentRoute.value.path).toBe('/')
+    expect(mockPush).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
   it.skip('129文字で送信するとバリデーションエラーが表示され遷移しない', async () => {
-    const router = makeRouter(VILLAGE_ROUTES)
-    const wrapper = mountView(router)
+    // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
+    const wrapper = mountView()
     await wrapper.find('input').setValue('あ'.repeat(129))
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('128文字以内')
-    expect(router.currentRoute.value.path).toBe('/')
+    expect(mockPush).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
   it.skip('正常送信後に /villages へリダイレクトする', async () => {
-    const router = makeRouter(VILLAGE_ROUTES)
-    const wrapper = mountView(router)
+    // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
+    const wrapper = mountView()
     const store = useVillageStore()
     vi.spyOn(store, 'createVillage').mockResolvedValue({
       id: 1,
@@ -80,7 +84,7 @@ describe('VillageCreateView', () => {
     await wrapper.find('input').setValue('テスト村')
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/villages')
+    expect(mockPush).toHaveBeenCalledWith('/villages')
     wrapper.unmount()
   })
 })

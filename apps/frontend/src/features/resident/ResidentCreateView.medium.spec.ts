@@ -3,19 +3,22 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import { createTestingPinia } from '@pinia/testing'
 import ResidentCreateView from './ResidentCreateView.vue'
-import { makeRouter } from '@/test-utils/makeRouter'
 import { useResidentStore } from '@/features/resident/residentStore'
 import type { ResidentResponse } from '@repo/schema'
 
+const mockPush = vi.hoisted(() => vi.fn<(to: string) => void>())
+
+vi.mock('vue-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue-router')>()
+  return {
+    ...actual,
+    useRouter: vi.fn<() => { push: typeof mockPush }>(() => ({ push: mockPush })),
+  }
+})
+
 const vuetify = createVuetify()
 
-const RESIDENT_CREATE_ROUTES = [
-  { path: '/', component: { template: '<div />' } },
-  { path: '/residents', component: { template: '<div />' } },
-  { path: '/residents/new', component: { template: '<div />' } },
-]
-
-function mountView(router = makeRouter(RESIDENT_CREATE_ROUTES)) {
+function mountView() {
   return mount(ResidentCreateView, {
     global: {
       plugins: [
@@ -28,7 +31,6 @@ function mountView(router = makeRouter(RESIDENT_CREATE_ROUTES)) {
           stubActions: true,
           createSpy: vi.fn,
         }),
-        router,
       ],
     },
     attachTo: document.body,
@@ -38,6 +40,7 @@ function mountView(router = makeRouter(RESIDENT_CREATE_ROUTES)) {
 describe('ResidentCreateView', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    mockPush.mockClear()
   })
 
   it('フォームが表示される（名前・読み・生年月日・所属村ドロップダウン）', () => {
@@ -53,32 +56,29 @@ describe('ResidentCreateView', () => {
 
   it.skip('名前が空で送信 → 「名前は必須です」が表示・遷移しない', async () => {
     // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
-    const router = makeRouter(RESIDENT_CREATE_ROUTES)
-    const wrapper = mountView(router)
+    const wrapper = mountView()
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('名前は必須です')
-    expect(router.currentRoute.value.path).toBe('/')
+    expect(mockPush).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
   it.skip('読みが空で送信 → 「読みは必須です」が表示・遷移しない', async () => {
     // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
-    const router = makeRouter(RESIDENT_CREATE_ROUTES)
-    const wrapper = mountView(router)
+    const wrapper = mountView()
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('読みは必須です')
-    expect(router.currentRoute.value.path).toBe('/')
+    expect(mockPush).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
   it.skip('読みにひらがな入力で送信 → 「読みはカタカナで入力してください」が表示', async () => {
     // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
-    const router = makeRouter(RESIDENT_CREATE_ROUTES)
-    const wrapper = mountView(router)
+    const wrapper = mountView()
     await wrapper.find('[data-testid="name"]').setValue('テスト')
     await wrapper.find('[data-testid="nameKana"]').setValue('てすと')
     await wrapper.find('[data-testid="submit"]').trigger('click')
@@ -90,8 +90,7 @@ describe('ResidentCreateView', () => {
 
   it.skip('生年月日が空で送信 → 「生年月日は必須です」が表示', async () => {
     // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
-    const router = makeRouter(RESIDENT_CREATE_ROUTES)
-    const wrapper = mountView(router)
+    const wrapper = mountView()
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
     await flushPromises()
@@ -101,8 +100,7 @@ describe('ResidentCreateView', () => {
 
   it.skip('正常送信後 → /residents にリダイレクト', async () => {
     // JSDOM + Vuetify VForm.validate() の制限により動作しない（PBI-017 で追跡中）
-    const router = makeRouter(RESIDENT_CREATE_ROUTES)
-    const wrapper = mountView(router)
+    const wrapper = mountView()
     const store = useResidentStore()
     const mockResident: ResidentResponse = {
       id: 1,
@@ -119,7 +117,7 @@ describe('ResidentCreateView', () => {
     await inputs[2]!.setValue('2000-01-15')
     await wrapper.find('[data-testid="submit"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/residents')
+    expect(mockPush).toHaveBeenCalledWith('/residents')
     wrapper.unmount()
   })
 })
