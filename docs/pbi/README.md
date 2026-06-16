@@ -81,6 +81,7 @@
 | PBI | タイトル | 優先度 |
 |---|---|---|
 | [PBI-016](00-infrastructure/PBI-016.md) | villages・residents の ID を UUID v7 に移行する | Phase 2 |
+| [PBI-024](00-infrastructure/PBI-024.md) | プロジェクトのテスト戦略を策定する | 中 |
 
 ---
 
