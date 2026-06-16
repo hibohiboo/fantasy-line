@@ -20,6 +20,7 @@
 | 5 | [可視化・統計](05-visualization/) | PBI-009, 010 | Phase 2 |
 | 6 | [魔力システム](06-mana-system/) | PBI-011, 012, 013 | Phase 2-3 |
 | — | [インフラ・基盤](00-infrastructure/) | PBI-016 | Phase 2 |
+| 7 | [マルチテナント SaaS](07-multitenant-saas/) | PBI-SaaS-001 | Phase 2 |
 
 ---
 
@@ -82,6 +83,12 @@
 |---|---|---|
 | [PBI-016](00-infrastructure/PBI-016.md) | villages・residents の ID を UUID v7 に移行する | Phase 2 |
 | [PBI-024](00-infrastructure/PBI-024.md) | プロジェクトのテスト戦略を策定する | 中 |
+
+### エピック 7 — マルチテナント SaaS
+
+| PBI | タイトル | 優先度 |
+|---|---|---|
+| [PBI-SaaS-001](07-multitenant-saas/PBI-SaaS-001.md) | マルチテナント SaaS 化 — 設計 | Phase 2 |
 
 ---
 
