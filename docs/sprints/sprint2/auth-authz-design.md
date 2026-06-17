@@ -187,15 +187,16 @@ type Permission = {
 | `common` | 全テナントから参照可能な共通マスタデータ | 全テナントの Lambda |
 | `tenant_{slug}` | テナント固有のビジネスデータ・カスタムロール・権限 | テナント選択後の Lambda |
 
-### `service` スキーマ
+### `service` スキーマ（サービサー側ユーザーと全体管理）
 
 ```
 service.users
   - id           UUID PK
   - cognito_sub  string UNIQUE   ← Cognito の sub クレーム
   - email        string
-  - user_type    'servicer_admin' | 'servicer_delegate' | 'tenant_admin' | 'tenant_user'
+  - user_type    'servicer_admin' | 'servicer_delegate'
   - created_at   datetime
+  ※ servicer_* のみ。tenant_* は各テナントスキーマで管理
 
 service.tenants
   - id           UUID PK
@@ -204,38 +205,52 @@ service.tenants
   - status       'active' | 'suspended'
   - created_at   datetime
 
-service.user_tenant_roles
-  - user_id      → users.id
-  - tenant_id    → tenants.id
-  - role_type    'servicer_admin' | 'servicer_delegate' | 'tenant_admin' | 'tenant_user'
+service.user_tenant_access
+  - user_id      → service.users.id
+  - tenant_id    → service.tenants.id
+  - role_type    'servicer_admin' | 'servicer_delegate'
   - created_at   datetime
   PK: (user_id, tenant_id)
-  ※ servicer_* は複数テナントに割り当て可能
-  ※ tenant_*  は 1 テナントのみ（アプリ側でテナント数 = 1 を制約する）
+  ※ servicer_* ユーザーがアクセス可能なテナントと、そのテナントでの役割を管理
+  ※ テナントごとに role_type が異なる場合に対応（例: A テナントは admin、B テナントは delegate）
 
 service.default_role_permissions
   - role_type    string
   - resource     string
   - action       string
   PK: (role_type, resource, action)
-  ※ 各 role_type のデフォルト許可アクション定義（ホワイトリスト）
+  ※ 全 role_type のパーミッション定義（ホワイトリスト）
 ```
 
-### `common` スキーマ
+### `common` スキーマ（全テナント共通マスタ）
 
 全テナントから参照可能な共通マスタデータを置く。
-具体的な内容は追加要件で確定（例: 職業マスタ、アイテム定義等）。
+具体的なテーブルは DB 設計 PBI で確定する。
 
-### `tenant_{slug}` スキーマ
+### `tenant_{slug}` スキーマ（テナント側ユーザーとビジネスデータ）
 
 ```
-＋ ビジネスデータのみ（villages, residents, jobs, simulations 等）
+tenant_{slug}.users
+  - id           UUID PK
+  - cognito_sub  string UNIQUE   ← Cognito の sub クレーム
+  - email        string
+  - user_type    'tenant_admin' | 'tenant_user'
+  - created_at   datetime
+  ※ このテナントに属するユーザーのみ。servicer_* はここに存在しない
+
+＋ ビジネスデータ（villages, residents, jobs, simulations 等）
   docs/design/data-model/ に定義済みのテーブルはすべてここに属する
 ```
 
-パーミッション関連テーブル（roles / role_permissions / user_roles）は **`tenant_{slug}` には置かない**。
+パーミッション関連テーブル（roles / role_permissions）は **`tenant_{slug}` には置かない**。
+ユーザーのロールは `user_type` カラムで、パーミッション定義は `service.default_role_permissions` で一元管理する。
 
-理由: カスタムロール機能は現時点では不採用。ユーザーのロール情報は `service.user_tenant_roles.role_type` で管理し、パーミッション定義は `service.default_role_permissions` で一元管理する。
+**ユーザー特定の分岐まとめ（Hono ミドルウェア内）：**
+
+| user_type（JWT） | ユーザーレコードの参照先 | テナントアクセス確認先 |
+|---|---|---|
+| `servicer_admin` / `servicer_delegate` | `service.users` | `service.user_tenant_access` |
+| `tenant_admin` / `tenant_user` | `tenant_{slug}.users`（JWT の `custom:tenant_id` から特定） | 不要（JWT に確定テナントが入っている） |
 
 ---
 
@@ -310,16 +325,24 @@ sequenceDiagram
         Lambda-->>FE: 400 Bad Request
     end
 
-    Lambda->>ServiceDB: user_tenant_roles を確認<br/>（このユーザーはこのテナントにアクセス可能か）
-    alt アクセス不可（または tenant_* で tenant_id 不一致）
-        Lambda-->>FE: 403 Forbidden（テナントアクセス拒否）
+    alt user_type = "servicer_admin" or "servicer_delegate"
+        Lambda->>ServiceDB: service.user_tenant_access を確認<br/>（このユーザーはこの X-Tenant-Id にアクセス可能か）
+        alt アクセス不可
+            Lambda-->>FE: 403 Forbidden（テナントアクセス拒否）
+        end
+    else user_type = "tenant_admin" or "tenant_user"
+        Note over Lambda: JWT の custom:tenant_id と<br/>X-Tenant-Id ヘッダーを照合
+        alt 不一致
+            Lambda-->>FE: 403 Forbidden（テナント不一致）
+        end
+        Lambda->>TenantDB: tenant_{slug}.users で存在確認
     end
 
     alt user_type = "servicer_admin"
         Note over Lambda,TenantDB: Tier 2 スキップ（全権限）
         Lambda->>TenantDB: 操作実行
     else user_type = その他（servicer_delegate / tenant_admin / tenant_user）
-        Lambda->>ServiceDB: default_role_permissions を確認<br/>（resource + action がホワイトリストにあるか）
+        Lambda->>ServiceDB: default_role_permissions を確認<br/>（role_type × resource × action がホワイトリストにあるか）
         alt 権限なし
             Lambda-->>FE: 403 Forbidden（権限不足）
         end
