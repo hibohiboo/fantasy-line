@@ -157,10 +157,14 @@ type Permission = {
 
 理由: サービス全体を管理する立場であるため、機能ごとの細かい制御は行わない。
 
-### ロールは固定セットのみ（カスタムロールなし）
+### ロールは固定セットのみ（カスタムロールなし）——現時点
 
-`tenant_admin` によるカスタムロールの定義は現時点では行わない。
-全アクターのパーミッションは `service.default_role_permissions` の固定セットで管理する。
+`tenant_admin` によるカスタムロール定義は現時点では行わない。
+ただし将来の複数ロール付与・テナントごとの認可カスタマイズを見据え、
+**`tenant_{slug}` には roles / user_roles / role_permissions の 3 テーブルを最初から置く**。
+
+テナントプロビジョニング時に `service.role_permissions`（デフォルト定義）の内容を各テナントに複製してシードする。
+現時点では全テナント同一の権限セットで動くが、将来は `tenant_{slug}.role_permissions` を個別に変更できる。
 
 ### `servicer_delegate` の確定パーミッション
 
@@ -194,7 +198,7 @@ service.users
   - id           UUID PK
   - cognito_sub  string UNIQUE   ← Cognito の sub クレーム
   - email        string
-  - user_type    'servicer_admin' | 'servicer_delegate'
+  - user_type    'servicer_admin' | 'servicer_delegate'  ← 大区分（JWT 検証用）
   - created_at   datetime
   ※ servicer_* のみ。tenant_* は各テナントスキーマで管理
 
@@ -205,21 +209,23 @@ service.tenants
   - status       'active' | 'suspended'
   - created_at   datetime
 
-service.user_tenant_access
+service.roles
+  - id           UUID PK
+  - name         string ('servicer_admin' | 'servicer_delegate')
+
+service.user_tenant_roles  ← 中間テーブル（servicer user × tenant × role）
   - user_id      → service.users.id
   - tenant_id    → service.tenants.id
-  - role_type    'servicer_admin' | 'servicer_delegate'
-  - created_at   datetime
-  PK: (user_id, tenant_id)
-  ※ servicer_* ユーザーがアクセス可能なテナントと、そのテナントでの役割を管理
-  ※ テナントごとに role_type が異なる場合に対応（例: A テナントは admin、B テナントは delegate）
+  - role_id      → service.roles.id
+  PK: (user_id, tenant_id, role_id)
+  ※ テナントごとに異なるロールを付与可能（例: A テナントは admin、B は delegate）
+  ※ 将来的に複数ロール付与にも対応
 
-service.default_role_permissions
-  - role_type    string
+service.role_permissions  ← servicer 側のパーミッション定義 兼 テナントへのシード元
+  - role_id      → service.roles.id
   - resource     string
   - action       string
-  PK: (role_type, resource, action)
-  ※ 全 role_type のパーミッション定義（ホワイトリスト）
+  PK: (role_id, resource, action)
 ```
 
 ### `common` スキーマ（全テナント共通マスタ）
@@ -234,23 +240,40 @@ tenant_{slug}.users
   - id           UUID PK
   - cognito_sub  string UNIQUE   ← Cognito の sub クレーム
   - email        string
-  - user_type    'tenant_admin' | 'tenant_user'
+  - user_type    'tenant_admin' | 'tenant_user'  ← 大区分（JWT 検証用）
   - created_at   datetime
   ※ このテナントに属するユーザーのみ。servicer_* はここに存在しない
+
+tenant_{slug}.roles
+  - id           UUID PK
+  - name         string  ← テナントプロビジョニング時に 'tenant_admin' / 'tenant_user' をシード
+  - is_default   boolean ← true = シード済みデフォルトロール
+  ※ 将来テナントが独自ロールを追加する拡張点
+
+tenant_{slug}.user_roles  ← 中間テーブル（tenant user × role）
+  - user_id      → tenant_{slug}.users.id
+  - role_id      → tenant_{slug}.roles.id
+  PK: (user_id, role_id)
+  ※ 1 ユーザーに複数ロール付与可能
+
+tenant_{slug}.role_permissions
+  - role_id      → tenant_{slug}.roles.id
+  - resource     string
+  - action       string
+  PK: (role_id, resource, action)
+  ※ テナントプロビジョニング時に service.role_permissions からシード
+  ※ 将来テナントごとに独自カスタマイズ可能
 
 ＋ ビジネスデータ（villages, residents, jobs, simulations 等）
   docs/design/data-model/ に定義済みのテーブルはすべてここに属する
 ```
 
-パーミッション関連テーブル（roles / role_permissions）は **`tenant_{slug}` には置かない**。
-ユーザーのロールは `user_type` カラムで、パーミッション定義は `service.default_role_permissions` で一元管理する。
-
 **ユーザー特定の分岐まとめ（Hono ミドルウェア内）：**
 
-| user_type（JWT） | ユーザーレコードの参照先 | テナントアクセス確認先 |
-|---|---|---|
-| `servicer_admin` / `servicer_delegate` | `service.users` | `service.user_tenant_access` |
-| `tenant_admin` / `tenant_user` | `tenant_{slug}.users`（JWT の `custom:tenant_id` から特定） | 不要（JWT に確定テナントが入っている） |
+| user_type（JWT） | ユーザーレコードの参照先 | テナントアクセス確認先 | パーミッション参照先 |
+|---|---|---|---|
+| `servicer_admin` / `servicer_delegate` | `service.users` | `service.user_tenant_roles` | `service.role_permissions`（`servicer_admin` は skip） |
+| `tenant_admin` / `tenant_user` | `tenant_{slug}.users`（JWT の `custom:tenant_id` で特定） | JWT 照合のみ | `tenant_{slug}.role_permissions` |
 
 ---
 
@@ -391,7 +414,7 @@ const canCreateUser = hasPermission('user', 'create');
 | # | 内容 | 決定内容 |
 |---|---|---|
 | 1 | `common` スキーマに含める具体的なデータ | DB 設計 PBI で確定する。`docs/design/data-model/` の既存定義はすべて `tenant_{slug}` スキーマ用 |
-| 2 | テナント固有のカスタムロールを TenantAdmin が定義できるか | **固定セットのみ**。`service.default_role_permissions` で一元管理。`tenant_{slug}` にパーミッションテーブルは置かない |
+| 2 | テナント固有のカスタムロールを TenantAdmin が定義できるか | **現時点は固定セットのみ**。ただし将来の複数ロール・テナント固有カスタマイズに備え、`tenant_{slug}` に roles / user_roles / role_permissions を最初から置く。プロビジョニング時に `service.role_permissions` からシード |
 | 3 | `service.default_role_permissions` の初期定義 | 認可テーブル設計 PBI で確定する |
 | 4 | `servicer_delegate` のパーミッション一覧 | `resident.create` / `resident.update` のみ可。削除不可。全リソースの read / list は可。詳細は認可テーブル設計 PBI |
 | 5 | Cognito Authorizer の方式 | **Cognito JWT Authorizer**（API Gateway レベルで JWT 検証）。認可は Hono ミドルウェアで実施 |
