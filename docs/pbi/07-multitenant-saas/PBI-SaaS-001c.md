@@ -6,17 +6,20 @@
 
 ## ユーザーストーリー
 
-As a サービサー / テナントシステム管理者  
-I want テナント発行フローとテナント内ユーザー管理（招待・削除・ロール割り当て）のフローを設計ドキュメントとして確定したい  
-So that 誰が・いつ・どの手順で操作するかが明確になり、実装 PBI をブレなく定義できる
+As a `servicer_admin` / `tenant_admin`  
+I want テナント発行フロー・`servicer_delegate` 作成フロー・テナント内ユーザー管理フロー（招待・削除・ロール割り当て）を設計ドキュメントとして確定したい  
+So that 4 アクター（`servicer_admin` / `servicer_delegate` / `tenant_admin` / `tenant_user`）それぞれが・いつ・どの手順で操作するかが明確になり、実装 PBI をブレなく定義できる
 
 ---
 
 ## 背景 / 目的
 
-テナント発行はサービサーが行い（テナントユーザーによる自己発行なし）、
-テナント内のユーザー管理（招待・削除）はテナントシステム管理者が SaaS アプリ内のユーザー管理画面から行う。
-この 2 つのフローを操作手順・画面遷移レベルで設計する。
+テナント発行は `servicer_admin` が行い（テナントユーザーによる自己発行なし）、
+`servicer_delegate` の作成も `servicer_admin` のみが行う。
+テナント内のユーザー管理（招待・削除）は `tenant_admin` が SaaS アプリ内のユーザー管理画面から行う。
+`tenant_admin` は同テナント内の `tenant_admin` / `tenant_user` を管理できるが、`servicer_*` ロールの付与はできない。
+
+これらのフローを操作手順・画面遷移レベルで設計する。
 
 ---
 
@@ -24,17 +27,21 @@ So that 誰が・いつ・どの手順で操作するかが明確になり、実
 
 ### 含む
 
-- テナントプロビジョニングフロー設計（サービサー操作手順・実行手段の選定）
-  - Cognito グループ作成
-  - Aurora スキーマ作成
-  - 初期システム管理者アカウント作成
+- テナントプロビジョニングフロー設計（`servicer_admin` 操作手順・実行手段の選定）
+  - `service.tenants` への登録
+  - `tenant_{slug}` Aurora スキーマ作成
+  - `service.role_permissions` から `tenant_{slug}.role_permissions` へのシード
+  - 初期 `tenant_admin` アカウント作成（Cognito + `tenant_{slug}.users`）
   - ロールバック手順
-- テナント内ユーザー管理フロー設計（テナントシステム管理者が行う操作）
-  - ユーザー招待（Cognito AdminCreateUser）
+- `servicer_delegate` 作成フロー設計（`servicer_admin` が行う操作）
+  - Cognito アカウント作成（`custom:user_type: "servicer_delegate"`）
+  - `service.users` 登録 + `service.user_tenant_roles` でアクセス可能テナントを設定
+- テナント内ユーザー管理フロー設計（`tenant_admin` が行う操作）
+  - ユーザー招待（`tenant_user` / `tenant_admin`: Cognito AdminCreateUser + `tenant_{slug}.users` 登録）
   - ユーザー削除（Cognito + DB 両方）
-  - ロール割り当て（DB テーブル経由）
+  - ロール割り当て（`tenant_{slug}.user_roles` + `tenant_{slug}.role_permissions` 経由）
 - ユーザー管理画面のワイヤーフレーム / 画面遷移図（PO 向け・開発者向け）
-- 操作権限マトリクス（サービサー・テナント管理者・一般ユーザーそれぞれが行える操作）
+- 操作権限マトリクス（4 アクター: `servicer_admin` / `servicer_delegate` / `tenant_admin` / `tenant_user` それぞれが行える操作）
 
 ### 含まない
 
@@ -47,21 +54,29 @@ So that 誰が・いつ・どの手順で操作するかが明確になり、実
 
 ## ユースケース
 
-### メイン（サービサー — テナント発行）
+### メイン（`servicer_admin` — テナント発行）
 
-1. サービサーがテナントスラッグ・初期管理者メールアドレスを決定する
-2. サービサーがプロビジョニング手順（管理 CLI / 管理コンソール / 管理 Lambda）を実行する
-3. Cognito グループが作成され、Aurora にテナントスキーマが作成される
-4. Cognito に初期システム管理者アカウントが作成され、招待メールが送信される
-5. テナントシステム管理者が招待メールから初回ログインし、パスワードを設定する
+1. `servicer_admin` がテナントスラッグ・初期 `tenant_admin` メールアドレスを決定する
+2. `servicer_admin` がプロビジョニング手順（管理 CLI / 管理コンソール / 管理 Lambda）を実行する
+3. `service.tenants` に登録され、Aurora に `tenant_{slug}` スキーマが作成される
+4. `service.role_permissions` の内容が `tenant_{slug}.role_permissions` にシードされる
+5. Cognito に初期 `tenant_admin` アカウントが作成され（`custom:user_type: "tenant_admin"` / `custom:tenant_id: "{slug}"`）、招待メールが送信される
+6. `tenant_{slug}.users` に初期管理者レコードが登録される
+7. `tenant_admin` が招待メールから初回ログインし、パスワードを設定する
 
-### メイン（テナントシステム管理者 — ユーザー管理）
+### メイン（`servicer_admin` — `servicer_delegate` 作成）
 
-1. テナントシステム管理者がユーザー管理画面を開く
-2. 管理者がメールアドレスとロールを入力してユーザーを招待する
+1. `servicer_admin` が `servicer_delegate` のメールアドレスとアクセス可能テナントを決定する
+2. Cognito アカウントを作成（`custom:user_type: "servicer_delegate"`、`custom:tenant_id` は設定しない）
+3. `service.users` に登録し、`service.user_tenant_roles` でアクセス可能テナントと役割を設定する
+
+### メイン（`tenant_admin` — ユーザー管理）
+
+1. `tenant_admin` がユーザー管理画面を開く
+2. 管理者がメールアドレスとロール（`tenant_admin` / `tenant_user`）を入力してユーザーを招待する
 3. 招待ユーザーが招待メールから初回ログインする
-4. 管理者がユーザー一覧を確認し、必要に応じてロールを変更する
-5. 管理者がユーザーを削除する（Cognito アカウント + DB のユーザーデータ）
+4. 管理者がユーザー一覧を確認し、必要に応じて `tenant_{slug}.user_roles` でロールを変更する
+5. 管理者がユーザーを削除する（Cognito アカウント + `tenant_{slug}.users` 両方）
 
 ### 代替
 
@@ -69,8 +84,8 @@ So that 誰が・いつ・どの手順で操作するかが明確になり、実
 
 ### 例外
 
-- プロビジョニング中に Aurora スキーマ作成が失敗した場合 → Cognito グループ作成をロールバックし、エラーをサービサーに通知する
-- テナントシステム管理者が自分自身を削除しようとした場合 → エラーメッセージを表示して拒否する（最後の管理者は削除不可）
+- プロビジョニング中に Aurora スキーマ作成が失敗した場合 → `service.tenants` 登録をロールバックし、エラーを `servicer_admin` に通知する
+- `tenant_admin` が自分自身を削除しようとした場合 → エラーメッセージを表示して拒否する（テナント内の最後の `tenant_admin` は削除不可）
 
 ---
 
@@ -80,28 +95,36 @@ So that 誰が・いつ・どの手順で操作するかが明確になり、実
 Scenario 1: テナントプロビジョニングフローの確定
   Given プロビジョニングフロー設計ドキュメントが存在する
   When フロー手順を確認したとき
-  Then 実行主体（サービサー）と操作手段（管理 CLI / Lambda 等）が選定されていること
-  And  Cognito グループ作成 → Aurora スキーマ作成 → 初期管理者アカウント作成 の実行順序が定義されていること
+  Then 実行主体（`servicer_admin`）と操作手段（管理 CLI / Lambda 等）が選定されていること
+  And  `service.tenants` 登録 → Aurora スキーマ作成 → `role_permissions` シード → 初期 `tenant_admin` アカウント作成 の実行順序が定義されていること
   And  各ステップの失敗時ロールバック手順が定義されていること
 
-Scenario 2: ユーザー招待フローの確定
+Scenario 1b: `servicer_delegate` 作成フローの確定
+  Given `servicer_delegate` 作成フロー設計ドキュメントが存在する
+  When 作成手順を確認したとき
+  Then 実行主体が `servicer_admin` のみであることが明記されていること
+  And  Cognito アカウント作成（`custom:user_type: "servicer_delegate"`）→ `service.users` 登録 → `service.user_tenant_roles` 設定 の順序が定義されていること
+
+Scenario 2: テナント内ユーザー招待フローの確定
   Given ユーザー管理フロー設計ドキュメントが存在する
   When ユーザー招待手順を確認したとき
-  Then テナントシステム管理者がメールアドレスとロールを入力して招待する手順が定義されていること
+  Then `tenant_admin` がメールアドレスとロール（`tenant_admin` / `tenant_user`）を入力して招待する手順が定義されていること
   And  Cognito AdminCreateUser を使った招待メール送信が採用されていること
   And  招待後の初回ログイン・パスワード設定フローが定義されていること
+  And  `servicer_*` ロールを `tenant_admin` が付与できないことが明記されていること
 
 Scenario 3: ユーザー削除フローの確定
   Given ユーザー管理フロー設計ドキュメントが存在する
   When ユーザー削除手順を確認したとき
-  Then Cognito アカウントと DB レコードを両方削除する手順が定義されていること
-  And  最後のテナントシステム管理者は削除できないルールが明記されていること
+  Then Cognito アカウントと DB レコード（`tenant_{slug}.users`）を両方削除する手順が定義されていること
+  And  テナント内の最後の `tenant_admin` は削除できないルールが明記されていること
 
 Scenario 4: 操作権限マトリクスの確定
   Given 権限マトリクス設計ドキュメントが存在する
   When マトリクスを確認したとき
-  Then サービサー・テナント管理者・一般ユーザーそれぞれが実行できる操作が一覧化されていること
-  And  テナント管理者が自テナント外の操作を行えないことが明記されていること
+  Then `servicer_admin` / `servicer_delegate` / `tenant_admin` / `tenant_user` それぞれが実行できる操作が一覧化されていること
+  And  `tenant_admin` が自テナント外の操作を行えないことが明記されていること
+  And  `tenant_admin` が追加できる管理者は同テナント内の `tenant_admin` のみであることが明記されていること
 
 Scenario 5: ユーザー管理画面のフロー設計確定
   Given ユーザー管理画面の設計ドキュメントが存在する
@@ -120,11 +143,11 @@ Scenario 5: ユーザー管理画面のフロー設計確定
 - **Rule 2: スラッグはサービサーがテナント追加時に決定し、後から変更しない**
   - Example: スラッグ変更はスキーマ名・グループ名・全 JWT 再発行を伴うため変更不可とし、フローに明記する
 
-- **Rule 3: ユーザー管理はテナントシステム管理者が SaaS アプリ内画面から行う**
-  - Example: Cognito コンソールへのアクセス権限はテナント管理者に付与しない。操作は SaaS アプリ内のユーザー管理画面に限定する
+- **Rule 3: テナント内ユーザー管理は `tenant_admin` が SaaS アプリ内画面から行う**
+  - Example: Cognito コンソールへのアクセス権限は `tenant_admin` に付与しない。操作は SaaS アプリ内のユーザー管理画面に限定する。`servicer_*` ロールの付与は `tenant_admin` からはできない
 
-- **Rule 4: 最後のテナントシステム管理者は削除できない**
-  - Example: テナント内の `admin` ロールを持つユーザーが 1 人のとき、その削除操作は 400 エラーで拒否する
+- **Rule 4: テナント内の最後の `tenant_admin` は削除できない**
+  - Example: テナント内の `tenant_admin` ロールを持つユーザーが 1 人のとき、その削除操作は 400 エラーで拒否する
 
 - **Rule 5: ユーザー削除は Cognito と DB の両方から物理削除する**
   - Example: 削除後、削除対象ユーザーの JWT は次のリクエストで 403 になる（Cognito 無効化を削除前に実行する）
