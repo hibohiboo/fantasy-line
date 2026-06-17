@@ -145,8 +145,8 @@ Scenario 5: 既存 `owner_id` 扱い方針の確定
 
 ## 不明点 / 質問
 
-- Aurora MySQL の `max_connections` に対して、テナント数増加時の接続数影響を試算する必要があるか？
-- Lambda の接続プールライブラリ（mysql2 の pool 等）を使うか、1 リクエスト 1 接続とするか？
+- Aurora MySQL の `max_connections` に対して、テナント数増加時の接続数影響を試算する必要があるか？ → 試算しない
+- Lambda の接続プールライブラリ（mysql2 の pool 等）を使うか、1 リクエスト 1 接続とするか？ 
 
 ---
 
