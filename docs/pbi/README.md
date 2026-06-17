@@ -20,7 +20,7 @@
 | 5 | [可視化・統計](05-visualization/) | PBI-009, 010 | Phase 2 |
 | 6 | [魔力システム](06-mana-system/) | PBI-011, 012, 013 | Phase 2-3 |
 | — | [インフラ・基盤](00-infrastructure/) | PBI-016 | Phase 2 |
-| 7 | [マルチテナント SaaS](07-multitenant-saas/) | PBI-SaaS-001 | Phase 2 |
+| 7 | [マルチテナント SaaS](07-multitenant-saas/) | PBI-SaaS-001a〜d | Phase 2 |
 
 ---
 
@@ -88,7 +88,11 @@
 
 | PBI | タイトル | 優先度 |
 |---|---|---|
-| [PBI-SaaS-001](07-multitenant-saas/PBI-SaaS-001.md) | マルチテナント SaaS 化 — 設計 | Phase 2 |
+| [PBI-SaaS-001](07-multitenant-saas/PBI-SaaS-001.md) | マルチテナント SaaS 化 — エピック概要 | — |
+| [PBI-SaaS-001a](07-multitenant-saas/PBI-SaaS-001a.md) | Cognito 設計（claim 定義・グループ構成） | Phase 2 |
+| [PBI-SaaS-001b](07-multitenant-saas/PBI-SaaS-001b.md) | DB スキーマ per テナント設計（命名規則・接続切替・認可テーブル） | Phase 2 |
+| [PBI-SaaS-001c](07-multitenant-saas/PBI-SaaS-001c.md) | テナントプロビジョニング・ユーザー管理フロー設計 | Phase 2 |
+| [PBI-SaaS-001d](07-multitenant-saas/PBI-SaaS-001d.md) | API 認可パターン設計 + 既存ドキュメント横断更新 | Phase 2 |
 
 ---
 
