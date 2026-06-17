@@ -157,6 +157,24 @@ type Permission = {
 
 理由: サービス全体を管理する立場であるため、機能ごとの細かい制御は行わない。
 
+### ロールは固定セットのみ（カスタムロールなし）
+
+`tenant_admin` によるカスタムロールの定義は現時点では行わない。
+全アクターのパーミッションは `service.default_role_permissions` の固定セットで管理する。
+
+### `servicer_delegate` の確定パーミッション
+
+| resource | action | 可否 |
+|---|---|---|
+| （全リソース） | `read` / `list` | ✅ |
+| `resident` | `create` | ✅ |
+| `resident` | `update` | ✅ |
+| `resident` | `delete` | ❌ |
+| `user` | `create` / `update` / `delete` | ❌ |
+| （その他の write 系） | `create` / `update` / `delete` | ❌（別途 PBI で確定） |
+
+> `default_role_permissions` の完全な初期定義は「認可テーブル設計 PBI」で確定する。
+
 ---
 
 ## DB スキーマ構成
@@ -211,28 +229,57 @@ service.default_role_permissions
 ### `tenant_{slug}` スキーマ
 
 ```
-tenant_{slug}.roles
-  - id           UUID PK
-  - name         string          ← 将来テナントが独自定義するカスタムロール
-  - description  string
-
-tenant_{slug}.role_permissions
-  - role_id      → roles.id
-  - resource     string
-  - action       string
-  PK: (role_id, resource, action)
-  ※ カスタムロールへのパーミッション付与
-
-tenant_{slug}.user_roles
-  - user_id      → service.users.id
-  - role_id      → roles.id
-  PK: (user_id, role_id)
-  ※ ユーザーとカスタムロールの紐づけ
-
-＋ ビジネスデータ（villages, residents, jobs, simulations 等）
+＋ ビジネスデータのみ（villages, residents, jobs, simulations 等）
+  docs/design/data-model/ に定義済みのテーブルはすべてここに属する
 ```
 
-> **現時点の方針**: `tenant_admin` / `tenant_user` は `service.default_role_permissions` のデフォルト権限で動かす。テナント固有のカスタムロールは将来拡張として位置づける。
+パーミッション関連テーブル（roles / role_permissions / user_roles）は **`tenant_{slug}` には置かない**。
+
+理由: カスタムロール機能は現時点では不採用。ユーザーのロール情報は `service.user_tenant_roles.role_type` で管理し、パーミッション定義は `service.default_role_permissions` で一元管理する。
+
+---
+
+## API 実装方針：Hono ミドルウェアで認可を集約
+
+### 採用方針
+
+- **Cognito JWT Authorizer**（API Gateway）: JWT の署名検証のみ担当。claims を Lambda コンテキストに渡す
+- **Hono**（Lambda 内）: ルーティングとミドルウェアを担当。認可チェックをミドルウェアとして集約する
+
+### Lambda の処理レイヤー
+
+```
+API Gateway (Cognito JWT Authorizer)
+  ↓ JWT 検証済み claims をコンテキストに付与
+Lambda → Hono Router
+  ↓ middleware 1: テナントコンテキスト取得（tenant slug 解決 + DB アクセス可否確認）
+  ↓ middleware 2: パーミッションチェック（endpoint ごとに required permission を宣言）
+Handler（薄い。ビジネスロジック呼び出しのみ）
+```
+
+### ミドルウェアの役割
+
+| ミドルウェア | 処理内容 |
+|---|---|
+| `tenantContext` | user_type に応じて JWT / ヘッダーからテナントスラッグを解決。`service.user_tenant_roles` でアクセス可否を確認。テナント DB 接続を context にセット |
+| `requirePermission(resource, action)` | `service.default_role_permissions` を参照し、ロールに該当パーミッションがあるか確認。`servicer_admin` は skip |
+
+### ハンドラーの例
+
+```ts
+// apps/api/src/resident/handler.ts
+app.post(
+  '/residents',
+  tenantContext,
+  requirePermission('resident', 'create'),
+  async (c) => {
+    const body = await c.req.json();
+    const db = c.get('tenantDb');  // ミドルウェアがセット済み
+    const result = await createResident(db, body);
+    return c.json(result, 201);
+  }
+);
+```
 
 ---
 
@@ -316,13 +363,21 @@ const canCreateUser = hasPermission('user', 'create');
 
 ---
 
+## 確定済み事項（未確定事項の回答）
+
+| # | 内容 | 決定内容 |
+|---|---|---|
+| 1 | `common` スキーマに含める具体的なデータ | DB 設計 PBI で確定する。`docs/design/data-model/` の既存定義はすべて `tenant_{slug}` スキーマ用 |
+| 2 | テナント固有のカスタムロールを TenantAdmin が定義できるか | **固定セットのみ**。`service.default_role_permissions` で一元管理。`tenant_{slug}` にパーミッションテーブルは置かない |
+| 3 | `service.default_role_permissions` の初期定義 | 認可テーブル設計 PBI で確定する |
+| 4 | `servicer_delegate` のパーミッション一覧 | `resident.create` / `resident.update` のみ可。削除不可。全リソースの read / list は可。詳細は認可テーブル設計 PBI |
+| 5 | Cognito Authorizer の方式 | **Cognito JWT Authorizer**（API Gateway レベルで JWT 検証）。認可は Hono ミドルウェアで実施 |
+| 6 | `default_role_permissions` の `role_type` と `tenant_{slug}.roles` の紐づけ方 | カスタムロール自体を採用しないため後回し |
+
 ## 未確定事項
 
 | # | 内容 | 影響範囲 |
 |---|---|---|
-| 1 | `common` スキーマに含める具体的なデータ | DB 設計 PBI |
-| 2 | テナント固有のカスタムロール（`tenant_{slug}.roles`）を TenantAdmin が定義できるようにするか、それとも `service.default_role_permissions` の固定セットのみで運用するか | 認可テーブル PBI |
-| 3 | `service.default_role_permissions` の初期定義（各 role_type にどのパーミッションを付与するか） | 認可テーブル PBI |
-| 4 | `servicer_delegate` のパーミッション一覧（閲覧 + 一部編集削除の具体的な範囲） | 認可テーブル PBI |
-| 5 | Cognito Authorizer の方式（Lambda Authorizer vs Cognito JWT Authorizer） | Cognito CDK 実装 PBI |
-| 6 | テナント内でのロール名の表現：`default_role_permissions` の `role_type` と `tenant_{slug}.roles` の紐づけ方 | 認可テーブル PBI |
+| 1 | `service.default_role_permissions` の完全な初期定義（全 role_type × resource × action） | 認可テーブル設計 PBI |
+| 2 | `common` スキーマに含める具体的なテーブルとデータ | DB 設計 PBI |
+| 3 | `servicer_delegate` の `resident` 以外の write 系パーミッション範囲（village・simulation 等） | 認可テーブル設計 PBI |
