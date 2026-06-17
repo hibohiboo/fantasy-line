@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-05-10
+last_updated: 2026-06-17
 ---
 
 # API アーキテクチャ — リクエスト処理の代表パターン
@@ -19,6 +19,7 @@ API ハンドラーを実装する開発者。認証・ユーザーID 取得・�
 |---|---|---|
 | 開発中（PBI-014 前） | リクエストヘッダー `X-User-Id` | `apps/api/src/shared/auth.ts` の `getOwnerId(event)` を呼び出す |
 | 本番（PBI-014 後） | API Gateway Authorizer | `event.requestContext.authorizer.userId`（PBI-014 で `shared/auth.ts` を差し替え） |
+| SaaS 化（PBI-SaaS-001d 以降） | Hono context `c.get('userId')` | tenantContext ミドルウェアが JWT / X-Tenant-Id ヘッダーからテナントを解決し、context にセット |
 
 ヘッダーが存在しない場合（開発中）または Authorizer が通過しない場合（本番）は `401 Unauthorized` を返す。
 
@@ -123,6 +124,47 @@ sequenceDiagram
 
 ---
 
+## 代表パターン 4: Cognito JWT Authorizer → tenantContext → requirePermission → ハンドラー
+
+マルチテナント SaaS 化後のすべての認証済みエンドポイントの標準フロー。
+
+```mermaid
+sequenceDiagram
+    actor Client as クライアント
+    participant APIGW as API Gateway<br/>（Cognito JWT Authorizer）
+    participant Hono as Lambda Hono
+    participant TC as tenantContext
+    participant RP as requirePermission
+    participant Handler as ハンドラー
+    participant DB as テナント DB
+
+    Client->>APIGW: リクエスト（JWT 付き）
+    APIGW->>APIGW: JWT 署名検証
+    APIGW->>Hono: Lambda 起動（claims をコンテキストに付与）
+    Hono->>TC: テナント解決 + Tier 1 テナントアクセス確認
+    TC->>Hono: c.set(tenantDb, tenantSlug, userId, userType)
+    Hono->>RP: Tier 2 機能認可（resource × action）
+    Hono->>Handler: ハンドラー実行（ビジネスロジック）
+    Handler->>DB: テナントスキーマ内操作
+    DB-->>Handler: 結果
+    Handler-->>Client: レスポンス
+```
+
+詳細なフローとエラー一覧は [api-authz-multitenant.md](./api-authz-multitenant.md) を参照。
+
+### getOwnerId パターンから Hono ミドルウェアパターンへの移行
+
+| 比較項目 | 旧: getOwnerId パターン | 新: Hono ミドルウェアパターン |
+|---|---|---|
+| ユーザーID 取得 | `getOwnerId(event)` | `c.get('userId')` |
+| テナント識別 | なし | `c.get('tenantSlug')` |
+| DB 接続 | 共通接続 | `c.get('tenantDb')`（テナントスキーマ切替済み） |
+| 認可チェック | `owner_id` 一致確認 | `requirePermission(resource, action)` |
+
+移行は実装 PBI で段階的に行う。詳細は [api-authz-multitenant.md](./api-authz-multitenant.md) を参照。
+
+---
+
 ## バリデーションエラーレスポンス形式
 
 すべてのエンドポイントで以下の形式に統一する。詳細は [error-handling.md](./error-handling.md) を参照。
@@ -156,3 +198,4 @@ sequenceDiagram
 | PBI-003 | 2026-05-06 | 初版作成。代表パターン3種・認証方式・タイムゾーン方針を定義 |
 | PBI-003 | 2026-05-10 | 認証チェックを `src/auth.ts` の `getOwnerId()` に共通化。使い方・テスト方針を追記 |
 | PBI-019 | 2026-05-30 | `src/auth.ts` を `src/shared/auth.ts` に移動。import パスとテスト配置を更新 |
+| PBI-SaaS-001d | 2026-06-17 | マルチテナント対応: SaaS 化後の認証フェーズ追加・代表パターン 4（Cognito JWT Authorizer → tenantContext → requirePermission → ハンドラー）追加・getOwnerId から Hono ミドルウェアへの移行経路を追記 |

@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-05-05
+last_updated: 2026-06-17
 ---
 
 # インフラ設計方針
@@ -24,6 +24,8 @@ last_updated: 2026-05-05
 | Lambda Layer（SharedDepsLayer） | Lambda 間で共有する npm パッケージ |
 | API Gateway（RestApi） | HTTP エンドポイント |
 | Secrets Manager VPC Endpoint | Lambda が DB 認証情報を取得するための VPC 内経路 |
+| Cognito User Pool | テナント・サービサー共用の認証基盤。全テナント共用 1 Pool |
+| Cognito JWT Authorizer | API Gateway の認証。JWT 署名検証と claims の Lambda コンテキスト渡し |
 
 ---
 
@@ -93,3 +95,4 @@ bundling: {
 |---|---|---|
 | PBI-001 | 2026-05-05 | 初版作成。Lambda Layer（SharedDepsLayer）導入、createVillage・listVillages Lambda 追加 |
 | PBI-019 | 2026-05-30 | Lambda追加手順のハンドラーパスを `src/handlers/` → `src/<feature>/` に更新 |
+| PBI-SaaS-001d | 2026-06-17 | Cognito User Pool / Cognito JWT Authorizer をスタック構成表に追記 |

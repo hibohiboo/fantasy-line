@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-05-05
+last_updated: 2026-06-17
 ---
 
 # セキュリティ方針
@@ -16,6 +16,7 @@ API・インフラ担当の開発者。新しいエンドポイント実装時�
 |---|---|---|
 | MVP 開発中（PBI-014 実装前） | モック認証 | リクエストヘッダー `X-User-Id` の値を `owner_id` として使用する。ヘッダーがない場合は固定値 `"mock-user-1"` にフォールバックする |
 | PBI-014 実装後 | JWT 認証 | API Gateway Authorizer が JWT を検証し、`requestContext.authorizer.userId` を Lambda に渡す |
+| SaaS 化（PBI-SaaS-001d 以降） | Cognito JWT Authorizer + テナントコンテキスト解決 | Cognito JWT Authorizer が JWT 署名検証。Lambda 内の tenantContext ミドルウェアが custom:user_type / custom:tenant_id を検証し、テナント DB 接続を確立する |
 
 モック認証は `AUTH_ENABLED` 環境変数で切り替える（`true` で本番認証を使用）。
 本番環境では必ず `AUTH_ENABLED=true` を設定すること。
@@ -36,6 +37,18 @@ API・インフラ担当の開発者。新しいエンドポイント実装時�
 | 将来の更新・削除系エンドポイント | 対象リソースの `owner_id` と認証ユーザーID が一致することを確認。不一致は 403 を返す |
 
 > `owner_id` はリクエストボディから受け取らない。必ず認証情報から取得する。
+
+### マルチテナント認可（SaaS 化後）
+
+認可は 2 段構成で実施する。
+
+| Tier | ミドルウェア | チェック内容 |
+|---|---|---|
+| Tier 1 | `tenantContext` | テナントアクセス確認（`service.user_tenant_roles` / JWT `custom:tenant_id`） |
+| Tier 2 | `requirePermission(resource, action)` | 機能認可（`role_permissions` テーブルの resource × action ホワイトリスト） |
+
+`servicer_admin` は Tier 2 をスキップし全テナント・全操作に対する権限を持つ。
+詳細は [api-authz-multitenant.md](./api-authz-multitenant.md) を参照。
 
 ---
 
@@ -85,3 +98,4 @@ const ownerId = decodeURIComponent(c.req.header('X-User-Id') ?? '')
 |---|---|---|
 | PBI-001 | 2026-05-05 | 初版作成。認証モック方針・認可原則・バリデーション責務・秘密情報取り扱いを定義 |
 | PBI-001 | 2026-05-06 | HTTP ヘッダーへのユーザー入力エンコーディング方針を追加（`encodeURIComponent` / `decodeURIComponent`） |
+| PBI-SaaS-001d | 2026-06-17 | マルチテナント認証フェーズ（Cognito JWT Authorizer + tenantContext）と認可 2 段構成（Tier 1: テナントアクセス確認 / Tier 2: resource × action ホワイトリスト）を追記 |
