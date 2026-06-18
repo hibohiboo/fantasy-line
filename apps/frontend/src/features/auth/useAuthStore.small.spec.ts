@@ -12,9 +12,9 @@ const mockTenantUser: AuthUser = {
 
 function createMockAuthService(overrides?: Partial<AuthService>): AuthService {
   return {
-    signIn: vi.fn().mockResolvedValue(mockTenantUser),
-    signOut: vi.fn().mockResolvedValue(undefined),
-    getCurrentUser: vi.fn().mockResolvedValue(mockTenantUser),
+    signIn: vi.fn<(email: string, password: string) => Promise<AuthUser>>().mockResolvedValue(mockTenantUser),
+    signOut: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    getCurrentUser: vi.fn<() => Promise<AuthUser | null>>().mockResolvedValue(mockTenantUser),
     ...overrides,
   };
 }
@@ -42,7 +42,7 @@ describe('useAuthStore', () => {
     test('login() が失敗したとき user が null のままであること', async () => {
       // Arrange
       const mockService = createMockAuthService({
-        signIn: vi.fn().mockRejectedValue(new Error('Invalid')),
+        signIn: vi.fn<(email: string, password: string) => Promise<AuthUser>>().mockRejectedValue(new Error('Invalid')),
       });
       setAuthService(mockService);
       const store = useAuthStore();
@@ -65,7 +65,7 @@ describe('useAuthStore', () => {
         resolveSignIn = resolve;
       });
       const mockService = createMockAuthService({
-        signIn: vi.fn().mockReturnValue(pendingSignIn),
+        signIn: vi.fn<(email: string, password: string) => Promise<AuthUser>>().mockReturnValue(pendingSignIn),
       });
       setAuthService(mockService);
       const store = useAuthStore();
@@ -117,7 +117,7 @@ describe('useAuthStore', () => {
     test('restoreSession() でセッションが復元されること', async () => {
       // Arrange
       const mockService = createMockAuthService({
-        getCurrentUser: vi.fn().mockResolvedValue(mockTenantUser),
+        getCurrentUser: vi.fn<() => Promise<AuthUser | null>>().mockResolvedValue(mockTenantUser),
       });
       setAuthService(mockService);
       const store = useAuthStore();
@@ -132,7 +132,7 @@ describe('useAuthStore', () => {
     test('restoreSession() で getCurrentUser() が null を返すとき user が null のままであること', async () => {
       // Arrange
       const mockService = createMockAuthService({
-        getCurrentUser: vi.fn().mockResolvedValue(null),
+        getCurrentUser: vi.fn<() => Promise<AuthUser | null>>().mockResolvedValue(null),
       });
       setAuthService(mockService);
       const store = useAuthStore();
@@ -147,7 +147,7 @@ describe('useAuthStore', () => {
     test('restoreSession() で例外が発生したとき user が null のままであること', async () => {
       // Arrange
       const mockService = createMockAuthService({
-        getCurrentUser: vi.fn().mockRejectedValue(new Error('Session expired')),
+        getCurrentUser: vi.fn<() => Promise<AuthUser | null>>().mockRejectedValue(new Error('Session expired')),
       });
       setAuthService(mockService);
       const store = useAuthStore();
