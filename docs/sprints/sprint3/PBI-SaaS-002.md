@@ -328,3 +328,11 @@ this.node.addMetadata(Validations.ACKNOWLEDGED_RULES_METADATA_KEY, {
 - `CognitoConstruct.ts`: `custom:user_type` / `custom:tenant_id` に `mutable: false` を追加
 - `auth.test.ts`: `Mutable: false` のアサーションを追加（テスト green 確認済み）
 - `cognito-cdk-design.md`: `X-Tenant-Id` の検証責任（Lambda 側・PBI-SaaS-004 以降）を明記
+
+# 確認したドキュメント
+
+https://dev.classmethod.jp/articles/20260506-agent-toolkit-for-aws/
+
+https://github.com/aws/agent-toolkit-for-aws/tree/main
+https://aws.amazon.com/jp/about-aws/whats-new/2026/05/aws-mcp-server/
+https://github.com/cdklabs/cdk-nag#migrating-from-v2
