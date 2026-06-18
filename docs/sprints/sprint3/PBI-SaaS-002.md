@@ -266,3 +266,45 @@ or your own API.
 **原因**: `/api/echo` エンドポイントは設計上「疎通テスト用のため認証不要」（cognito-cdk-design.md §JWT Authorizer の適用範囲）としているが、cdk-nag がすべての API Gateway メソッドに Cognito 認証を要求するルールを適用したため。
 
 **対処方針**: echo エンドポイントの該当メソッドに suppression を追加し、理由・影響・見直し条件を明記する。suppress する rule ID は `cdk.out/policy-validation-report.json` で確認する。
+
+---
+
+### cdk-nag v3 × IAM4 granular rule: `::` 問題（2026-06-18）
+
+**事象**: `AwsSolutions-IAM4` を `Validations.of(this).acknowledge({ id: 'AwsSolutions-IAM4', ... })` で抑制しようとしたが、`npm run synth` で以下の失敗が続く。
+
+```
+Description: The IAM user, role, or group uses AWS managed policies. ...
+This is a granular rule that returns individual findings that can be suppressed with 'appliesTo'.
+The findings are in the format 'Policy::<policy>' for AWS managed policies.
+```
+
+**根本原因（2段構造）**:
+
+1. `AwsSolutions-IAM4` は **granular rule**（`result` が配列）のため、suppress には `AwsSolutions-IAM4[Policy::arn:...]` 形式の finding ID が必要。`AwsSolutions-IAM4` だけでは抑制されない。  
+   `nag-pack.js` の分岐：`Array.isArray(result)` の場合 `findingRuleId = RuleId[finding]` のみチェック。
+
+2. CDK の `Validations.acknowledge()` は ID を `"::"` で split してパースする：
+   ```js
+   const parts = id.split("::");
+   if (parts.length > 2) throw InvalidValidationId;
+   ```
+   `Policy::arn:<AWS::Partition>:iam::aws:policy/...` は `::` が3か所あり 4分割 → **`InvalidValidationId` を投げる**。
+
+3. MIGRATION.md の例 `AwsSolutions-IAM5[Action::s3:*]` は `::` が1つ（2分割）なので通る。ARN を含む IAM4 finding だけが壊れる。
+
+**修正方針**: `isAcknowledged()` が直接読む CDK metadata キー `aws:cdk:acknowledged-rules` を `node.addMetadata()` で書き込み、`qualifyId()` バリデーションを迂回する。
+
+```ts
+// CDK v2.260.0 での Validations.ACKNOWLEDGED_RULES_METADATA_KEY = 'aws:cdk:acknowledged-rules'
+this.node.addMetadata(Validations.ACKNOWLEDGED_RULES_METADATA_KEY, {
+  'AwsSolutions-IAM4[Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole]': 'reason...',
+  'AwsSolutions-IAM4[Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole]': 'reason...',
+});
+```
+
+`isAcknowledged()` の実装：`Object.keys(entry.data).map(k => k.replace(/^annotation::/, ''))` → `includes(findingRuleId)` で完全一致チェック。`annotation::` prefix なしで格納してもマッチする。
+
+**影響**: CDK の内部 API（metadata key の文字列定数）に依存するため、CDK アップグレード時に再確認が必要。`Validations.ACKNOWLEDGED_RULES_METADATA_KEY` を直接参照することで定数変更への耐性を確保した。
+
+**見直し条件**: cdk-nag が IAM4 の finding ID から ARN を除外するか、CDK の `qualifyId()` がブラケット内の `::` を許容する修正が入った場合に、正規の `acknowledge()` 呼び出しに切り替える。
