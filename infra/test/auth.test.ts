@@ -53,7 +53,10 @@ describe('CognitoConstruct', () => {
     test('TOTP と SMS の MFA が有効であること', () => {
       // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPool', {
-        EnabledMfas: Match.arrayWith(['SOFTWARE_TOKEN_MFA', 'SMS_MFA']),
+        EnabledMfas: Match.arrayWith(['SOFTWARE_TOKEN_MFA']),
+      });
+      template.hasResourceProperties('AWS::Cognito::UserPool', {
+        EnabledMfas: Match.arrayWith(['SMS_MFA']),
       });
     });
 
