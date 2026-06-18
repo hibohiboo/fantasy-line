@@ -309,3 +309,22 @@ this.node.addMetadata(Validations.ACKNOWLEDGED_RULES_METADATA_KEY, {
 **影響**: CDK の内部 API（metadata key の文字列定数）に依存するため、CDK アップグレード時に再確認が必要。`Validations.ACKNOWLEDGED_RULES_METADATA_KEY` を直接参照することで定数変更への耐性を確保した。
 
 **見直し条件**: cdk-nag が IAM4 の finding ID から ARN を除外するか、CDK の `qualifyId()` がブラケット内の `::` を許容する修正が入った場合に、正規の `acknowledge()` 呼び出しに切り替える。
+
+---
+
+### セキュリティレビュー結果（2026-06-18）
+
+セキュリティレビュー SubAgent によるレビュー完了。結果サマリー：
+
+| 重要度 | 件数 | 内容 |
+|---|---|---|
+| HIGH | 1 → 対処済み | `custom:user_type` / `custom:tenant_id` に `mutable: false` が未設定 |
+| HIGH | 1 → 問題なし | `Validations.acknowledge()` は cdk-nag v3 の正規 API（reviewer が v2 前提で誤判断） |
+| MEDIUM | 1 → 設計書に明記 | `X-Tenant-Id` の検証責任を `cognito-cdk-design.md` に追記 |
+| MEDIUM | 2 → 別 PBI | Aurora ポート 3389 / echoFunction の設定漏れ（既存コード・Cognito スコープ外） |
+| LOW | 2 → 別 PBI | suppression スコープの細分化 / Stack env 未指定 |
+
+**対処内容**:
+- `CognitoConstruct.ts`: `custom:user_type` / `custom:tenant_id` に `mutable: false` を追加
+- `auth.test.ts`: `Mutable: false` のアサーションを追加（テスト green 確認済み）
+- `cognito-cdk-design.md`: `X-Tenant-Id` の検証責任（Lambda 側・PBI-SaaS-004 以降）を明記
