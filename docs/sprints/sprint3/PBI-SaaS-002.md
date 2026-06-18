@@ -228,4 +228,9 @@ jest + `aws-cdk-lib/assertions` の `Template` クラスを使用。
 
 **方針**: MCP に頼らない回避策（WebFetch）ではなく、**aws-iac MCP サーバーを正しく動作させる**方向で解決する。
 
-**次のアクション**: `aws-iac` の起動失敗の原因（FastMCP バージョン不整合、リモート接続要件、AWS 認証情報）を特定し、設定を修正する。
+**調査結果（追記）**:
+- `uvx awslabs.aws-iac-mcp-server@latest 2>/dev/null` の stdout は空 → 警告は stderr に出力されており、MCP stdio プロトコルへの混入はない
+- `aws sts get-caller-identity` → `"Your session has expired. Please reauthenticate using 'aws login'"` → **AWS セッション期限切れが根本原因**
+- `aws-iac` はリモート AWS エンドポイントへのプロキシのため、有効な認証情報が必要。セッション切れで接続フェーズが失敗し Claude Code への登録に至っていなかった
+
+**解決手順**: `aws sso login`（または `aws login`）で AWS セッションを更新後、Claude Code を再起動する。
