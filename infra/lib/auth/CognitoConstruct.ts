@@ -26,8 +26,10 @@ export class CognitoConstruct extends Construct {
         sms: true,
       },
       customAttributes: {
-        user_type: new cognito.StringAttribute({ maxLen: 32 }),
-        tenant_id: new cognito.StringAttribute({ maxLen: 63 }),
+        // mutable: false にすることでユーザー自身・Admin API 経由いずれの書き換えも防ぐ
+        // テナント識別に使う属性のためテナント横断アクセス防止のために immutable とする
+        user_type: new cognito.StringAttribute({ maxLen: 32, mutable: false }),
+        tenant_id: new cognito.StringAttribute({ maxLen: 63, mutable: false }),
       },
       userInvitation: {
         emailSubject: '【Fantasy Line】アカウント登録のご案内',

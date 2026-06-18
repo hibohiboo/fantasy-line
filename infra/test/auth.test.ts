@@ -60,13 +60,14 @@ describe('CognitoConstruct', () => {
       });
     });
 
-    test('custom:user_type が定義されていること', () => {
+    test('custom:user_type が immutable で定義されていること', () => {
       // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPool', {
         Schema: Match.arrayWith([
           Match.objectLike({
             Name: 'user_type',
             AttributeDataType: 'String',
+            Mutable: false,
             StringAttributeConstraints: Match.objectLike({
               MaxLength: '32',
             }),
@@ -75,13 +76,14 @@ describe('CognitoConstruct', () => {
       });
     });
 
-    test('custom:tenant_id が定義されていること', () => {
+    test('custom:tenant_id が immutable で定義されていること', () => {
       // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPool', {
         Schema: Match.arrayWith([
           Match.objectLike({
             Name: 'tenant_id',
             AttributeDataType: 'String',
+            Mutable: false,
             StringAttributeConstraints: Match.objectLike({
               MaxLength: '63',
             }),

@@ -66,6 +66,12 @@ API Gateway の各エンドポイントを以下の方針で保護する。
 | `/api/villages/{id}/residents` | 必要 | 同上 |
 | `/api/residents` | 必要 | 同上 |
 
+### X-Tenant-Id ヘッダーの検証責任
+
+`auth-cognito.md §ユーザー種別` で定義している `servicer_admin` / `servicer_delegate` は `X-Tenant-Id` ヘッダーでテナントを指定する。このヘッダーの検証（値が空でないか、有効なテナント ID か）は **Lambda 側が担う**。
+
+API Gateway レベルでの必須ヘッダー検証（`requestParameters`）は PBI-SaaS-004 以降の Lambda 実装フェーズで検討する。それまでの間、ヘッダーが省略された場合のリクエストは Lambda のバリデーション（Zod）が処理する。
+
 ---
 
 ## テスト観点

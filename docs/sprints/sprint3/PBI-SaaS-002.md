@@ -183,10 +183,11 @@ jest + `aws-cdk-lib/assertions` の `Template` クラスを使用。
 
 ## 完了条件
 
-- [ ] `npm run synth`（`infra/` 内）がエラーなく通る
-- [ ] cdk-nag の警告・エラーがゼロ、または理由付き suppression で対処済み
-- [ ] `npm run test`（`infra/` 内）の全アサーションが通る
-- [ ] `infra/test/__snapshots__/` にスナップショットが生成されている
+- [x] `npm run synth`（`infra/` 内）がエラーなく通る
+- [x] cdk-nag の警告・エラーがゼロ、または理由付き suppression で対処済み
+- [x] `npm run test`（`infra/` 内）の全アサーションが通る
+- [x] `infra/test/__snapshots__/` にスナップショットが生成されている
+- [x] セキュリティレビュー完了・HIGH 指摘対処済み
 
 ---
 
