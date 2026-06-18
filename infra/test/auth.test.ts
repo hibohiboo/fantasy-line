@@ -1,11 +1,12 @@
 import * as cdk from 'aws-cdk-lib/core';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Template, Match } from 'aws-cdk-lib/assertions';
 import { CognitoConstruct } from '../lib/auth/CognitoConstruct.js';
 
 describe('CognitoConstruct', () => {
   let template: Template;
 
   beforeEach(() => {
+    // Arrange
     const app = new cdk.App();
     const stack = new cdk.Stack(app, 'TestStack');
     new CognitoConstruct(stack, 'Cognito');
@@ -14,16 +15,12 @@ describe('CognitoConstruct', () => {
 
   describe('User Pool', () => {
     test('User Pool が存在すること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.resourceCountIs('AWS::Cognito::UserPool', 1);
     });
 
     test('セルフサインアップが無効であること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPool', {
         AdminCreateUserConfig: {
           AllowAdminCreateUserOnly: true,
@@ -32,9 +29,7 @@ describe('CognitoConstruct', () => {
     });
 
     test('パスワードポリシーが設定されていること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPool', {
         Policies: {
           PasswordPolicy: {
@@ -49,36 +44,27 @@ describe('CognitoConstruct', () => {
     });
 
     test('MFA が OPTIONAL であること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPool', {
         MfaConfiguration: 'OPTIONAL',
       });
     });
 
     test('TOTP と SMS の MFA が有効であること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPool', {
-        EnabledMfas: expect.arrayContaining([
-          'SOFTWARE_TOKEN_MFA',
-          'SMS_MFA',
-        ]),
+        EnabledMfas: Match.arrayWith(['SOFTWARE_TOKEN_MFA', 'SMS_MFA']),
       });
     });
 
     test('custom:user_type が定義されていること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPool', {
-        Schema: expect.arrayContaining([
-          expect.objectContaining({
+        Schema: Match.arrayWith([
+          Match.objectLike({
             Name: 'user_type',
             AttributeDataType: 'String',
-            StringAttributeConstraints: expect.objectContaining({
+            StringAttributeConstraints: Match.objectLike({
               MaxLength: '32',
             }),
           }),
@@ -87,15 +73,13 @@ describe('CognitoConstruct', () => {
     });
 
     test('custom:tenant_id が定義されていること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPool', {
-        Schema: expect.arrayContaining([
-          expect.objectContaining({
+        Schema: Match.arrayWith([
+          Match.objectLike({
             Name: 'tenant_id',
             AttributeDataType: 'String',
-            StringAttributeConstraints: expect.objectContaining({
+            StringAttributeConstraints: Match.objectLike({
               MaxLength: '63',
             }),
           }),
@@ -106,27 +90,21 @@ describe('CognitoConstruct', () => {
 
   describe('App Client', () => {
     test('App Client が存在すること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.resourceCountIs('AWS::Cognito::UserPoolClient', 1);
     });
 
     test('App Client が USER_SRP_AUTH を使うこと', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-        ExplicitAuthFlows: expect.arrayContaining(['ALLOW_USER_SRP_AUTH']),
+        ExplicitAuthFlows: Match.arrayWith(['ALLOW_USER_SRP_AUTH']),
       });
     });
 
     test('アクセストークンが 60 分であること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-        TokenValidityUnits: expect.objectContaining({
+        TokenValidityUnits: Match.objectLike({
           AccessToken: 'minutes',
         }),
         AccessTokenValidity: 60,
@@ -134,11 +112,9 @@ describe('CognitoConstruct', () => {
     });
 
     test('ID トークンが 60 分であること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-        TokenValidityUnits: expect.objectContaining({
+        TokenValidityUnits: Match.objectLike({
           IdToken: 'minutes',
         }),
         IdTokenValidity: 60,
@@ -146,44 +122,43 @@ describe('CognitoConstruct', () => {
     });
 
     test('リフレッシュトークンが 30 日であること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
+      // Arrange
+      // CDK は Duration.days(30) を 43200 分（minutes 単位）に変換して出力する
+      const thirtyDaysInMinutes = 30 * 24 * 60;
 
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-        TokenValidityUnits: expect.objectContaining({
-          RefreshToken: 'days',
+        TokenValidityUnits: Match.objectLike({
+          RefreshToken: 'minutes',
         }),
-        RefreshTokenValidity: 30,
+        RefreshTokenValidity: thirtyDaysInMinutes,
       });
     });
 
     test('custom:user_type が ReadAttributes に含まれること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-        ReadAttributes: expect.arrayContaining(['custom:user_type']),
+        ReadAttributes: Match.arrayWith(['custom:user_type']),
       });
     });
 
     test('custom:tenant_id が ReadAttributes に含まれること', () => {
-      // Arrange / Act: beforeEach で template 生成済み
-
-      // Assert
+      // Act / Assert
       template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-        ReadAttributes: expect.arrayContaining(['custom:tenant_id']),
+        ReadAttributes: Match.arrayWith(['custom:tenant_id']),
       });
     });
 
     test('custom:user_type が WriteAttributes に含まれないこと', () => {
       // Arrange
       const resources = template.findResources('AWS::Cognito::UserPoolClient');
-      const clients = Object.values(resources);
+      const clients = Object.values(resources) as Array<{
+        Properties?: { WriteAttributes?: string[] };
+      }>;
 
       // Act
-      const writeAttributes: unknown[] = clients.flatMap(
-        (client: { Properties?: { WriteAttributes?: unknown[] } }) =>
-          client.Properties?.WriteAttributes ?? [],
+      const writeAttributes = clients.flatMap(
+        (client) => client.Properties?.WriteAttributes ?? [],
       );
 
       // Assert
@@ -193,12 +168,13 @@ describe('CognitoConstruct', () => {
     test('custom:tenant_id が WriteAttributes に含まれないこと', () => {
       // Arrange
       const resources = template.findResources('AWS::Cognito::UserPoolClient');
-      const clients = Object.values(resources);
+      const clients = Object.values(resources) as Array<{
+        Properties?: { WriteAttributes?: string[] };
+      }>;
 
       // Act
-      const writeAttributes: unknown[] = clients.flatMap(
-        (client: { Properties?: { WriteAttributes?: unknown[] } }) =>
-          client.Properties?.WriteAttributes ?? [],
+      const writeAttributes = clients.flatMap(
+        (client) => client.Properties?.WriteAttributes ?? [],
       );
 
       // Assert
