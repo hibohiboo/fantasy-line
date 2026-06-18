@@ -83,7 +83,7 @@
 |---|---|---|
 | [PBI-016](00-infrastructure/PBI-016.md) | villages・residents の ID を UUID v7 に移行する | Phase 2 |
 | [PBI-024](00-infrastructure/PBI-024.md) | プロジェクトのテスト戦略を策定する | 中 |
-| [PBI-025](00-infrastructure/PBI-025.md) | Serena MCP サーバーの採用可否を判断する | 中 |
+| [PBI-025](00-infrastructure/PBI-025.md) | MCP サーバー（Serena / context7）の採用可否を判断する | 中 |
 
 ### エピック 7 — マルチテナント SaaS
 
