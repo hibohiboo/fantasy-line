@@ -234,3 +234,35 @@ jest + `aws-cdk-lib/assertions` の `Template` クラスを使用。
 - `aws-iac` はリモート AWS エンドポイントへのプロキシのため、有効な認証情報が必要。セッション切れで接続フェーズが失敗し Claude Code への登録に至っていなかった
 
 **解決手順**: `aws sso login`（または `aws login`）で AWS セッションを更新後、Claude Code を再起動する。
+
+---
+
+### cdk-nag v3 で `appConstruct` が提供されない問題（2026-06-18）
+
+**事象**: `npm run synth` で以下のエラーが発生。
+
+```
+NagPack requires a construct tree on the validation context.
+Use validateScope(scope) for direct invocation or ensure your CDK version provides appConstruct on IPolicyValidationContext.
+```
+
+**原因**: cdk-nag v3 は CDK の `IPolicyValidationContext` 上の `appConstruct` プロパティを使用するが、aws-cdk-lib 2.257.0（インストールされていた最小要件バージョン）ではこのプロパティが実装されていなかった。
+
+**解決**: `aws-cdk-lib` を 2.260.0（最新）に更新することで解消。ユーザーが手動でアップデート実施。
+
+---
+
+### cdk-nag: echo エンドポイントの Cognito 認証なし警告（2026-06-18）
+
+**事象**: aws-cdk-lib 更新後の `npm run synth` で以下の cdk-nag 違反が発生。
+
+```
+The API GW method does not use a Cognito user pool authorizer.
+API Gateway validates the tokens from a successful user pool authentication,
+and uses them to grant your users access to resources including Lambda functions,
+or your own API.
+```
+
+**原因**: `/api/echo` エンドポイントは設計上「疎通テスト用のため認証不要」（cognito-cdk-design.md §JWT Authorizer の適用範囲）としているが、cdk-nag がすべての API Gateway メソッドに Cognito 認証を要求するルールを適用したため。
+
+**対処方針**: echo エンドポイントの該当メソッドに suppression を追加し、理由・影響・見直し条件を明記する。suppress する rule ID は `cdk.out/policy-validation-report.json` で確認する。

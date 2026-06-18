@@ -75,5 +75,23 @@ export class CognitoConstruct extends Construct {
         'Advanced Security Mode は有料機能。個人プロジェクトのコスト制約により採用しない。' +
         '不正アクセス事案が発生した場合または有料プランへ移行する場合に再評価する。',
     });
+    // Plus tier（高度なセキュリティ機能）は有料のためコスト制約で採用しない
+    // 影響: 不正アクセス検知・ブロック機能が動作しない
+    // 見直し条件: 有料プランへ移行する場合または不正アクセス事案発生時
+    Validations.of(this.userPool).acknowledge({
+      id: 'AwsSolutions-COG8',
+      reason:
+        'Plus tier は有料機能。個人プロジェクトのコスト制約により採用しない。' +
+        '有料プランへ移行する場合または不正アクセス事案が発生した場合に再評価する。',
+    });
+    // SMS MFA 有効化に伴い CDK が自動生成する smsRole の IAM ポリシーはワイルドカードを含む
+    // 影響: SMS 送信に必要な最小限の権限であり、CDK の管理下で自動生成されるため変更不可
+    // 見直し条件: CDK が smsRole のスコープを絞る仕組みを提供した場合
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-IAM5[Resource::*]',
+      reason:
+        'CDK が SMS MFA 有効化時に自動生成する smsRole のポリシーに含まれるワイルドカード。' +
+        'CDK の管理下であり手動変更は困難。CDK が制限付き smsRole を提供した場合に再評価する。',
+    });
   }
 }

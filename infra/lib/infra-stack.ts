@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib/core';
+import { Validations } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
@@ -271,10 +272,21 @@ export class InfraStack extends cdk.Stack {
     const apiResource = api.root.addResource('api');
 
     const echoResource = apiResource.addResource('echo');
-    echoResource.addMethod(
+    const echoMethod = echoResource.addMethod(
       'ANY',
       new apigateway.LambdaIntegration(echoFunction),
     );
+    // 疎通テスト用エンドポイントのため認証不要（cognito-cdk-design.md §JWT Authorizer の適用範囲 参照）
+    // 影響: 未認証リクエストが到達可能。接続確認目的のみに使用すること
+    // 見直し条件: echo エンドポイントを廃止または認証エンドポイントに変更した場合
+    Validations.of(echoMethod).acknowledge({
+      id: 'AwsSolutions-APIG4',
+      reason: '疎通テスト用エンドポイントのため意図的に認証を除外している（cognito-cdk-design.md 参照）。',
+    });
+    Validations.of(echoMethod).acknowledge({
+      id: 'AwsSolutions-COG4',
+      reason: '疎通テスト用エンドポイントのため Cognito 認証を意図的に除外している（cognito-cdk-design.md 参照）。',
+    });
 
     const cognitoMethodOptions: apigateway.MethodOptions = {
       authorizer,
@@ -338,6 +350,79 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'MigrationFunctionName', {
       value: migrationFunction.functionName,
       description: 'Migration Lambda function name',
+    });
+
+    // -- cdk-nag suppressions（既存リソースの未対応分 / cdk-nag 導入前から存在）--
+    // 以下は PBI-SaaS-002 で cdk-nag を初めて導入した際に顕在化した既存リソースの違反。
+    // 各項目は別 PBI で個別に対処する。
+
+    // VPC Flow Log 未設定。個人プロジェクトのコスト制約で未導入。要件が高まった場合に追加する
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-VPC7',
+      reason: 'VPC Flow Log は未設定。個人プロジェクトのコスト制約により見送り。ネットワーク監査要件が発生した場合に追加する。',
+    });
+    // Security Group の動的 CIDR 参照により cdk-nag がルール評価できなかった（エラー扱い）
+    // 影響: Lambda → VPC CIDR（HTTPS）の egress ルールは意図的な設定
+    // 見直し条件: cdk-nag が動的値を評価できるようになった場合
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-EC23',
+      reason: 'Lambda の egress ルールで VPC CIDR を動的参照しており cdk-nag が評価不能。意図的な設定であり変更不要。',
+    });
+    // Secrets Manager 自動ローテーション未設定。Aurora 接続情報は CDK 管理の生成シークレット
+    // 見直し条件: 本番運用開始時またはローテーション機能が必要になった場合
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-SMG4',
+      reason: 'Aurora 認証情報は CDK 生成シークレット。現状は手動ローテーション運用。本番化時に自動ローテーションを設定する。',
+    });
+    // Aurora IAM 認証未設定。Secrets Manager 経由のパスワード認証を使用中
+    // 見直し条件: IAM 認証への移行コストと効果を評価した場合
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-RDS6',
+      reason: 'Aurora は Secrets Manager 経由のパスワード認証を使用。IAM 認証への移行は別途検討する。',
+    });
+    // Aurora 削除保護無効。開発環境のため DESTROY ポリシーで管理
+    // 見直し条件: 本番運用開始時
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-RDS10',
+      reason: '開発環境のため削除保護を無効にしている（removalPolicy: DESTROY）。本番化時に有効にする。',
+    });
+    // Aurora Backtrack 未設定。MySQL Serverless v2 では Backtrack 非対応
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-RDS14',
+      reason: 'Aurora MySQL Serverless v2 は Backtrack 非対応のため設定不可。',
+    });
+    // Lambda に AWS 管理ポリシー（BasicExecutionRole / VPCAccessExecutionRole）を使用
+    // カスタムポリシーへの置き換えは別 PBI で対応する
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-IAM4[Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole]',
+      reason: 'Lambda の実行ロールに AWS 管理ポリシーを使用中。カスタムポリシーへの置き換えは別 PBI で対応する。',
+    });
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-IAM4[Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole]',
+      reason: 'Lambda の VPC アクセスに AWS 管理ポリシーを使用中。カスタムポリシーへの置き換えは別 PBI で対応する。',
+    });
+    // API Gateway リクエストバリデーション未設定。Lambda 側で Zod バリデーションを実施
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-APIG2',
+      reason: 'API GW レベルのリクエストバリデーションは未設定。Lambda ハンドラー内で Zod により入力検証を実施している。',
+    });
+    // API Gateway アクセスログ未設定。コスト制約により見送り
+    // 見直し条件: 本番運用開始時またはアクセス分析が必要になった場合
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-APIG1',
+      reason: 'API GW アクセスログは未設定。個人プロジェクトのコスト制約により見送り。本番化時に設定する。',
+    });
+    // WAF 未設定。有料機能のためコスト制約で見送り
+    // 見直し条件: 本番公開時またはセキュリティ要件が高まった場合
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-APIG3',
+      reason: 'WAF は有料機能。個人プロジェクトのコスト制約により未導入。本番公開時に採用要否を検討する。',
+    });
+    // API Gateway CloudWatch ログ未設定。コスト制約により見送り
+    // 見直し条件: 本番運用開始時
+    Validations.of(this).acknowledge({
+      id: 'AwsSolutions-APIG6',
+      reason: 'API GW CloudWatch ログは未設定。個人プロジェクトのコスト制約により見送り。本番化時に設定する。',
     });
   }
 }
