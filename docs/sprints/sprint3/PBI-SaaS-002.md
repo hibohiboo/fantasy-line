@@ -211,3 +211,21 @@ jest + `aws-cdk-lib/assertions` の `Template` クラスを使用。
 
 作業計画の `§CognitoConstruct の実装詳細` に記載した suppression コードは **v2 の書き方** である可能性がある。
 実装 SubAgent は `aws-iac` MCP サーバーで `cdk-nag suppression v3` を検索し、現在の正しい API を確認してから実装すること。
+
+---
+
+### aws-iac MCP サーバーが SubAgent から使えない問題（2026-06-18）
+
+**事象**: SubAgent 実行時に「Server 'aws-iac' not found. Available servers: serena, ...」エラーが発生。`settings.json` に設定は存在するが、Claude Code の MCP サーバーとして登録されていない。
+
+**調査結果**:
+- `uvx awslabs.aws-iac-mcp-server@latest --help` はローカルで実行でき、パッケージ自体は起動する
+- 起動時に `FastMCPDeprecationWarning` が 2 件発生（`fastmcp.server.proxy` の API が変わっている）
+- このサーバーは "Remote to local bridge" アーキテクチャを採用しており、リモートエンドポイントへの接続を試みる
+- 接続が完了する前にタイムアウトし、Claude Code への登録に失敗していると推測される
+
+**誤った判断**: `settings.json` に設定がある＝動作している、と判断してしまった。実際には設定の存在と動作確認は別であり、`ListMcpResourcesTool` 等で事前確認すべきだった。
+
+**方針**: MCP に頼らない回避策（WebFetch）ではなく、**aws-iac MCP サーバーを正しく動作させる**方向で解決する。
+
+**次のアクション**: `aws-iac` の起動失敗の原因（FastMCP バージョン不整合、リモート接続要件、AWS 認証情報）を特定し、設定を修正する。
