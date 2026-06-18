@@ -34,6 +34,14 @@ description: 小規模の S3 + CloudFront / API Gateway + Lambda / EventBridge �
 - **使用するライブラリ（cdk-nag 等）のバージョンを確認し、`aws-iac` MCP サーバーで現在の API を検索してから実装する**
   - `aws-iac` は `search_cdk_documentation` 等で CDK ドキュメントと cdk-nag のバリデーションルール・API を取得できる
   - 例: cdk-nag の suppression 書き方、Construct プロパティの現バージョンでの名称など
+  - **`aws-iac` が利用できない場合（"Server not found" 等）は WebFetch 等で代替せず、ユーザーに以下を伝えて停止する:**
+    ```
+    aws-iac MCP サーバーに接続できません。
+    AWS セッションが期限切れの可能性があります。
+    以下のコマンドでログインしてから Claude Code を再起動してください:
+      aws login
+    再起動後に作業を再開してください。
+    ```
 
 ### 2. Construct で機能ごとに分ける
 

@@ -33,6 +33,23 @@ description: AWS CDK 実装に集中する SubAgent。S3 + CloudFront / API Gate
 理由: cdk-nag などのライブラリはメジャーバージョン間で破壊的変更がある。トレーニングデータには古い API が含まれている可能性が高い。
 
 手順:
+
 1. 実装対象のライブラリ（例: `cdk-nag`）のバージョンを `package.json` で確認する
 2. `aws-iac` MCP サーバーの `search_cdk_documentation` などで「cdk-nag suppression v3」などのクエリで最新 API を検索する
 3. 検索結果の API に従って実装する。トレーニングデータの記憶は参考程度に留める
+
+**`aws-iac` が利用できない場合は作業を中断してユーザーに通知する:**
+
+WebFetch 等での代替は行わない。代わりに以下をユーザーに伝えて停止する:
+
+```
+aws-iac MCP サーバーに接続できません。
+AWS セッションが期限切れの可能性があります。
+以下のコマンドでログインしてから Claude Code を再起動してください:
+  aws login
+再起動後に作業を再開してください。
+```
+
+既知の破壊的変更（参考情報 / MCP での確認を必ず行うこと）:
+
+- `cdk-nag` v2 → v3: `NagSuppressions` クラスが削除された
