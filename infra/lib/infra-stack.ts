@@ -393,13 +393,12 @@ export class InfraStack extends cdk.Stack {
     });
     // Lambda に AWS 管理ポリシー（BasicExecutionRole / VPCAccessExecutionRole）を使用
     // カスタムポリシーへの置き換えは別 PBI で対応する
+    // ルール ID に ARN（:: 含む）を付けると cdk-nag v3 がパースエラーを起こすため基本 ID のみ使用
     Validations.of(this).acknowledge({
-      id: 'AwsSolutions-IAM4[Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole]',
-      reason: 'Lambda の実行ロールに AWS 管理ポリシーを使用中。カスタムポリシーへの置き換えは別 PBI で対応する。',
-    });
-    Validations.of(this).acknowledge({
-      id: 'AwsSolutions-IAM4[Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole]',
-      reason: 'Lambda の VPC アクセスに AWS 管理ポリシーを使用中。カスタムポリシーへの置き換えは別 PBI で対応する。',
+      id: 'AwsSolutions-IAM4',
+      reason:
+        'Lambda 実行ロールに AWSLambdaBasicExecutionRole / AWSLambdaVPCAccessExecutionRole を使用中。' +
+        'カスタムポリシーへの置き換えは別 PBI で対応する。',
     });
     // API Gateway リクエストバリデーション未設定。Lambda 側で Zod バリデーションを実施
     Validations.of(this).acknowledge({
