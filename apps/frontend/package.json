@@ -20,6 +20,8 @@
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "@aws-amplify/ui-vue": "^4.4.4",
+    "aws-amplify": "^6.18.0",
     "date-fns": "^4.4.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.35",
