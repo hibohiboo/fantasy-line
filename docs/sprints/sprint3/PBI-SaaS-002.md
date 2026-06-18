@@ -187,3 +187,27 @@ jest + `aws-cdk-lib/assertions` の `Template` クラスを使用。
 - [ ] cdk-nag の警告・エラーがゼロ、または理由付き suppression で対処済み
 - [ ] `npm run test`（`infra/` 内）の全アサーションが通る
 - [ ] `infra/test/__snapshots__/` にスナップショットが生成されている
+
+---
+
+## 発見事項・証跡（2026-06-18）
+
+### cdk-nag v3 で NagSuppressions が削除されている
+
+**発覚経緯**: Phase 3 実装で `aws-cdk-engineer` SubAgent を起動しようとした際、作業計画に `NagSuppressions.addResourceSuppressions` を使う指示を記載していた。ユーザーが [https://github.com/cdklabs/cdk-nag#migrating-from-v2](https://github.com/cdklabs/cdk-nag#migrating-from-v2) を参照し、v3 では `NagSuppressions` クラスが削除されていることを指摘。
+
+**根本原因**: SubAgent のトレーニングデータに v2 の API が含まれており、v3 の破壊的変更を知らなかった。さらに `.claude/skills/aws-cdk-patterns/SKILL.md` のコード例にも `NagSuppressions` が残っていた。
+
+**対処方針**: 毎回 WebFetch でドキュメントを取得するのはコストが高いため、スキルファイルを最新情報に合わせて修正する方針とした。不備を発見したタイミングでスキルを更新し、次回以降の SubAgent に正しい情報が渡るようにする。
+
+### 修正したファイル
+
+| ファイル | 変更内容 |
+|---|---|
+| `.claude/skills/aws-cdk-patterns/SKILL.md` | `NagSuppressions` の直接記載を削除し、「実装前に `aws-iac` MCP で現在の API を確認すること」を手順 1 と手順 3 に明記 |
+| `.claude/agents/aws-cdk-engineer.md` | 「外部ライブラリの API は必ず MCP で確認する」セクションを追加。cdk-nag の v2→v3 破壊的変更を既知リストに記載 |
+
+### cdk-nag v3 suppression の正しい書き方
+
+作業計画の `§CognitoConstruct の実装詳細` に記載した suppression コードは **v2 の書き方** である可能性がある。
+実装 SubAgent は `aws-iac` MCP サーバーで `cdk-nag suppression v3` を検索し、現在の正しい API を確認してから実装すること。

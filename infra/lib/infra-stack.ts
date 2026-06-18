@@ -8,6 +8,7 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import { mkdirSync, copyFileSync, existsSync } from 'fs';
+import { CognitoConstruct } from './auth/CognitoConstruct.js';
 
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -253,10 +254,19 @@ export class InfraStack extends cdk.Stack {
     );
     auroraCluster.secret!.grantRead(migrationFunction);
 
+    // -- Cognito --
+    const cognitoConstruct = new CognitoConstruct(this, 'Cognito');
+
     // -- API Gateway --
     const api = new apigateway.RestApi(this, 'FantasyLineApi', {
       restApiName: 'Fantasy Line API',
     });
+
+    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(
+      this,
+      'CognitoAuthorizer',
+      { cognitoUserPools: [cognitoConstruct.userPool] },
+    );
 
     const apiResource = api.root.addResource('api');
 
@@ -266,30 +276,40 @@ export class InfraStack extends cdk.Stack {
       new apigateway.LambdaIntegration(echoFunction),
     );
 
+    const cognitoMethodOptions: apigateway.MethodOptions = {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    };
+
     const itemsResource = apiResource.addResource('items');
     itemsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(itemsFunction),
+      cognitoMethodOptions,
     );
 
     const villagesResource = apiResource.addResource('villages');
     villagesResource.addMethod(
       'POST',
       new apigateway.LambdaIntegration(createVillageFunction),
+      cognitoMethodOptions,
     );
     villagesResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(listVillagesFunction),
+      cognitoMethodOptions,
     );
 
     const residentsResource = apiResource.addResource('residents');
     residentsResource.addMethod(
       'POST',
       new apigateway.LambdaIntegration(createResidentFunction),
+      cognitoMethodOptions,
     );
     residentsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(listResidentsFunction),
+      cognitoMethodOptions,
     );
 
     const villageByIdResource = villagesResource.addResource('{id}');
@@ -297,6 +317,7 @@ export class InfraStack extends cdk.Stack {
     villageResidentsResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(listVillageResidentsFunction),
+      cognitoMethodOptions,
     );
 
     // -- Outputs

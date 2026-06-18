@@ -29,9 +29,11 @@ description: 小規模の S3 + CloudFront / API Gateway + Lambda / EventBridge �
 ### 1. 設計の前に確認する
 
 - どのスタックに置くべきか（`site-stack` / `api-stack` / 別の新スタック）
-- AWS CDK MCP Server / cdk-nag MCP Integration が動く環境か
 - 追加するリソースが「常時起動か」「呼び出し時起動か」を区別する
 - ログ・暗号化・ドメインの方針が既存と整合しているか
+- **使用するライブラリ（cdk-nag 等）のバージョンを確認し、`aws-iac` MCP サーバーで現在の API を検索してから実装する**
+  - `aws-iac` は `search_cdk_documentation` 等で CDK ドキュメントと cdk-nag のバリデーションルール・API を取得できる
+  - 例: cdk-nag の suppression 書き方、Construct プロパティの現バージョンでの名称など
 
 ### 2. Construct で機能ごとに分ける
 
@@ -41,9 +43,14 @@ description: 小規模の S3 + CloudFront / API Gateway + Lambda / EventBridge �
 
 ### 3. cdk-nag を必ず組み込む
 
+**実装前に必ず `aws-iac` MCP サーバーで現在の API を確認すること。**
+cdk-nag はメジャーバージョン間で suppression API が変わっている（v2 → v3 で `NagSuppressions` クラスが削除されるなど）。
+以下のコード例はあくまで構造の参考であり、実際の API は MCP で確認した最新情報を優先する。
+
 ```ts
+// 構造の参考（実際の import 名・メソッド名は MCP で最新版を確認すること）
 import { Aspects } from 'aws-cdk-lib';
-import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
+import { AwsSolutionsChecks } from 'cdk-nag';
 const app = new cdk.App();
 const stack = new BlogSiteStack(app, 'BlogSiteStack');
 Aspects.of(stack).add(new AwsSolutionsChecks({ verbose: true }));
@@ -51,8 +58,8 @@ Aspects.of(stack).add(new AwsSolutionsChecks({ verbose: true }));
 
 - すべての Stack に NagPack を適用する
 - 警告 / エラーは原則すべて解消する
-- やむを得ず抑制する場合は、`NagSuppressions.addResourceSuppressions` に
-  理由・影響・見直し条件を必ず書く
+- やむを得ず抑制する場合は理由・影響・見直し条件を必ず書く
+- **suppression の具体的な API（クラス名・メソッド名）は MCP で確認してから使う**
 
 ### 4. S3 + CloudFront
 
