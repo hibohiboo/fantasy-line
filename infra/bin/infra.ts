@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib/core';
+import { Validations } from 'aws-cdk-lib';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { InfraStack } from '../lib/infra-stack';
 
@@ -19,4 +20,4 @@ new InfraStack(app, 'InfraStack', {
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });
-cdk.Aspects.of(app).add(new AwsSolutionsChecks({ verbose: true }));
+Validations.of(app).addPlugins(new AwsSolutionsChecks(app, { verbose: true }));

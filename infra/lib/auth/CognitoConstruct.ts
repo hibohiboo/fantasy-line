@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib/core';
+import { Validations } from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
-import { NagSuppressions } from 'cdk-nag';
 
 export class CognitoConstruct extends Construct {
   readonly userPool: cognito.UserPool;
@@ -57,19 +57,23 @@ export class CognitoConstruct extends Construct {
       readAttributes,
     });
 
-    NagSuppressions.addResourceSuppressions(this.userPool, [
-      {
-        id: 'AwsSolutions-COG2',
-        reason:
-          'MFA は OPTIONAL 設定（auth-cognito.md §MFA 参照）。' +
-          'ユーザーが任意に TOTP/SMS を設定できる方針のため Pool 全体での強制はしない。',
-      },
-      {
-        id: 'AwsSolutions-COG3',
-        reason:
-          'Advanced Security Mode は有料機能。個人プロジェクトのコスト制約により採用しない。' +
-          '不正アクセス事案が発生した場合または有料プランへ移行する場合に再評価する。',
-      },
-    ]);
+    // MFA OPTIONAL 設定のため強制ルールを抑制（auth-cognito.md §MFA 参照）
+    // 影響: 一部ユーザーが MFA なしでログイン可能
+    // 見直し条件: MFA 強制要件がビジネス要件として定まった場合
+    Validations.of(this.userPool).acknowledge({
+      id: 'AwsSolutions-COG2',
+      reason:
+        'MFA は OPTIONAL 設定（auth-cognito.md §MFA 参照）。' +
+        'ユーザーが任意に TOTP/SMS を設定できる方針のため Pool 全体での強制はしない。',
+    });
+    // Advanced Security Mode は有料機能のためコスト制約で採用しない
+    // 影響: 高度な異常ログイン検知が動作しない
+    // 見直し条件: 有料プランへ移行する場合または不正アクセス事案発生時
+    Validations.of(this.userPool).acknowledge({
+      id: 'AwsSolutions-COG3',
+      reason:
+        'Advanced Security Mode は有料機能。個人プロジェクトのコスト制約により採用しない。' +
+        '不正アクセス事案が発生した場合または有料プランへ移行する場合に再評価する。',
+    });
   }
 }
