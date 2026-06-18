@@ -88,7 +88,7 @@ export class CognitoConstruct extends Construct {
     // 影響: SMS 送信に必要な最小限の権限であり、CDK の管理下で自動生成されるため変更不可
     // 見直し条件: CDK が smsRole のスコープを絞る仕組みを提供した場合
     Validations.of(this).acknowledge({
-      id: 'AwsSolutions-IAM5',
+      id: 'AwsSolutions-IAM5[Resource::*]',
       reason:
         'CDK が SMS MFA 有効化時に自動生成する smsRole のポリシーに含まれるワイルドカード。' +
         'CDK の管理下であり手動変更は困難。CDK が制限付き smsRole を提供した場合に再評価する。',
