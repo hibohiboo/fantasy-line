@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['**/auth.spec.ts'],
+  testMatch: ['**/auth.large.test.ts'],
   fullyParallel: false,
   // Vite コールドスタート時に最初の button click が失敗することがある (PBI-018)
   // retries: 1 で初回失敗をリカバリする
