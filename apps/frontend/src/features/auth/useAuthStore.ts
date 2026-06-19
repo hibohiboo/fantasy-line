@@ -27,6 +27,9 @@ export const useAuthStore = defineStore('auth', () => {
       const loggedInUser = await getService().signIn(email, password);
       user.value = loggedInUser;
       return loggedInUser;
+    } catch (error) {
+      user.value = null;
+      throw error;
     } finally {
       isLoading.value = false;
     }

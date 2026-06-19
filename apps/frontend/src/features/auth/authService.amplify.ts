@@ -49,10 +49,11 @@ async function buildAuthUser(): Promise<AuthUser> {
   const rawUserType = payload['custom:user_type'];
   const rawTenantId = payload['custom:tenant_id'];
 
-  if (typeof sub !== 'string') throw new Error('JWT claim "sub" is missing.');
-  if (typeof email !== 'string') throw new Error('JWT claim "email" is missing.');
+  // エラーメッセージに JWT クレーム名・値を含めない（内部情報漏洩防止）
+  if (typeof sub !== 'string') throw new Error('認証トークンの検証に失敗しました。');
+  if (typeof email !== 'string') throw new Error('認証トークンの検証に失敗しました。');
   if (typeof rawUserType !== 'string' || !VALID_USER_TYPES.has(rawUserType)) {
-    throw new Error(`Invalid custom:user_type: ${String(rawUserType)}`);
+    throw new Error('認証トークンの検証に失敗しました。');
   }
 
   const userType = rawUserType as UserType;
