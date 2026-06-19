@@ -112,7 +112,7 @@ Gherkin シナリオは**ユーザーの操作**を記述している。その�
 |---|---|---|---|
 | ユニット（Small） | 単一関数・クラスが仕様どおりに動く | vitest | `src/<feature>/*.small.test.ts` |
 | 統合（Medium） | 複数モジュール・DB を含む連携が正しい | vitest + Testcontainers | `src/<feature>/*.medium.test.ts`・`src/<feature>/*.integration.test.ts` |
-| **E2E 受け入れ（Large）** | **Gherkin シナリオをユーザー操作で満たす** | **Playwright** | **`e2e/`** |
+| **E2E 受け入れ（Large）** | **Gherkin シナリオをユーザー操作で満たす** | **Playwright** | **`e2e/*.large.test.ts`** |
 
 ### E2E 受け入れテストのルール
 
