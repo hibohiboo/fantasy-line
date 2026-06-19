@@ -4,7 +4,9 @@ export default defineConfig({
   testDir: './e2e',
   testMatch: ['**/auth.spec.ts'],
   fullyParallel: false,
-  retries: 0,
+  // Vite コールドスタート時に最初の button click が失敗することがある (PBI-018)
+  // retries: 1 で初回失敗をリカバリする
+  retries: 1,
   workers: 1,
   reporter: 'list',
   use: {

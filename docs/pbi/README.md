@@ -30,7 +30,8 @@
 
 | PBI | タイトル | 優先度 |
 |---|---|---|
-| [PBI-014](00-authentication/PBI-014.md) | ログインする | MVP（前提） |
+| [PBI-014](00-authentication/PBI-014.md) | ログインする | MVP（前提）✅ |
+| [PBI-018](00-authentication/PBI-018.md) | モックログイン E2E テストのフレーキーを修正する | 低 |
 
 ### エピック 1 — 村の管理
 

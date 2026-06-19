@@ -69,6 +69,25 @@ test.describe('認証機能（dev:mock モード）', () => {
     await expect(page).toHaveURL('/')
   })
 
+  test('ログアウト後にブラウザバックしても保護ページが表示されないこと', async ({ page }) => {
+    // Arrange: tenant_admin でログイン（v-select 経由で安定したフロー）
+    await page.goto('/login')
+    await page.getByLabel('ユーザー種別').click({ force: true })
+    await page.getByRole('option', { name: /tenant_admin/ }).click()
+    await page.getByRole('button', { name: 'モックログイン' }).click()
+    await expect(page).toHaveURL('/villages')
+
+    // Act: ログアウト（router.replace でナビゲーション履歴から /villages を除去）
+    await page.getByRole('button', { name: 'ログアウト' }).click()
+    await expect(page).toHaveURL('/login')
+
+    // Assert: ブラウザバックしても /login のまま
+    // router.replace を使っているため /villages は履歴に残らず、
+    // 万一履歴に保護ページが残っていても beforeEach ガードが /login にリダイレクトする
+    await page.goBack()
+    await expect(page).toHaveURL('/login')
+  })
+
   test('ログイン済み状態で /login にアクセスしてもリダイレクトされないこと（ログイン画面が表示されること）', async ({
     page,
   }) => {
