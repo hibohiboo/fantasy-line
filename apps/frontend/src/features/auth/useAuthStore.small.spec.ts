@@ -35,8 +35,8 @@ describe('useAuthStore', () => {
       // Act
       await store.login('test@example.com', 'password');
 
-      // Assert
-      expect(store.user?.userType).toBe('tenant_user');
+      // Assert: Pinia 3 setup store は Vue reactive proxy 経由で ref を自動 unwrap する
+      expect(store.user).toMatchObject({ userType: 'tenant_user' });
     });
 
     test('login() が失敗したとき user が null のままであること', async () => {
@@ -125,8 +125,8 @@ describe('useAuthStore', () => {
       // Act
       await store.restoreSession();
 
-      // Assert
-      expect(store.user?.userType).toBe('tenant_user');
+      // Assert: Pinia 3 setup store は Vue reactive proxy 経由で ref を自動 unwrap する
+      expect(store.user).toMatchObject({ userType: 'tenant_user' });
     });
 
     test('restoreSession() で getCurrentUser() が null を返すとき user が null のままであること', async () => {

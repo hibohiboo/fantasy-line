@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { Authenticator } from '@aws-amplify/ui-vue'
 import '@aws-amplify/ui-vue/styles.css'
 import { useAuthStore } from './useAuthStore'
-import type { UserType } from './authService'
+import type { AuthUser, UserType } from './authService'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -16,6 +16,30 @@ const REDIRECT_MAP: Record<UserType, string> = {
   tenant_admin: '/villages',
   servicer_admin: '/',
   servicer_delegate: '/',
+}
+
+function getRedirectPath(userType: UserType): string {
+  // Record<UserType, string> はすべてのキーを網羅しているが、
+  // noUncheckedIndexedAccess により string | undefined になるため
+  // フォールバックを付与する
+  return REDIRECT_MAP[userType] ?? '/'
+}
+
+function resolveUser(): AuthUser | null {
+  // useAuthStore の user は vue-tsc では Ref として推論されるため、
+  // 実行時は Pinia が自動アンラップする。
+  // 型安全にアクセスするため AuthUser | null にキャストする。
+  const raw: unknown = authStore.user
+  if (
+    raw !== null &&
+    typeof raw === 'object' &&
+    'userType' in raw &&
+    'userId' in raw &&
+    'email' in raw
+  ) {
+    return raw as AuthUser
+  }
+  return null
 }
 
 // === モックモード ===
@@ -36,9 +60,9 @@ async function handleMockLogin(): Promise<void> {
   try {
     localStorage.setItem('mock:userType', selectedUserType.value)
     await authStore.login('', '')
-    const user = authStore.user
+    const user = resolveUser()
     if (user) {
-      await router.push(REDIRECT_MAP[user.userType])
+      await router.push(getRedirectPath(user.userType))
     }
   } catch {
     mockError.value = 'ログインに失敗しました。'
@@ -55,11 +79,26 @@ const PostSignInRedirect = defineComponent({
   setup() {
     const postRouter = useRouter()
     const postStore = useAuthStore()
+
+    function resolvePostUser(): AuthUser | null {
+      const raw: unknown = postStore.user
+      if (
+        raw !== null &&
+        typeof raw === 'object' &&
+        'userType' in raw &&
+        'userId' in raw &&
+        'email' in raw
+      ) {
+        return raw as AuthUser
+      }
+      return null
+    }
+
     onMounted(async () => {
       await postStore.restoreSession()
-      const user = postStore.user
+      const user = resolvePostUser()
       if (user) {
-        await postRouter.push(REDIRECT_MAP[user.userType])
+        await postRouter.push(getRedirectPath(user.userType))
       }
     })
     return () => null
