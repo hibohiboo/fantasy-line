@@ -36,12 +36,20 @@ Hono を Lambda に導入し、`tenantContext`（Tier 1: テナントアクセ�
 - 代表ハンドラー 1 本（`listVillages`）を Hono + ミドルウェアパターンに移行
 - ユニットテスト（`tenantContext` / `requirePermission` の各条件）
 - 統合テスト（ローカル Docker MySQL + 代表ハンドラー）
+- **旧シングルテナント系統の廃止**（PBI-SaaS-003 で暫定維持していた二重管理の解消）
+  - `apps/api/src/db/tenant-template-schema.ts` に業務テーブル（`villages`・`residents`・`items`）を追加する
+  - `drizzle-kit generate` で `apps/api/drizzle-tenant/` に業務テーブルのマイグレーション SQL を追加生成する
+  - `apps/api/src/db/client.ts` をテナント別接続（`tenant_{slug}` データベース）に切り替える
+  - `apps/api/src/db/schema.ts` を削除する
+  - `apps/api/drizzle.config.ts` を削除する
+  - `apps/api/drizzle/`（旧マイグレーション履歴）を削除する
 
 ### 含まない
 
 - 全ハンドラーの Hono 移行（段階的に後続 PBI で行う）
 - ユーザー管理 API（→ PBI-SaaS-006）
 - フロントエンド（→ PBI-SaaS-007）
+- 既存ローカルデータ（`testdb`）のテナントスキーマへの移行（ローカル開発環境は `db:up` 後に再構築する前提）
 
 ---
 
@@ -148,5 +156,5 @@ Scenario 7: 代表ハンドラーが Hono + ミドルウェアパターンで動
 - **Negotiable**: OK — 移行する代表ハンドラーの選定・Hono の導入方式は交渉余地あり
 - **Valuable**: OK — このパターンなしでは安全なマルチテナント API を実装できない
 - **Estimable**: OK — Hono + ミドルウェアパターンは設計ドキュメントで詳細化済み
-- **Small**: OK — ミドルウェア実装 + 代表ハンドラー 1 本の移行
+- **Small**: 要注意 — ミドルウェア実装 + 代表ハンドラー 1 本の移行に加え、旧スキーマ廃止（業務テーブル移行・旧ファイル削除）を含む。スコープが広いと判断した場合は旧スキーマ廃止を `PBI-SaaS-003b` として独立させることを検討する
 - **Testable**: OK — ユニットテスト + 統合テスト（ローカル Docker MySQL）で検証可能

@@ -15,9 +15,37 @@ Sprint 3 / 作成日: 2026-06-20
 - `apps/api` で `drizzle-orm ^0.45.x`・`drizzle-kit ^0.31.x`・`mysql2 ^3.22.x` を使用
 - ローカル MySQL: `tools/docker/` の Docker Compose。`npm run db:up`（`apps/api`）で起動
 - ローカル接続情報（デフォルト）: host `localhost`, port `3306`, user `testuser`, password `testpass`
-- **既存 `drizzle.config.ts` と `apps/api/drizzle/` は変更しない**（テナント業務テーブルの既存マイグレーション履歴に影響を与えない）
+- **既存 `drizzle.config.ts` と `apps/api/drizzle/` は変更しない**（後述「暫定的二重管理について」を参照）
 - `tools/` は npm workspaces に含まれていない。ツールスクリプトは `apps/api` から `tsx ../../tools/scripts/<file>.ts` で実行する
 - 完了後、PBI-SaaS-004（Hono tenantContext）・PBI-SaaS-005（プロビジョニング Lambda）が本 PBI の成果物に依存する
+
+---
+
+## 暫定的二重管理について（意図的な設計判断）
+
+本 PBI 完了後、`apps/api` に以下の **2 系統の Drizzle 設定が並存する**。これは意図的な暫定状態である。
+
+| 系統 | 設定ファイル | マイグレーション | 対象 DB | 状態 |
+|---|---|---|---|---|
+| 旧（シングルテナント） | `drizzle.config.ts` | `drizzle/` (0000〜0003) | `testdb` | **暫定維持** |
+| 新（service スキーマ） | `drizzle.service.config.ts` | `drizzle-service/` | `service` | 本 PBI で新設 |
+| 新（テナントテンプレート） | `drizzle.tenant-template.config.ts` | `drizzle-tenant/` | `tenant_template` | 本 PBI で新設（認可テーブルのみ） |
+
+### 旧系統を今すぐ削除しない理由
+
+- 業務テーブル（`villages`・`residents`・`items`）を `tenant-template-schema.ts` に移行するには、既存ローカルデータの移行計画が必要
+- `apps/api/src/db/client.ts` がまだシングルテナント接続のままであり、DB 接続切替（PBI-SaaS-004）と同時に行うのが自然
+
+### 削除タイミング（PBI-SaaS-004 のスコープ）
+
+PBI-SaaS-004（Hono tenantContext 実装）において以下を実施する（PBI-SaaS-004.md に明記済み）:
+
+1. `tenant-template-schema.ts` に業務テーブル（`villages`・`residents`・`items`）を追加する
+2. `drizzle-tenant/` に業務テーブルのマイグレーション SQL を追加生成する
+3. `apps/api/src/db/client.ts` をテナント別接続に切り替える
+4. `apps/api/src/db/schema.ts`・`apps/api/drizzle.config.ts`・`apps/api/drizzle/` を削除する
+
+この完了をもって旧系統が完全に廃止され、二重管理が解消される。
 
 ---
 
