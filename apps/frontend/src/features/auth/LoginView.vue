@@ -89,11 +89,11 @@ const PostSignInRedirect = defineComponent({
 <template>
   <v-container class="fill-height" fluid>
     <v-row align="center" justify="center">
-      <v-col cols="12">
+      <v-col cols="12" sm="8" md="6" lg="5">
 
         <!-- モックモード: 開発用ログインフォーム -->
         <template v-if="isMock">
-          <v-card class="pa-6 mx-auto" elevation="3" max-width="480">
+          <v-card class="pa-6" elevation="3">
             <v-card-title class="text-h5 mb-2">
               モックログイン
             </v-card-title>
@@ -135,13 +135,11 @@ const PostSignInRedirect = defineComponent({
 
         <!-- 本番モード: Amplify Authenticator -->
         <template v-else>
-          <div class="d-flex justify-center">
-            <Authenticator :hide-sign-up="true">
-              <template #default>
-                <PostSignInRedirect />
-              </template>
-            </Authenticator>
-          </div>
+          <Authenticator :hide-sign-up="true">
+            <template #default>
+              <PostSignInRedirect />
+            </template>
+          </Authenticator>
         </template>
 
       </v-col>
