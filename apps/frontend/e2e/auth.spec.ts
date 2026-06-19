@@ -33,10 +33,11 @@ test.describe('認証機能（dev:mock モード）', () => {
     // Arrange: ログイン画面に移動
     await page.goto('/login')
 
-    // Act: v-select で tenant_user を明示的に選択してログイン
-    // Vuetify v-select は内部 span がポインターイベントをインターセプトするため force: true を使用
+    // Act: デフォルト (tenant_user) のままログイン
+    // v-select で同じ値を再選択するとドロップダウンが閉じない場合があるため
+    // ここでは v-select を操作せず、Escape でドロップダウン外クリック後にログイン
     await page.getByLabel('ユーザー種別').click({ force: true })
-    await page.getByRole('option', { name: /tenant_user/ }).click()
+    await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'モックログイン' }).click()
 
     // Assert
