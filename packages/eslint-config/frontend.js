@@ -22,7 +22,10 @@ export default defineConfigWithVueTs(
   vueTsConfigs.recommended,
   {
     ...pluginVitest.configs.recommended,
-    files: ['src/**/__tests__/*'],
+    files: ['src/**/*.test.ts', 'e2e/**/*.test.ts'],
+    rules: {
+      'sonarjs/no-forced-browser-interaction': ['off'],
+    },
   },
 
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),

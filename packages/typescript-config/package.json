@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "ncu": "ncu -u"
+    "ncu": "npx ncu -u"
   },
   "publishConfig": {
     "access": "public"

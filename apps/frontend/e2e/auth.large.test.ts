@@ -1,10 +1,7 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 /** mock モードでセッションをセットアップする（addInitScript 経由） */
-async function setupMockSession(
-  page: Parameters<Parameters<typeof test>[1]>[0],
-  userType = 'tenant_user',
-): Promise<void> {
+async function setupMockSession(page: Page, userType = 'tenant_user'): Promise<void> {
   await page.addInitScript((type) => {
     localStorage.setItem('mock:userType', type)
   }, userType)
