@@ -25,23 +25,6 @@ function getRedirectPath(userType: UserType): string {
   return REDIRECT_MAP[userType] ?? '/'
 }
 
-function resolveUser(): AuthUser | null {
-  // useAuthStore の user は vue-tsc では Ref として推論されるため、
-  // 実行時は Pinia が自動アンラップする。
-  // 型安全にアクセスするため AuthUser | null にキャストする。
-  const raw: unknown = authStore.user
-  if (
-    raw !== null &&
-    typeof raw === 'object' &&
-    'userType' in raw &&
-    'userId' in raw &&
-    'email' in raw
-  ) {
-    return raw as AuthUser
-  }
-  return null
-}
-
 // === モックモード ===
 const selectedUserType = ref<UserType>('tenant_user')
 const mockError = ref('')
@@ -59,11 +42,8 @@ async function handleMockLogin(): Promise<void> {
   isLoggingIn.value = true
   try {
     localStorage.setItem('mock:userType', selectedUserType.value)
-    await authStore.login('', '')
-    const user = resolveUser()
-    if (user) {
-      await router.push(getRedirectPath(user.userType))
-    }
+    const loggedInUser = await authStore.login('', '')
+    await router.push(getRedirectPath(loggedInUser.userType))
   } catch {
     mockError.value = 'ログインに失敗しました。'
   } finally {

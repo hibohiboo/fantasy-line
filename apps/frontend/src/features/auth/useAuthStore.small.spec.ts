@@ -33,9 +33,11 @@ describe('useAuthStore', () => {
       const store = useAuthStore();
 
       // Act
-      await store.login('test@example.com', 'password');
+      const returned = await store.login('test@example.com', 'password');
 
-      // Assert: Pinia 3 setup store は Vue reactive proxy 経由で ref を自動 unwrap する
+      // Assert: 戻り値に AuthUser が含まれること
+      expect(returned).toMatchObject({ userType: 'tenant_user' });
+      // Assert: ストアの user にも反映されること
       expect(store.user).toMatchObject({ userType: 'tenant_user' });
     });
 

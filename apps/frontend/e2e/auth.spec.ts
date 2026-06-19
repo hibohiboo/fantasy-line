@@ -33,11 +33,7 @@ test.describe('認証機能（dev:mock モード）', () => {
     // Arrange: ログイン画面に移動
     await page.goto('/login')
 
-    // Act: デフォルト (tenant_user) のままログイン
-    // v-select で同じ値を再選択するとドロップダウンが閉じない場合があるため
-    // ここでは v-select を操作せず、Escape でドロップダウン外クリック後にログイン
-    await page.getByLabel('ユーザー種別').click({ force: true })
-    await page.keyboard.press('Escape')
+    // Act: デフォルト (tenant_user) のままログイン（v-select 操作不要）
     await page.getByRole('button', { name: 'モックログイン' }).click()
 
     // Assert

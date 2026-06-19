@@ -21,10 +21,12 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null);
   const isLoading = ref(false);
 
-  async function login(email: string, password: string): Promise<void> {
+  async function login(email: string, password: string): Promise<AuthUser> {
     isLoading.value = true;
     try {
-      user.value = await getService().signIn(email, password);
+      const loggedInUser = await getService().signIn(email, password);
+      user.value = loggedInUser;
+      return loggedInUser;
     } finally {
       isLoading.value = false;
     }
