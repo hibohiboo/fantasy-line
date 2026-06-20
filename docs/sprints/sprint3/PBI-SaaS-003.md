@@ -426,3 +426,89 @@ describe('validateSlug', () => {
 - [x] 存在しないテナントスキーマを含む場合、`npm run db:migrate:all:local` がエラーテナントをスキップして正常終了すること
 - [x] `npm run lint`（`apps/api`）が通ること
 - [x] セキュリティレビュー完了・HIGH 指摘対処済みであること
+
+---
+
+## 動作確認記録（2026-06-20）
+
+実行環境: ローカル Docker MySQL（`docker-mysql-1` コンテナ、image: mysql:8.0）
+
+### db:migrate:service:local
+
+```
+> tsx ../../tools/scripts/migrate-service.ts
+
+データベース "service" を確認・作成しました
+"service" スキーマのマイグレーション完了
+```
+
+- `service` スキーマが存在しない状態で実行し、`CREATE DATABASE IF NOT EXISTS` によりスキーマが作成されたことを確認
+- `drizzle-service/` の SQL が適用されたことを `SHOW TABLES IN service` で確認
+
+### db:seed:service:local（冪等性確認）
+
+1 回目（データなし → 初回挿入済み状態のコンテナへの追加実行のため 0 件）:
+
+```
+roles 挿入完了: servicer_admin, servicer_delegate
+role_permissions 挿入完了: 0 件挿入（合計 8 件対象）
+```
+
+2 回目（INSERT IGNORE によるスキップ確認）:
+
+```
+roles 挿入完了: servicer_admin, servicer_delegate
+role_permissions 挿入完了: 0 件挿入（合計 8 件対象）
+```
+
+- DB 確認で `roles` 2 件・`role_permissions` 8 件が存在することを確認
+- 2 回実行してもエラーなしで冪等性を確認
+
+> **補足**: コンテナが前セッションのままだったため、初回投入は前セッション時に完了済みだった。スクリプトが INSERT IGNORE で正しく冪等動作することを 2 回の実行で確認した。
+
+### db:migrate:all:local（全件成功ケース）
+
+投入データ:
+
+```sql
+INSERT INTO tenants (slug, name, status, created_at)
+VALUES ('acme', 'ACME Corp', 'active', NOW()),
+       ('beta-org', 'Beta Organization', 'active', NOW());
+```
+
+実行結果:
+
+```
+アクティブテナント数: 2
+[acme] マイグレーション成功
+[beta-org] マイグレーション成功
+{"success":2,"failed":0,"failedSlugs":[]}
+```
+
+- `SHOW DATABASES LIKE 'tenant_%'` で `tenant_acme` / `tenant_beta_org` の作成を確認
+- `suspended` ステータスのテナント（`suspended-co`）が SELECT から除外されることを確認
+
+### db:migrate:all:local（エラースキップケース）
+
+DB に `validateSlug` で弾かれる無効スラッグ `-invalid` を直接挿入して実行:
+
+```
+アクティブテナント数: 3
+[-invalid] マイグレーション失敗: Error: 無効なスラッグ "-invalid": スラッグは英小文字・数字・ハイフンのみ使用でき、先頭と末尾はアルファベットまたは数字である必要があります
+[acme] マイグレーション成功
+[beta-org] マイグレーション成功
+{"success":2,"failed":1,"failedSlugs":["-invalid"]}
+```
+
+exit code: 1
+
+- 無効スラッグはエラーログを出力してスキップし、他のテナントの処理が続行されることを確認
+- 1 件でも失敗があれば exit 1 で終了することを確認
+- セキュリティ HIGH 対処（`validateSlug` 呼び出し）が実際に機能することを確認
+
+### lint
+
+```
+> eslint . --fix
+（警告・エラーなし）
+```
