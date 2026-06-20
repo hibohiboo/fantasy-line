@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-06-17
+last_updated: 2026-06-21
 ---
 
 # API 認可パターン設計 — マルチテナント SaaS 対応
@@ -65,13 +65,19 @@ Lambda 内のルーティングとミドルウェア集約には **Hono** を使
 
 ### エラー一覧
 
-| 条件 | ステータス |
-|---|---|
-| `custom:user_type` が想定 4 値以外 | 403 Forbidden |
-| `tenant_*` の JWT に `custom:tenant_id` がない | 403 Forbidden |
-| `servicer_*` のリクエストに `X-Tenant-Id` ヘッダーがない | 400 Bad Request |
-| テナントスキーマが存在しない | 503 Service Unavailable |
-| Tier 1: テナントアクセス不可 | 403 Forbidden |
+| 条件 | 経路 | ステータス |
+|---|---|---|
+| `custom:user_type` が想定 4 値以外 | 共通 | 403 Forbidden |
+| JWT に `sub` がない | 共通 | 403 Forbidden |
+| `tenant_*` の JWT に `custom:tenant_id` がない | tenant_* | 403 Forbidden |
+| `servicer_*` のリクエストに `X-Tenant-Id` ヘッダーがない | servicer_* | 400 Bad Request |
+| テナントスラッグが `service.tenants` に存在しない | servicer_* | **404 Not Found** |
+| テナントの `status` が `'active'` 以外（suspended / deleted 等） | servicer_* | **403 Forbidden** |
+| テナントスキーマが存在しない / インフラ接続エラー | tenant_* | 503 Service Unavailable |
+| テナントスキーマが inactive または接続エラー | tenant_* | 503 Service Unavailable |
+| Tier 1: テナントアクセス不可（ユーザーがテナントに属していない） | 共通 | 403 Forbidden |
+
+> **servicer 経路の 404/403 分離の理由（PBI-SaaS-004b）**: `servicer_*` ユーザーは任意の `X-Tenant-Id` を送れるため、503 を返すとスラッグの存在有無が推測できる（列挙攻撃）。存在しない場合は 404、存在するが停止中の場合は 403 を返すことで、スラッグを存在していないスラッグと区別する情報を提供しない。
 
 ### Hono context へのセット
 
@@ -254,3 +260,4 @@ export const createResidentHandler: Handler = async (c) => {
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-SaaS-001d | 2026-06-17 | 初版作成。tenantContext / requirePermission ミドルウェア設計・代表フロー・クロステナント拒否パターン・ハンドラー例・フロントエンド権限取得パターンを定義 |
+| PBI-SaaS-004b | 2026-06-21 | servicer_* 経路のエラー一覧を更新。503 を「スラッグ不在 → 404」「非 active → 403」「インフラ接続エラー → 503」に分離。列挙攻撃対策の根拠を追記 |
