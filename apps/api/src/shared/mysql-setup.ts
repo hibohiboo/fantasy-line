@@ -6,6 +6,9 @@ import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
 import * as schema from '../db/schema';
 
+// TODO(PBI-SaaS-004後続): drizzle/ フォルダは旧シングルテナント用マイグレーション履歴。
+// village / resident / item ハンドラーが Hono マルチテナント移行完了後に削除する。
+// 移行完了まではこのセットアップヘルパーごと削除できないため保留。
 // vitest は apps/api/ をCWDとして実行するため drizzle/ への相対パスが確定する
 const migrationsFolder = path.resolve(process.cwd(), 'drizzle');
 

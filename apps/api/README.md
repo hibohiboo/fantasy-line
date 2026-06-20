@@ -14,14 +14,13 @@ Lambda ハンドラー群と Drizzle ORM による MySQL アクセス層。
 ```
 drizzle-service/          # service スキーマのマイグレーション SQL（コミット必須）
 drizzle-tenant/           # tenant テンプレートのマイグレーション SQL（コミット必須）
-drizzle/                  # 旧 testdb のマイグレーション SQL（PBI-SaaS-004 まで維持）
+drizzle/                  # 旧 testdb のマイグレーション SQL（village/resident/item Hono 移行後に削除）
 src/db/
   service-schema.ts       # service スキーマのテーブル定義
   tenant-template-schema.ts # tenant_{slug} スキーマのテーブル定義
-  schema.ts               # 旧 testdb のテーブル定義（PBI-SaaS-004 まで維持）
+  schema.ts               # 旧 testdb のテーブル定義（village/resident/item Hono 移行後に削除）
 drizzle.service.config.ts
 drizzle.tenant-template.config.ts
-drizzle.config.ts         # 旧 testdb 用（PBI-SaaS-004 まで維持）
 ```
 
 ### コマンド一覧
@@ -31,11 +30,9 @@ drizzle.config.ts         # 旧 testdb 用（PBI-SaaS-004 まで維持）
 | `npm run db:up` | Docker MySQL を起動する | — |
 | `npm run db:generate:service` | `service-schema.ts` から SQL を生成する | 不要 |
 | `npm run db:generate:tenant` | `tenant-template-schema.ts` から SQL を生成する | 不要 |
-| `npm run db:generate` | 旧 `schema.ts` から SQL を生成する（PBI-SaaS-004 まで） | 不要 |
 | `npm run db:migrate:service:local` | `service` スキーマを作成してマイグレーションを適用する | 必要 |
 | `npm run db:seed:service:local` | サービス権限マスタ（roles / role_permissions）を投入する | 必要 |
 | `npm run db:migrate:all:local` | アクティブな全テナントスキーマを作成してマイグレーションを適用する | 必要 |
-| `npm run db:migrate:local` | 旧 `testdb` にマイグレーションを適用する（PBI-SaaS-004 まで） | 必要 |
 
 > `db:migrate:service:local` と `db:migrate:all:local` は `CREATE DATABASE IF NOT EXISTS` を行うため、
 > `testuser` に CREATE 権限が必要。Docker コンテナ初回起動時に自動付与される（[db-operations.md](../../docs/design/non-functional/db-operations.md) 参照）。
