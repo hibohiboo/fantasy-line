@@ -4,7 +4,7 @@ import { createConnection } from 'mysql2/promise';
 import type { RowDataPacket } from 'mysql2';
 import { drizzle } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
-import { slugToSchemaName } from '../../apps/api/src/shared/tenant';
+import { slugToSchemaName, validateSlug } from '../../apps/api/src/shared/tenant';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -40,6 +40,10 @@ async function fetchActiveSlugs(): Promise<string[]> {
 }
 
 async function migrateTenant(slug: string): Promise<void> {
+  const validation = validateSlug(slug);
+  if (!validation.valid) {
+    throw new Error(`無効なスラッグ "${slug}": ${validation.reason}`);
+  }
   const schemaName = slugToSchemaName(slug);
   const connection = await createConnection({
     host: DB_HOST,

@@ -377,13 +377,35 @@ describe('validateSlug', () => {
 
 ---
 
+## セキュリティレビュー結果（2026-06-20）
+
+### HIGH → 対処済み: `migrate-all-tenants.ts` でスラッグ検証漏れ
+
+**内容**: `migrateTenant(slug)` 内で `slugToSchemaName` を呼ぶ前に `validateSlug` を呼んでいなかった。DB の `tenants.slug` に不正な値が混入した場合に意図しないスキーマへマイグレーションが走るリスクがあった。
+
+**対処**: `migrateTenant` の冒頭で `validateSlug` を呼び、検証失敗時は `Error` を投げるよう修正済み（失敗 slug は `failedSlugs` に記録される）。
+
+### MEDIUM: FK に `ON DELETE` が未指定
+
+`service-schema.ts` / `tenant-template-schema.ts` の外部キーに `onDelete` が明示されていない。MySQL デフォルトは `RESTRICT`（安全側）だが意図が不明確。後続 PBI でテナント削除・ユーザー削除フローを実装する際に明示すること。
+
+### MEDIUM: `servicer_admin` の `delete` 権限の業務的意味
+
+`seed-service-permissions.ts` の `tenant:delete` / `user:delete` は `service.tenants.status = 'deleted'` による論理削除と物理削除のどちらを想定するかを PBI-SaaS-005/006 の設計時に明確化すること。
+
+### LOW: ツールスクリプトのエラーログ
+
+`console.error` の出力に mysql2 接続エラー詳細（ホスト・ポート）が含まれる可能性があるが、スクリプトはローカル・運用端末からの実行を前提とし Lambda 上では動かないため許容範囲。
+
+---
+
 ## 完了条件チェックリスト
 
-- [ ] `npm run test:small`（`apps/api`）で `tenant.small.test.ts` の全テストが通ること
-- [ ] `npm run db:generate:service`（`apps/api`）でエラーなく実行できること
-- [ ] `npm run db:generate:tenant`（`apps/api`）でエラーなく実行できること
-- [ ] `apps/api/drizzle-service/` にマイグレーション SQL が生成されていること
-- [ ] `apps/api/drizzle-tenant/` にマイグレーション SQL が生成されていること
+- [x] `npm run test:small`（`apps/api`）で `tenant.small.test.ts` の全テストが通ること
+- [x] `npm run db:generate:service`（`apps/api`）でエラーなく実行できること
+- [x] `npm run db:generate:tenant`（`apps/api`）でエラーなく実行できること
+- [x] `apps/api/drizzle-service/` にマイグレーション SQL が生成されていること
+- [x] `apps/api/drizzle-tenant/` にマイグレーション SQL が生成されていること
 - [ ] ローカル Docker MySQL（`npm run db:up`）を起動した状態で `npm run db:migrate:service:local`（`apps/api`）が通ること
 - [ ] 上記後、`npm run db:seed:service:local` が通ること（2 回実行してもエラーなし）
 - [ ] `service.tenants` にテストデータを 2 件投入した後、`npm run db:migrate:all:local` が全件成功すること
