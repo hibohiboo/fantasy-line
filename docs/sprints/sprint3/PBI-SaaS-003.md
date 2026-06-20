@@ -229,12 +229,18 @@ export default defineConfig({
     port: Number(process.env.DB_PORT ?? '3306'),
     user: process.env.DB_USER ?? 'testuser',
     password: process.env.DB_PASSWORD ?? 'testpass',
-    database: 'service',
+    // ローカルでは testdb に同居させる（service テーブルは既存テーブルと名前が競合しない）
+    // 本番では DB_NAME=service を設定して接続先を切り替える
+    database: process.env.DB_NAME ?? 'testdb',
   },
 });
 ```
 
 ### `apps/api/drizzle.tenant-template.config.ts`
+
+> **注意**: このファイルは `drizzle-kit generate`（SQL 生成）専用。`drizzle-kit push` はローカルで実行しない。  
+> 理由: テナントテンプレートの `users`・`roles`・`role_permissions` は `testdb` に存在する service テーブルと名前が競合する。
+> テナントマイグレーションの動作確認は `migrate-all-tenants.ts` を使い、個別の `tenant_{slug}` データベースに対して行う。
 
 ```ts
 import { defineConfig } from 'drizzle-kit';
