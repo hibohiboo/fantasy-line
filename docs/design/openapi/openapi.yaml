@@ -228,7 +228,7 @@ paths:
                     village:
                       id: 1
                       name: エルムの村
-                      ownerId: user-123
+                      ownerId: 1
                       createdAt: '2026-05-05T00:00:00.000Z'
         '400':
           description: バリデーションエラーまたはJSONパース失敗
@@ -256,10 +256,12 @@ paths:
     get:
       summary: 自分の村一覧を取得する
       operationId: listVillages
-      description: ログイン中のユーザーが管理者として登録されている村のみを、作成日時の降順（最新順）で返す
+      description: 現在のテナントスキーマ内でログイン中のユーザーが作成した村の一覧を、作成日時の降順（最新順）で返す。テナントコンテキストは tenantContext ミドルウェアが解決する
       x-pbi: PBI-001
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
       responses:
         '200':
           description: 村一覧の取得成功
@@ -274,11 +276,11 @@ paths:
                     villages:
                       - id: 2
                         name: オークの村
-                        ownerId: user-123
+                        ownerId: 1
                         createdAt: '2026-05-06T00:00:00.000Z'
                       - id: 1
                         name: エルムの村
-                        ownerId: user-123
+                        ownerId: 1
                         createdAt: '2026-05-05T00:00:00.000Z'
                 empty:
                   summary: 村が存在しない場合
@@ -293,7 +295,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT トークン（PBI-014 実装前はモック認証）
+      description: |
+        Cognito JWT トークン。以下の custom claims を含む。
+        - custom:user_type: "tenant_admin" | "tenant_user" | "servicer_admin" | "servicer_delegate"
+        - custom:tenant_id: テナントスラッグ（tenant_* ユーザーのみ）
 
   schemas:
     CreateResidentInput:
@@ -433,9 +438,9 @@ components:
           description: 村名
           example: エルムの村
         ownerId:
-          type: string
-          description: 管理者ユーザーID
-          example: user-123
+          type: integer
+          description: 村を作成したテナントユーザーの ID（tenant_{slug}.users.id への参照）
+          example: 1
         createdAt:
           type: string
           format: date-time
@@ -505,3 +510,24 @@ components:
             $ref: '#/components/schemas/SimpleErrorResponse'
           example:
             error: Forbidden
+
+    ServiceUnavailable:
+      description: テナントスキーマが存在しない、または DB 接続に失敗した
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SimpleErrorResponse'
+          example:
+            error: Service Unavailable
+
+  parameters:
+    XTenantId:
+      in: header
+      name: X-Tenant-Id
+      schema:
+        type: string
+      required: false
+      description: |
+        対象テナントのスラッグ。servicer_* ユーザーのリクエストでは必須。
+        tenant_* ユーザーのリクエストでは JWT の custom:tenant_id が優先されるため無視される。
+      example: acme
