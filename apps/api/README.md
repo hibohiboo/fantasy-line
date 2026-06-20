@@ -2,48 +2,61 @@
 
 Lambda ハンドラー群と Drizzle ORM による MySQL アクセス層。
 
-## マイグレーション
+## DB セットアップ・マイグレーション
 
-### ファイル構成
+ローカル環境のセットアップ手順と各コマンドの使い方は以下を参照すること。
+
+- **[DB 操作手順書](../../docs/design/non-functional/db-operations.md)** — ローカル初期構築・テナント追加・全テナントマイグレーションの手順
+- **[マイグレーション方針](../../docs/design/non-functional/migration.md)** — スキーマ管理の設計方針・スキーマ変更手順
+
+### スキーマ構成とファイル配置
 
 ```
-drizzle/
-  0000_*.sql        # 自動生成されたマイグレーション SQL（コミット必須）
-  meta/             # drizzle-kit の内部メタデータ（コミット必須）
+drizzle-service/          # service スキーマのマイグレーション SQL（コミット必須）
+drizzle-tenant/           # tenant テンプレートのマイグレーション SQL（コミット必須）
+drizzle/                  # 旧 testdb のマイグレーション SQL（PBI-SaaS-004 まで維持）
 src/db/
-  schema.ts         # テーブル定義の唯一の正（Single Source of Truth）
+  service-schema.ts       # service スキーマのテーブル定義
+  tenant-template-schema.ts # tenant_{slug} スキーマのテーブル定義
+  schema.ts               # 旧 testdb のテーブル定義（PBI-SaaS-004 まで維持）
+drizzle.service.config.ts
+drizzle.tenant-template.config.ts
+drizzle.config.ts         # 旧 testdb 用（PBI-SaaS-004 まで維持）
 ```
 
-### 指針
+### コマンド一覧
 
-**`schema.ts` を変更したら必ず `db:generate` を実行すること。**
+| コマンド | 用途 | DB 接続 |
+|---|---|---|
+| `npm run db:up` | Docker MySQL を起動する | — |
+| `npm run db:generate:service` | `service-schema.ts` から SQL を生成する | 不要 |
+| `npm run db:generate:tenant` | `tenant-template-schema.ts` から SQL を生成する | 不要 |
+| `npm run db:generate` | 旧 `schema.ts` から SQL を生成する（PBI-SaaS-004 まで） | 不要 |
+| `npm run db:migrate:service:local` | `service` スキーマを作成してマイグレーションを適用する | 必要 |
+| `npm run db:seed:service:local` | サービス権限マスタ（roles / role_permissions）を投入する | 必要 |
+| `npm run db:migrate:all:local` | アクティブな全テナントスキーマを作成してマイグレーションを適用する | 必要 |
+| `npm run db:migrate:local` | 旧 `testdb` にマイグレーションを適用する（PBI-SaaS-004 まで） | 必要 |
 
-マイグレーションファイルはテストの `migrate()` でも使われるため、
-`schema.ts` と `drizzle/` が乖離するとテストが実際のスキーマと異なる状態で動作する。
+> `db:migrate:service:local` と `db:migrate:all:local` は `CREATE DATABASE IF NOT EXISTS` を行うため、
+> `testuser` に CREATE 権限が必要。Docker コンテナ初回起動時に自動付与される（[db-operations.md](../../docs/design/non-functional/db-operations.md) 参照）。
 
-### 手順
+### スキーマを変更するとき
+
+変更対象のスキーマに応じたコマンドを実行する。
 
 ```bash
-# 1. src/db/schema.ts を編集する
+# service スキーマを変更した場合
+npm run db:generate:service   # SQL を生成してコミットに含める
+npm run db:migrate:service:local
 
-# 2. マイグレーションファイルを生成する（DB接続不要）
-npm run db:generate
-
-# 3. 生成された drizzle/*.sql を必ずコミットに含める
-
-# 4. ローカル DB に適用する（開発時）
-npm run db:migrate:local
+# tenant テンプレートを変更した場合
+npm run db:generate:tenant    # SQL を生成してコミットに含める
+npm run db:migrate:all:local
 ```
 
-### 各コマンドの使い分け
+詳細な手順は **[マイグレーション方針](../../docs/design/non-functional/migration.md)** を参照。
 
-| コマンド | 用途 | DB接続 |
-|---------|------|--------|
-| `npm run db:generate` | `schema.ts` からマイグレーション SQL を生成 | 不要 |
-| `npm run db:migrate:local` | ローカル DB にスキーマを適用（`drizzle-kit push`） | 必要 |
-
-> **注意**: `db:migrate:local` は `drizzle-kit push` のため差分 SQL を直接適用する。
-> 本番環境へのマイグレーションは `migrate()` + 生成済み SQL ファイルを使うこと。
+---
 
 ## テスト
 
