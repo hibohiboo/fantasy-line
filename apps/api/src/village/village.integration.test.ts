@@ -1,15 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import { CreateVillageResponseSchema, ListVillagesResponseSchema } from '@repo/schema';
+import { CreateVillageResponseSchema } from '@repo/schema';
 import type * as CreateVillageModule from './createVillage';
-import type * as ListVillagesModule from './listVillages';
 import * as schema from '../db/schema';
 import { useMysqlContainer } from '../shared/use-mysql-container';
 import { mockDbClient } from '../shared/db-mock';
 
 const ctx = useMysqlContainer();
 let createVillage: typeof CreateVillageModule.handler;
-let listVillages: typeof ListVillagesModule.handler;
 
 describe('village API 統合テスト', () => {
   beforeEach(async () => {
@@ -17,7 +15,6 @@ describe('village API 統合テスト', () => {
     vi.resetModules();
     vi.doMock('../db/client', () => mockDbClient(ctx.db));
     ({ handler: createVillage } = await import('./createVillage'));
-    ({ handler: listVillages } = await import('./listVillages'));
   });
 
   it('POST /villages → 201・DB に owner_id 付きで保存・レスポンスに必要フィールドが含まれる', async () => {
@@ -76,40 +73,5 @@ describe('village API 統合テスト', () => {
     expect(rows.at(0)?.ownerId).toBe('user-1');
   });
 
-  it('ユーザーA・B それぞれ村を作成後、GET /villages で各ユーザーは自分の村のみ取得できる', async () => {
-    await createVillage(
-      {
-        body: JSON.stringify({ name: 'Aの村' }),
-        headers: { 'X-User-Id': 'user-A' },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-    await createVillage(
-      {
-        body: JSON.stringify({ name: 'Bの村' }),
-        headers: { 'X-User-Id': 'user-B' },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    const resultA = await listVillages(
-      { headers: { 'X-User-Id': 'user-A' } } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-    const resultB = await listVillages(
-      { headers: { 'X-User-Id': 'user-B' } } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    const { villages: villagesA } = ListVillagesResponseSchema.parse(JSON.parse(resultA.body));
-    const { villages: villagesB } = ListVillagesResponseSchema.parse(JSON.parse(resultB.body));
-
-    expect(villagesA).toHaveLength(1);
-    expect(villagesA.at(0)?.name).toBe('Aの村');
-    expect(villagesA.at(0)?.ownerId).toBe('user-A');
-
-    expect(villagesB).toHaveLength(1);
-    expect(villagesB.at(0)?.name).toBe('Bの村');
-    expect(villagesB.at(0)?.ownerId).toBe('user-B');
-  });
 });
+

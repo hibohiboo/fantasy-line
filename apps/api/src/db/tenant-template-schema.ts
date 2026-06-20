@@ -1,4 +1,4 @@
-import { bigint, datetime, mysqlEnum, mysqlTable, primaryKey, tinyint, varchar } from 'drizzle-orm/mysql-core';
+import { bigint, date, datetime, mysqlEnum, mysqlTable, primaryKey, tinyint, varchar } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 
 export const tenantUsers = mysqlTable('users', {
@@ -45,3 +45,35 @@ export const tenantRolePermissions = mysqlTable(
 
 export type TenantRolePermission = typeof tenantRolePermissions.$inferSelect;
 export type NewTenantRolePermission = typeof tenantRolePermissions.$inferInsert;
+
+export const tenantVillages = mysqlTable('villages', {
+  id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+  name: varchar('name', { length: 128 }).notNull(),
+  ownerId: bigint('owner_id', { mode: 'number', unsigned: true }).notNull().references(() => tenantUsers.id),
+  createdAt: datetime('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export type TenantVillage = typeof tenantVillages.$inferSelect;
+export type NewTenantVillage = typeof tenantVillages.$inferInsert;
+
+export const tenantResidents = mysqlTable('residents', {
+  id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+  name: varchar('name', { length: 128 }).notNull(),
+  nameKana: varchar('name_kana', { length: 128 }).notNull(),
+  birthDate: date('birth_date', { mode: 'string' }).notNull(),
+  villageId: bigint('village_id', { mode: 'number', unsigned: true }).notNull().references(() => tenantVillages.id),
+  createdAt: datetime('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export type TenantResident = typeof tenantResidents.$inferSelect;
+export type NewTenantResident = typeof tenantResidents.$inferInsert;
+
+export const tenantItems = mysqlTable('items', {
+  id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
+  name: varchar('name', { length: 128 }).notNull(),
+  ownerId: bigint('owner_id', { mode: 'number', unsigned: true }).notNull().references(() => tenantUsers.id),
+  createdAt: datetime('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export type TenantItem = typeof tenantItems.$inferSelect;
+export type NewTenantItem = typeof tenantItems.$inferInsert;

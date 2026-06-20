@@ -8,6 +8,13 @@
       "when": 1781885704702,
       "tag": "0000_slimy_the_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1781945248502,
+      "tag": "0001_jazzy_purifiers",
+      "breakpoints": true
     }
   ]
 }

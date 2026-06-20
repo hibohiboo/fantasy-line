@@ -25,6 +25,7 @@
   "dependencies": {
     "@repo/schema": "*",
     "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.26",
     "mysql2": "^3.22.5",
     "zod": "^4.4.3"
   },
