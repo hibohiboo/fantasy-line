@@ -59,18 +59,21 @@ PBI-SaaS-004（Hono tenantContext 実装）において以下を実施する（P
 | `apps/api/src/shared/tenant.small.test.ts` | スラッグ変換のユニットテスト |
 | `apps/api/src/db/service-schema.ts` | `service` スキーマ Drizzle テーブル定義 |
 | `apps/api/src/db/tenant-template-schema.ts` | `tenant_{slug}` テンプレート Drizzle テーブル定義 |
-| `apps/api/drizzle.service.config.ts` | `service` スキーマ向け Drizzle-kit 設定 |
-| `apps/api/drizzle.tenant-template.config.ts` | テナントテンプレート向け Drizzle-kit 設定 |
+| `apps/api/drizzle.service.config.ts` | `service` スキーマ向け Drizzle-kit 設定（SQL 生成用） |
+| `apps/api/drizzle.tenant-template.config.ts` | テナントテンプレート向け Drizzle-kit 設定（SQL 生成用） |
 | `apps/api/drizzle-service/` | `service` スキーマのマイグレーション SQL（`drizzle-kit generate` で自動生成） |
 | `apps/api/drizzle-tenant/` | テナントテンプレートのマイグレーション SQL（`drizzle-kit generate` で自動生成） |
+| `tools/scripts/migrate-service.ts` | `service` スキーマ作成 + マイグレーション実行スクリプト |
+| `tools/scripts/migrate-all-tenants.ts` | 全テナント横断スキーマ作成 + マイグレーションスクリプト |
 | `tools/scripts/seed-service-permissions.ts` | `service.role_permissions` 初期データ投入スクリプト |
-| `tools/scripts/migrate-all-tenants.ts` | 全テナント横断マイグレーションスクリプト |
+| `docker/init/01-grant-create.sql` | testuser に全スキーマへの CREATE 権限を付与（Docker 初回起動時自動実行） |
 
 ### 変更
 
 | ファイル | 変更内容 |
 |---|---|
 | `apps/api/package.json` | `db:generate:service`・`db:generate:tenant`・`db:migrate:service:local`・`db:seed:service:local`・`db:migrate:all:local` スクリプトを追加 |
+| `docker/docker-compose.yml` | `./init:/docker-entrypoint-initdb.d` ボリュームを追加 |
 
 ---
 
@@ -217,6 +220,9 @@ PBI-SaaS-004（Hono tenantContext 実装）において以下を実施する（P
 
 ### `apps/api/drizzle.service.config.ts`
 
+> **注意**: このファイルは `drizzle-kit generate`（SQL 生成）専用。`drizzle-kit push` は使わない。  
+> 実際のマイグレーション実行は `tools/scripts/migrate-service.ts` を経由する（`CREATE DATABASE IF NOT EXISTS` が必要なため）。
+
 ```ts
 import { defineConfig } from 'drizzle-kit';
 
@@ -229,9 +235,7 @@ export default defineConfig({
     port: Number(process.env.DB_PORT ?? '3306'),
     user: process.env.DB_USER ?? 'testuser',
     password: process.env.DB_PASSWORD ?? 'testpass',
-    // ローカルでは testdb に同居させる（service テーブルは既存テーブルと名前が競合しない）
-    // 本番では DB_NAME=service を設定して接続先を切り替える
-    database: process.env.DB_NAME ?? 'testdb',
+    database: process.env.SERVICE_DB ?? 'service',
   },
 });
 ```
@@ -266,10 +270,12 @@ export default defineConfig({
 ```json
 "db:generate:service": "drizzle-kit generate --config=drizzle.service.config.ts",
 "db:generate:tenant": "drizzle-kit generate --config=drizzle.tenant-template.config.ts",
-"db:migrate:service:local": "drizzle-kit push --config=drizzle.service.config.ts",
+"db:migrate:service:local": "tsx ../../tools/scripts/migrate-service.ts",
 "db:seed:service:local": "tsx ../../tools/scripts/seed-service-permissions.ts",
 "db:migrate:all:local": "tsx ../../tools/scripts/migrate-all-tenants.ts"
 ```
+
+> `db:migrate:service:local` は当初 `drizzle-kit push` を使う計画だったが、`drizzle-kit push` が `CREATE DATABASE` を行えないため、ラッパースクリプト経由に変更した。
 
 ---
 
@@ -315,11 +321,13 @@ export default defineConfig({
 1. 環境変数で `service` データベースに接続する
 2. `SELECT slug FROM tenants WHERE status = 'active' ORDER BY slug ASC` でスラッグ一覧を取得する
 3. 各スラッグに対して以下を実行する:
-   a. `slugToSchemaName(slug)` でスキーマ名（= データベース名）を導出する
-   b. `tenant_{slug}` データベースへの接続を新たに作成する
-   c. Drizzle の `migrate()` を実行する（マイグレーションフォルダ: スクリプトの `__dirname` から `../../apps/api/drizzle-tenant` の絶対パスを解決する）
-   d. 成功したらログ出力する
-   e. 失敗したらエラーをログに記録し、次のテナントに進む（ロールバックしない）
+   a. `validateSlug(slug)` でスラッグを検証する（失敗時は `Error` を投げる）
+   b. `slugToSchemaName(slug)` でスキーマ名（= データベース名）を導出する
+   c. データベース指定なしで接続し、`CREATE DATABASE IF NOT EXISTS \`tenant_{slug}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci` を実行する（testuser に CREATE 権限が必要）
+   d. `tenant_{slug}` データベースへの接続を新たに作成する
+   e. Drizzle の `migrate()` を実行する（マイグレーションフォルダ: スクリプトの `__dirname` から `../../apps/api/drizzle-tenant` の絶対パスを解決する）
+   f. 成功したらログ出力する
+   g. 失敗したらエラーをログに記録し、次のテナントに進む（ロールバックしない）
 4. 最後に成功数・失敗数・失敗したスラッグ一覧をログ出力して終了する
 
 ### `slugToSchemaName` の利用

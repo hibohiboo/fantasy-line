@@ -45,6 +45,23 @@ async function migrateTenant(slug: string): Promise<void> {
     throw new Error(`無効なスラッグ "${slug}": ${validation.reason}`);
   }
   const schemaName = slugToSchemaName(slug);
+
+  // データベースが存在しない場合は作成する（testuser に CREATE 権限が必要）
+  const initConn = await createConnection({
+    host: DB_HOST,
+    port: DB_PORT,
+    user: DB_USER,
+    password: DB_PASSWORD,
+  });
+
+  try {
+    await initConn.execute(
+      `CREATE DATABASE IF NOT EXISTS \`${schemaName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+    );
+  } finally {
+    await initConn.end();
+  }
+
   const connection = await createConnection({
     host: DB_HOST,
     port: DB_PORT,
