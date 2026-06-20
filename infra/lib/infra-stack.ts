@@ -194,7 +194,7 @@ export class InfraStack extends cdk.Stack {
       'ListVillagesFunction',
       {
         ...lambdaDefaults,
-        entry: path.join(__dirname, '../../apps/api/src/village/listVillages.ts'),
+        entry: path.join(__dirname, '../../apps/api/src/village/listVillages-lambda.ts'),
       },
     );
     auroraCluster.secret!.grantRead(listVillagesFunction);

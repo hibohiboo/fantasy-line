@@ -1,21 +1,12 @@
+/**
+ * 統合テスト専用の Hono アプリケーション。
+ * 本番 Lambda はルートごとに *-lambda.ts を使うこと（CloudWatch ログ分離のため）。
+ */
 import { Hono } from 'hono';
-import type { HonoVariables } from './types';
+import type { AppBindings, HonoVariables } from './types';
 import { tenantContext } from '../shared/middleware/tenantContext';
 import { requirePermission } from '../shared/middleware/requirePermission';
 import { listVillagesHandler } from '../village/listVillages';
-
-type AppBindings = {
-  event: {
-    requestContext: {
-      authorizer: {
-        jwt: {
-          claims: Record<string, string>;
-        };
-      };
-    };
-    headers?: Record<string, string>;
-  };
-};
 
 export const app = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
 

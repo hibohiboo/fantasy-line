@@ -37,7 +37,9 @@ PBI-SaaS-004 で `listVillages` のみ Hono パターンへ移行した。
   - `apps/api/src/item/createItem.ts`
   - `apps/api/src/item/items.ts`（listItems）
 - 上記ハンドラーの既存ユニットテスト・統合テストを Hono パターンに更新する
-- `apps/api/src/hono/app.ts` に上記ハンドラーのルーティングを追加する
+- 各ハンドラーに対応する **`-lambda.ts` エントリファイルを作成する**（CloudWatch ログ分離のため API ごとに Lambda を分けている設計を維持する）
+- `apps/api/src/hono/app.ts` に上記ハンドラーのルーティングを追加する（統合テスト専用）
+- **`infra/lib/infra-stack.ts` の Lambda Function エントリを `-lambda.ts` に更新する**（下記「CDK 更新」参照）
 - 旧スキーマ・旧マイグレーションの削除
   - `apps/api/src/db/schema.ts`
   - `apps/api/drizzle/`
@@ -53,6 +55,70 @@ PBI-SaaS-004 で `listVillages` のみ Hono パターンへ移行した。
 - `servicer_delegate` の権限チェック設計（→ PBI-SaaS-006 で設計決定後に対応）
 - フロントエンド（→ PBI-SaaS-007）
 - 新規 API エンドポイントの追加
+
+---
+
+## CDK 更新（`infra/lib/infra-stack.ts`）
+
+### 背景
+
+CloudWatch ログから API 呼び出しを追跡しやすくするため、API エンドポイントごとに Lambda Function を分けている設計を維持する。
+PBI-SaaS-004 で `listVillages.ts` が `listVillagesHandler` を export するよう変更されたため、`listVillages-lambda.ts` エントリファイルを作成し CDK を修正済み（PBI-SaaS-004 完了時点）。
+
+本 PBI では残る 6 ハンドラーについて同様の対応を行う。
+
+### `-lambda.ts` エントリファイルのパターン
+
+```ts
+// apps/api/src/village/createVillage-lambda.ts（例）
+import { Hono } from 'hono';
+import { handle } from 'hono/aws-lambda';
+import type { AppBindings, HonoVariables } from '../hono/types';
+import { tenantContext } from '../shared/middleware/tenantContext';
+import { requirePermission } from '../shared/middleware/requirePermission';
+import { createVillageHandler } from './createVillage';
+
+const app = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
+app.use('*', tenantContext);
+app.post('*', requirePermission('village', 'create'), createVillageHandler);
+
+export const handler = handle(app);
+```
+
+### 作成する `-lambda.ts` ファイル一覧
+
+| Lambda Function（CDK） | エントリファイル（作成） | HTTP メソッド |
+|---|---|---|
+| `CreateVillageFunction` | `village/createVillage-lambda.ts` | POST |
+| `CreateResidentFunction` | `resident/createResident-lambda.ts` | POST |
+| `ListResidentsFunction` | `resident/listResidents-lambda.ts` | GET |
+| `ListVillageResidentsFunction` | `resident/listVillageResidents-lambda.ts` | GET |
+| `ItemsFunction` | `item/items-lambda.ts` | GET |
+| `CreateItemFunction`（新設） | `item/createItem-lambda.ts` | POST |
+
+> **Note**: `createItem.ts` は既存 CDK に Lambda Function がないため、本 PBI で `CreateItemFunction` を新設する。
+
+### `migrationFunction` の更新
+
+`afterBundling` で `apps/api/drizzle/` をコピーしているが、本 PBI で `drizzle/` を削除するため更新が必要。
+
+**変更前**:
+```ts
+`node -e "...cpSync(join('${src}','apps','api','drizzle'),join('${dst}','migrations'),...)"`
+```
+
+**変更後**: 2 系統のマイグレーションを別フォルダにコピーする
+```ts
+`node -e "...cpSync(join('${src}','apps','api','drizzle-service'),join('${dst}','migrations-service'),...)"`
+`node -e "...cpSync(join('${src}','apps','api','drizzle-tenant'),join('${dst}','migrations-tenant'),...)"`
+```
+
+`apps/api/src/db/migration.ts` もこれに合わせて更新すること。
+
+### `hono` のバンドル方針
+
+`hono` は Lambda Layer（`infra/layer/`）に含めず、esbuild がバンドルする（約 50 KB、許容範囲）。
+`lambdaDefaults.bundling.externalModules` に追加しないこと。
 
 ---
 

@@ -8,3 +8,17 @@ export type HonoVariables = {
   userId: number;
   userType: UserType;
 };
+
+/** Lambda event から JWT claims を取得するための Bindings 型。各 -lambda.ts で共有する */
+export type AppBindings = {
+  event: {
+    requestContext: {
+      authorizer: {
+        jwt: {
+          claims: Record<string, string>;
+        };
+      };
+    };
+    headers?: Record<string, string>;
+  };
+};
