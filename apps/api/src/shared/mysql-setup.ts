@@ -6,13 +6,17 @@ import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
 import * as schema from '../db/schema';
 
+// eslint-disable-next-line sonarjs/todo-tag
 // TODO(PBI-SaaS-004後続): drizzle/ フォルダは旧シングルテナント用マイグレーション履歴。
 // village / resident / item ハンドラーが Hono マルチテナント移行完了後に削除する。
 // 移行完了まではこのセットアップヘルパーごと削除できないため保留。
 // vitest は apps/api/ をCWDとして実行するため drizzle/ への相対パスが確定する
 const migrationsFolder = path.resolve(process.cwd(), 'drizzle');
 
-export async function waitForMysql(pool: mysql.Pool, maxRetries = 20): Promise<void> {
+export async function waitForMysql(
+  pool: mysql.Pool,
+  maxRetries = 20,
+): Promise<void> {
   for (let i = 0; i < maxRetries; i++) {
     try {
       await pool.query('SELECT 1');

@@ -1,8 +1,9 @@
+import { z } from 'zod';
 import type { Context, MiddlewareHandler, Next } from 'hono';
 import { getDb, getTenantDb } from '../../db/client';
 import { serviceTenants, serviceUsers, serviceUserTenantRoles } from '../../db/service-schema';
 import { tenantUsers } from '../../db/tenant-template-schema';
-import type { HonoVariables, UserType } from '../../hono/types';
+import type { HonoVariables } from '../../hono/types';
 import { validateSlug } from '../tenant';
 import { eq, and } from 'drizzle-orm';
 
@@ -29,6 +30,13 @@ type TenantContextEnv = {
 
 type TenantContextContext = Context<TenantContextEnv>;
 
+const userTypeSchema = z.enum([
+  'tenant_admin',
+  'tenant_user',
+  'servicer_admin',
+  'servicer_delegate',
+]);
+
 /**
  * テナントコンテキストを Hono context にセットするミドルウェア。
  *
@@ -39,18 +47,23 @@ type TenantContextContext = Context<TenantContextEnv>;
 export const tenantContext: MiddlewareHandler<TenantContextEnv> = async (c, next) => {
   const event = c.env?.event as EventWithJwtClaims | undefined;
   const claims = event?.requestContext?.authorizer?.jwt?.claims ?? {};
-  const userType = claims['custom:user_type'] as UserType | undefined;
+
+  const userTypeParsed = userTypeSchema.safeParse(claims['custom:user_type']);
+  if (!userTypeParsed.success) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
+  const userType = userTypeParsed.data;
+
   const cognitoSub = claims['sub'];
+  if (!cognitoSub) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
 
   if (userType === 'tenant_admin' || userType === 'tenant_user') {
     return handleTenantUser(c, next, claims, userType, cognitoSub);
   }
 
-  if (userType === 'servicer_admin' || userType === 'servicer_delegate') {
-    return handleServicerUser(c, next, event, userType, cognitoSub);
-  }
-
-  return c.json({ error: 'Forbidden' }, 403);
+  return handleServicerUser(c, next, event, userType, cognitoSub);
 };
 
 /**
@@ -62,7 +75,7 @@ async function handleTenantUser(
   next: Next,
   claims: Record<string, string>,
   userType: 'tenant_admin' | 'tenant_user',
-  cognitoSub: string | undefined,
+  cognitoSub: string,
 ): Promise<Response> {
   const slug = claims['custom:tenant_id'];
   if (!slug) {
@@ -85,11 +98,11 @@ async function handleTenantUser(
     return c.json({ error: 'Service Unavailable' }, 503);
   }
 
-  const tenantDb = getTenantDb(slug);
+  const tenantDb = await getTenantDb(slug);
   const userRows = await tenantDb
     .select()
     .from(tenantUsers)
-    .where(eq(tenantUsers.cognitoSub, cognitoSub ?? ''));
+    .where(eq(tenantUsers.cognitoSub, cognitoSub));
 
   const user = userRows[0];
   if (!user) {
@@ -113,7 +126,7 @@ async function handleServicerUser(
   next: Next,
   event: EventWithJwtClaims | undefined,
   userType: 'servicer_admin' | 'servicer_delegate',
-  cognitoSub: string | undefined,
+  cognitoSub: string,
 ): Promise<Response> {
   const slug =
     c.req.header('X-Tenant-Id') ??
@@ -144,7 +157,7 @@ async function handleServicerUser(
   const serviceUserRows = await db
     .select()
     .from(serviceUsers)
-    .where(eq(serviceUsers.cognitoSub, cognitoSub ?? ''));
+    .where(eq(serviceUsers.cognitoSub, cognitoSub));
 
   const serviceUser = serviceUserRows[0];
 
@@ -165,7 +178,7 @@ async function handleServicerUser(
     return c.json({ error: 'Forbidden' }, 403);
   }
 
-  const tenantDb = getTenantDb(slug);
+  const tenantDb = await getTenantDb(slug);
 
   c.set('tenantDb', tenantDb);
   c.set('tenantSlug', slug);

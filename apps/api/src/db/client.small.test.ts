@@ -12,22 +12,23 @@ vi.mock('drizzle-orm/mysql2', () => ({
   drizzle: vi.fn().mockReturnValue({ _isTestDb: true }),
 }));
 
-// Secrets Manager をモック
-vi.mock('@aws-sdk/client-secrets-manager', () => {
-  const mockSend = vi.fn().mockResolvedValue({
-    SecretString: JSON.stringify({
-      host: 'secret-host',
-      port: 3306,
-      username: 'secret-user',
-      password: 'secret-pass',
-      dbname: 'testdb',
-    }),
-  });
-  return {
-    SecretsManagerClient: vi.fn().mockImplementation(() => ({ send: mockSend })),
-    GetSecretValueCommand: vi.fn(),
-  };
-});
+// Secrets Manager をモック（クラスはコンストラクタとして呼ばれるため class 構文を使う）
+vi.mock('@aws-sdk/client-secrets-manager', () => ({
+   
+  SecretsManagerClient: class {
+    send = vi.fn().mockResolvedValue({
+      SecretString: JSON.stringify({
+        host: 'secret-host',
+        port: 3306,
+        username: 'secret-user',
+        password: 'secret-pass',
+        dbname: 'testdb',
+      }),
+    });
+  },
+   
+  GetSecretValueCommand: class {},
+}));
 
 describe('getTenantDb', () => {
   const originalEnv = { ...process.env };
@@ -122,19 +123,17 @@ describe('getTenantDb', () => {
   });
 
   describe('本番環境（AWS_SAM_LOCAL 未設定、DB_SECRET_ARN あり）のとき', () => {
-    test('Secrets Manager から認証情報を取得してプールを生成すること', async () => {
+    test('Secrets Manager から取得した認証情報でプールを生成すること', async () => {
       // Arrange
       process.env.DB_SECRET_ARN = 'arn:aws:secretsmanager:ap-northeast-1:123456789:secret:mydb';
       delete process.env.AWS_SAM_LOCAL;
       const mysql = await import('mysql2/promise');
-      const { SecretsManagerClient } = await import('@aws-sdk/client-secrets-manager');
       const { getTenantDb } = await import('./client');
 
       // Act
       await getTenantDb('prod-tenant');
 
-      // Assert: Secrets Manager クライアントが生成され、createPool に secret の認証情報が渡される
-      expect(SecretsManagerClient).toHaveBeenCalled();
+      // Assert: Secrets Manager が返す secret の認証情報で createPool が呼ばれること
       expect(mysql.default.createPool).toHaveBeenCalledWith(
         expect.objectContaining({
           host: 'secret-host',

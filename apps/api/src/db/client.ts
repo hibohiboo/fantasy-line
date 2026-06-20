@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm/mysql2';
+import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import {
   SecretsManagerClient,
@@ -86,6 +86,8 @@ const tenantDbCache = new Map<string, TenantDb>();
  *
  * @param slug - バリデーション済みのテナントスラッグ
  */
+export type TenantDb = MySql2Database<typeof tenantSchema>;
+
 export async function getTenantDb(slug: string): Promise<TenantDb> {
   if (tenantDbCache.has(slug)) return tenantDbCache.get(slug)!;
 
@@ -102,5 +104,3 @@ export async function getTenantDb(slug: string): Promise<TenantDb> {
   tenantDbCache.set(slug, db);
   return db;
 }
-
-export type TenantDb = Awaited<ReturnType<typeof getTenantDb>>;
