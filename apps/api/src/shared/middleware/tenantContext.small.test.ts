@@ -132,7 +132,7 @@ describe('tenantContext ミドルウェア', () => {
       );
 
       mockGetDb.mockResolvedValue(mockServiceDb);
-      mockGetTenantDb.mockReturnValue(mockTenantDb);
+      mockGetTenantDb.mockResolvedValue(mockTenantDb);
 
       const app = createTestApp();
       const event = makeMockEvent({
@@ -171,7 +171,7 @@ describe('tenantContext ミドルウェア', () => {
       );
 
       mockGetDb.mockResolvedValue(mockServiceDb);
-      mockGetTenantDb.mockReturnValue(mockTenantDb);
+      mockGetTenantDb.mockResolvedValue(mockTenantDb);
 
       const app = createTestApp();
       const event = makeMockEvent(
@@ -229,7 +229,7 @@ describe('tenantContext ミドルウェア', () => {
         [], // roleRows が空 → 403
       );
       mockGetDb.mockResolvedValue(mockServiceDb);
-      mockGetTenantDb.mockReturnValue(makeTenantDbMock([]));
+      mockGetTenantDb.mockResolvedValue(makeTenantDbMock([]));
 
       const app = createTestApp();
       const event = makeMockEvent(
@@ -306,7 +306,7 @@ describe('tenantContext ミドルウェア', () => {
       const mockTenantDb = makeTenantDbMock([]); // テナント DB にユーザーなし
 
       mockGetDb.mockResolvedValue(mockServiceDb);
-      mockGetTenantDb.mockReturnValue(mockTenantDb);
+      mockGetTenantDb.mockResolvedValue(mockTenantDb);
 
       const app = createTestApp();
       const event = makeMockEvent({
@@ -336,6 +336,58 @@ describe('tenantContext ミドルウェア', () => {
 
       // Act
       const res = await sendRequest(app, '/test', { event });
+
+      // Assert
+      expect(res.status).toBe(403);
+      const body = await res.json() as { error: string };
+      expect(body.error).toBe('Forbidden');
+    });
+  });
+
+  describe('sub（cognitoSub）が JWT claims に存在しないとき', () => {
+    test('tenant_user でも 403 が返ること', async () => {
+      // Arrange
+      const slug = 'acme-corp';
+      const mockServiceDb = makeServiceDbMock(
+        [{ id: 1, slug, status: 'active' }],
+      );
+      mockGetDb.mockResolvedValue(mockServiceDb);
+
+      const app = createTestApp();
+      const event = makeMockEvent({
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': slug,
+        // sub を意図的に省略
+      });
+
+      // Act
+      const res = await sendRequest(app, '/test', { event });
+
+      // Assert
+      expect(res.status).toBe(403);
+      const body = await res.json() as { error: string };
+      expect(body.error).toBe('Forbidden');
+    });
+
+    test('servicer_admin でも 403 が返ること', async () => {
+      // Arrange
+      const slug = 'beta';
+      const mockServiceDb = makeServiceDbMock(
+        [{ id: 1, slug, status: 'active' }],
+      );
+      mockGetDb.mockResolvedValue(mockServiceDb);
+
+      const app = createTestApp();
+      const event = makeMockEvent(
+        {
+          'custom:user_type': 'servicer_admin',
+          // sub を意図的に省略
+        },
+        { 'X-Tenant-Id': slug },
+      );
+
+      // Act
+      const res = await sendRequest(app, '/test', { event }, { 'X-Tenant-Id': slug });
 
       // Assert
       expect(res.status).toBe(403);

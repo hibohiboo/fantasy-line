@@ -12,6 +12,23 @@ vi.mock('drizzle-orm/mysql2', () => ({
   drizzle: vi.fn().mockReturnValue({ _isTestDb: true }),
 }));
 
+// Secrets Manager をモック
+vi.mock('@aws-sdk/client-secrets-manager', () => {
+  const mockSend = vi.fn().mockResolvedValue({
+    SecretString: JSON.stringify({
+      host: 'secret-host',
+      port: 3306,
+      username: 'secret-user',
+      password: 'secret-pass',
+      dbname: 'testdb',
+    }),
+  });
+  return {
+    SecretsManagerClient: vi.fn().mockImplementation(() => ({ send: mockSend })),
+    GetSecretValueCommand: vi.fn(),
+  };
+});
+
 describe('getTenantDb', () => {
   const originalEnv = { ...process.env };
 
@@ -35,7 +52,7 @@ describe('getTenantDb', () => {
       const { getTenantDb } = await import('./client');
 
       // Act
-      getTenantDb('acme-corp');
+      await getTenantDb('acme-corp');
 
       // Assert
       expect(mysql.default.createPool).toHaveBeenCalledWith(
@@ -51,7 +68,7 @@ describe('getTenantDb', () => {
       const { getTenantDb } = await import('./client');
 
       // Act
-      getTenantDb('my-team-01');
+      await getTenantDb('my-team-01');
 
       // Assert
       expect(mysql.default.createPool).toHaveBeenCalledWith(
@@ -66,7 +83,7 @@ describe('getTenantDb', () => {
       const { getTenantDb } = await import('./client');
 
       // Act
-      getTenantDb('beta');
+      await getTenantDb('beta');
 
       // Assert
       expect(mysql.default.createPool).toHaveBeenCalledWith(
@@ -74,18 +91,58 @@ describe('getTenantDb', () => {
       );
     });
 
-    test('呼び出しごとに新しい Drizzle インスタンスを返すこと', async () => {
+    test('同一 slug の 2 回目の呼び出しはキャッシュを返し drizzle を 1 回しか呼ばないこと', async () => {
       // Arrange
       process.env.AWS_SAM_LOCAL = 'true';
       const { drizzle } = await import('drizzle-orm/mysql2');
       const { getTenantDb } = await import('./client');
 
       // Act
-      getTenantDb('alpha');
-      getTenantDb('beta');
+      const first = await getTenantDb('alpha');
+      const second = await getTenantDb('alpha');
 
-      // Assert: 2 回呼ばれていること（シングルトンではない）
+      // Assert: キャッシュにより drizzle は 1 回だけ呼ばれる
+      expect(drizzle).toHaveBeenCalledTimes(1);
+      expect(first).toBe(second);
+    });
+
+    test('異なる slug は別々の Drizzle インスタンスを返すこと', async () => {
+      // Arrange
+      process.env.AWS_SAM_LOCAL = 'true';
+      const { drizzle } = await import('drizzle-orm/mysql2');
+      const { getTenantDb } = await import('./client');
+
+      // Act
+      await getTenantDb('alpha');
+      await getTenantDb('beta');
+
+      // Assert: 2 つの slug で drizzle が 2 回呼ばれる
       expect(drizzle).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('本番環境（AWS_SAM_LOCAL 未設定、DB_SECRET_ARN あり）のとき', () => {
+    test('Secrets Manager から認証情報を取得してプールを生成すること', async () => {
+      // Arrange
+      process.env.DB_SECRET_ARN = 'arn:aws:secretsmanager:ap-northeast-1:123456789:secret:mydb';
+      delete process.env.AWS_SAM_LOCAL;
+      const mysql = await import('mysql2/promise');
+      const { SecretsManagerClient } = await import('@aws-sdk/client-secrets-manager');
+      const { getTenantDb } = await import('./client');
+
+      // Act
+      await getTenantDb('prod-tenant');
+
+      // Assert: Secrets Manager クライアントが生成され、createPool に secret の認証情報が渡される
+      expect(SecretsManagerClient).toHaveBeenCalled();
+      expect(mysql.default.createPool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          host: 'secret-host',
+          user: 'secret-user',
+          password: 'secret-pass',
+          database: 'tenant_prod_tenant',
+        }),
+      );
     });
   });
 
