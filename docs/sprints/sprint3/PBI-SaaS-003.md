@@ -420,9 +420,9 @@ describe('validateSlug', () => {
 - [x] `npm run db:generate:tenant`（`apps/api`）でエラーなく実行できること
 - [x] `apps/api/drizzle-service/` にマイグレーション SQL が生成されていること
 - [x] `apps/api/drizzle-tenant/` にマイグレーション SQL が生成されていること
-- [ ] ローカル Docker MySQL（`npm run db:up`）を起動した状態で `npm run db:migrate:service:local`（`apps/api`）が通ること
-- [ ] 上記後、`npm run db:seed:service:local` が通ること（2 回実行してもエラーなし）
-- [ ] `service.tenants` にテストデータを 2 件投入した後、`npm run db:migrate:all:local` が全件成功すること
-- [ ] 存在しないテナントスキーマを含む場合、`npm run db:migrate:all:local` がエラーテナントをスキップして正常終了すること
-- [ ] `npm run lint`（`apps/api`）が通ること
-- [ ] セキュリティレビュー完了・HIGH 指摘対処済みであること
+- [x] ローカル Docker MySQL（`npm run db:up`）を起動した状態で `npm run db:migrate:service:local`（`apps/api`）が通ること
+- [x] 上記後、`npm run db:seed:service:local` が通ること（2 回実行してもエラーなし）
+- [x] `service.tenants` にテストデータを 2 件投入した後、`npm run db:migrate:all:local` が全件成功すること
+- [x] 存在しないテナントスキーマを含む場合、`npm run db:migrate:all:local` がエラーテナントをスキップして正常終了すること
+- [x] `npm run lint`（`apps/api`）が通ること
+- [x] セキュリティレビュー完了・HIGH 指摘対処済みであること
