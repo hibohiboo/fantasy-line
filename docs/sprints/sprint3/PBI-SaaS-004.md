@@ -325,17 +325,26 @@ describe('listVillages 統合テスト（Docker MySQL）', () => {
 
 ## 完了条件チェックリスト
 
-- [ ] `npm install hono` が完了し、`apps/api/package.json` に追記されている
-- [ ] `tenant-template-schema.ts` に `villages` / `residents` / `items` テーブルが追加されている
-- [ ] `drizzle-tenant/` に業務テーブル分のマイグレーション SQL が生成されている
-- [ ] `getTenantDb(slug)` が `apps/api/src/db/client.ts` に実装されている
-- [ ] `tenantContext.ts` のユニットテストが全シナリオ（Scenario 1〜4）をカバーしている
-- [ ] `requirePermission.ts` のユニットテストが全シナリオ（Scenario 5〜6）をカバーしている
-- [ ] `listVillages.ts` が Hono パターンに移行している
-- [ ] 統合テスト（Scenario 7）が Docker MySQL で通過している
-- [ ] `npm run lint`（`apps/api`）が通過している
-- [ ] `npm run test`（`apps/api`）が全テスト通過している
-- [ ] 旧ファイル（`apps/api/src/db/schema.ts` / `apps/api/drizzle.config.ts` / `apps/api/drizzle/`）が削除されている
-- [ ] セキュリティレビューが完了している
-- [ ] `docs/pbi/README.md` の該当 PBI を `✅ 完了` に更新すること
-- [ ] ユーザーの承認を得てから完了とすること
+- [x] `npm install hono` が完了し、`apps/api/package.json` に追記されている
+- [x] `tenant-template-schema.ts` に `villages` / `residents` / `items` テーブルが追加されている
+- [x] `drizzle-tenant/` に業務テーブル分のマイグレーション SQL が生成されている
+- [x] `getTenantDb(slug)` が `apps/api/src/db/client.ts` に実装されている（async 化・Secrets Manager 対応・接続キャッシュ済み）
+- [x] `tenantContext.ts` のユニットテストが全シナリオ（Scenario 1〜4）をカバーしている
+- [x] `requirePermission.ts` のユニットテストが全シナリオ（Scenario 5〜6）をカバーしている
+- [x] `listVillages.ts` が Hono パターンに移行している
+- [x] 統合テスト（Scenario 7）が Docker MySQL で通過している
+- [x] `npm run lint`（`apps/api`）が通過している
+- [x] `npm run test`（`apps/api`）が全テスト通過している（small: 49件 / medium: 19件）
+- [x] セキュリティレビューが完了している（HIGH-1・LOW-1・LOW-2 修正済み）
+- [x] `apps/api/drizzle.config.ts` が削除されている
+- [ ] `apps/api/src/db/schema.ts` / `apps/api/drizzle/` が削除されている → **[PBI-SaaS-004b](../../pbi/07-multitenant-saas/PBI-SaaS-004b.md) に引き継ぎ**（`createVillage` 等の旧ハンドラーが参照中のため）
+- [x] `docs/pbi/README.md` の該当 PBI を `✅ 完了` に更新すること
+- [x] ユーザーの承認を得てから完了とすること
+
+## 未解決事項（次 PBI への引き継ぎ）
+
+| 優先度 | 内容 | 引き継ぎ先 |
+|---|---|---|
+| MEDIUM | 503 がテナント存在有無を推測させる可能性（servicer 経路の列挙攻撃対策） | [PBI-SaaS-004b](../../pbi/07-multitenant-saas/PBI-SaaS-004b.md) でエラーコード統一時に対応 |
+| MEDIUM | `servicer_delegate` の権限チェック設計乖離（service userId とテナント userId の不一致） | [PBI-SaaS-006](../../pbi/07-multitenant-saas/PBI-SaaS-006.md) で設計決定後に修正 |
+| — | `schema.ts` / `drizzle/` 未削除（旧ハンドラーが参照中） | [PBI-SaaS-004b](../../pbi/07-multitenant-saas/PBI-SaaS-004b.md) |

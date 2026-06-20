@@ -152,7 +152,48 @@ Scenario 7: ロール変更が正常に完了すること
 
 ## 不明点 / 質問
 
-なし（設計ドキュメントで確定済み）
+### `servicer_delegate` の権限チェック設計決定（PBI-SaaS-004 から引き継ぎ）
+
+**発生状況**: PBI-SaaS-004 の実装中に判明した設計上の乖離。
+
+**現状の実装**:
+
+`tenantContext.ts` では `servicer_delegate` が `X-Tenant-Id` ヘッダーでテナントを指定する。
+このとき `c.set('userId', serviceUser.id)` に **service スキーマの `users.id`** をセットしている。
+
+```
+service.users.id = 42  ← tenantContext がセットする userId
+```
+
+一方、`requirePermission.ts` は以下を実行する:
+
+```sql
+SELECT * FROM tenant_{slug}.user_roles ur
+INNER JOIN tenant_{slug}.role_permissions rp ON ur.role_id = rp.role_id
+WHERE ur.user_id = 42          -- ← service.users.id をテナント DB で使用
+  AND rp.resource = 'village'
+  AND rp.action = 'read'
+```
+
+`tenant_{slug}.user_roles.user_id` は `tenant_{slug}.users.id` の FK であり、
+`service.users.id` とは別系統の autoincrement 値である。
+このため **`servicer_delegate` は現状テナントリソースにアクセスできない**（一致する行が存在しないため 403 を返す）。
+
+**問題**: 上記は意図的な 403 ではなく「偶然の一致による遮断」であり、堅牢な設計ではない。
+
+**この PBI で決定が必要な設計方針**（以下のいずれかを選ぶ）:
+
+| 案 | 内容 | トレードオフ |
+|---|---|---|
+| A | `servicer_delegate` はテナント DB のリソースにアクセスできない（現状追認） | シンプルだが `servicer_delegate` の用途が限定される |
+| B | `servicer_delegate` 専用の権限テーブルをサービス側に持つ（`service.role_permissions`） | サービス側とテナント側で権限管理が統一できる |
+| C | `servicer_delegate` がテナントにアクセスする際はテナント DB にも `user_roles` 行を持つ | 柔軟だがテナントプロビジョニング時の設定が増える |
+
+**実装への影響**:
+- 案 A: `requirePermission.ts` で `servicer_delegate` を明示的に 403 返却するか、`tenantContext.ts` の段階でブロックするコードを追加
+- 案 B / C: `requirePermission.ts` に `servicer_delegate` 専用の権限確認パスを追加
+
+この PBI の実装開始前に上記方針を決定し、`api-authz-multitenant.md` を更新すること。
 
 ---
 
