@@ -96,7 +96,7 @@
 | [PBI-SaaS-001c](07-multitenant-saas/PBI-SaaS-001c.md) | テナントプロビジョニング・ユーザー管理フロー設計 | Phase 2 ✅ 設計完了 |
 | [PBI-SaaS-001d](07-multitenant-saas/PBI-SaaS-001d.md) | API 認可パターン設計 + 既存ドキュメント横断更新 | Phase 2 ✅ 設計完了 |
 | [PBI-SaaS-002](07-multitenant-saas/PBI-SaaS-002.md) | Cognito User Pool CDK 実装 | Phase 2 |
-| [PBI-SaaS-003](07-multitenant-saas/PBI-SaaS-003.md) | DB スキーマ per テナント マイグレーション実装 | Phase 2 |
+| [PBI-SaaS-003](07-multitenant-saas/PBI-SaaS-003.md) | DB スキーマ per テナント マイグレーション実装 | Phase 2 ✅ 完了 |
 | [PBI-SaaS-004](07-multitenant-saas/PBI-SaaS-004.md) | Hono + tenantContext + requirePermission ミドルウェア実装 | Phase 2 |
 | [PBI-SaaS-005](07-multitenant-saas/PBI-SaaS-005.md) | テナントプロビジョニング Lambda 実装 | Phase 2 |
 | [PBI-SaaS-006](07-multitenant-saas/PBI-SaaS-006.md) | テナント内ユーザー管理 API 実装 | Phase 2 |
