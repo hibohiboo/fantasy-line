@@ -25,18 +25,27 @@ So that 新テナントの DB スキーマ作成・Cognito ユーザー作成・
 
 ### 含む
 
+- **本番（Aurora）への `service` スキーマ初期構築**
+  - CDK デプロイ後に一度だけ実行するセットアップ Lambda（`POST /admin/setup/service-schema`）を実装する
+  - 処理内容: Aurora に `service` スキーマを `CREATE DATABASE IF NOT EXISTS` → Drizzle マイグレーション（`drizzle-service/`）適用 → 権限マスタシード（`servicer_admin` / `servicer_delegate` ロールと `role_permissions`）
+  - Aurora に接続する IAM ロールおよび Secrets Manager の接続情報設定を CDK で定義する
+  - `docs/design/non-functional/db-operations.md` に本番手順（Aurora 接続情報・権限設定・初回セットアップ手順・全テナントマイグレーション手順）を追記する
 - テナントプロビジョニング Lambda API（`servicer_admin` 専用）
   - `POST /admin/tenants`（テナント発行）
   - 処理順序:
     1. スラッグ・メールアドレスのバリデーション（Zod）
     2. `service.tenants` 登録
     3. Aurora に `tenant_{slug}` スキーマを `CREATE DATABASE`
-    4. Drizzle マイグレーション実行
+    4. Drizzle マイグレーション実行（`drizzle-tenant/` を適用）
     5. `service.role_permissions` → `tenant_{slug}.role_permissions` シード
     6. Cognito `AdminCreateUser`（`custom:user_type: "tenant_admin"` / `custom:tenant_id: "{slug}"`）
     7. 招待メール（日本語カスタマイズ）送信
     8. `tenant_{slug}.users` に初期管理者レコード登録
   - 各ステップの障害発生時ロールバック処理（逆順）
+- **全テナントマイグレーション Lambda**（スキーマ変更デプロイ時に実行）
+  - `POST /admin/migrate/all-tenants`（`servicer_admin` 専用）
+  - `service.tenants` からアクティブスラッグを取得し、各 `tenant_{slug}` スキーマに未適用マイグレーションを順次適用する
+  - 失敗テナントをスキップして続行し、最終結果（成功数・失敗一覧）を CloudWatch Logs に出力する
 - `servicer_delegate` 作成 Lambda API（`servicer_admin` 専用）
   - `POST /admin/users`（`servicer_delegate` 作成）
   - Cognito `AdminCreateUser`（`custom:user_type: "servicer_delegate"`、`custom:tenant_id` は設定しない）
@@ -80,6 +89,26 @@ So that 新テナントの DB スキーマ作成・Cognito ユーザー作成・
 ## 受け入れ条件（Gherkin）
 
 ```gherkin
+Scenario 0: service スキーマ初期構築が冪等に完了すること
+  Given `servicer_admin` の JWT でリクエストしている
+  And   Aurora に `service` スキーマが存在しない（または既に存在する）
+  When  POST /admin/setup/service-schema にリクエストを送ったとき
+  Then  200 OK が返ること
+  And   Aurora に `service` スキーマが存在すること
+  And   `service.roles` に `servicer_admin` / `servicer_delegate` が登録されていること
+  And   `service.role_permissions` に初期権限データが存在すること
+  And   2 回実行しても同じ結果が返ること（冪等）
+
+Scenario 0b: 全テナントマイグレーションが未適用のみ適用すること
+  Given `servicer_admin` の JWT でリクエストしている
+  And   アクティブなテナントが 3 件存在する
+  And   うち 1 件に未適用のマイグレーションファイルがある
+  When  POST /admin/migrate/all-tenants にリクエストを送ったとき
+  Then  200 OK が返ること
+  And   未適用だったテナントにマイグレーションが適用されていること
+  And   既に適用済みのテナントはスキップされること
+  And   処理結果（成功数・失敗一覧）が CloudWatch Logs に出力されること
+
 Scenario 1: テナント発行が正常に完了すること
   Given `servicer_admin` の JWT でリクエストしている
   And   スラッグ "new-tenant" がまだ存在しない
@@ -123,6 +152,12 @@ Scenario 5: `servicer_delegate` 作成が正常に完了すること
 
 ## ルール（Example Mapping）
 
+- **Rule 0: `service` スキーマセットアップは冪等に実装する**
+  - Example: `CREATE DATABASE IF NOT EXISTS` と `INSERT IGNORE` を使い、2 回実行しても同じ結果になるよう実装する。本番での再実行リスクを排除する
+
+- **Rule 0b: 全テナントマイグレーションは 1 テナントの失敗で停止しない**
+  - Example: 失敗テナントをスキップして次のテナントに進み、全件処理後に結果を集計して返す。一部失敗は HTTP 207 Multi-Status で返す
+
 - **Rule 1: プロビジョニングは `servicer_admin` のみが実行できる**
   - Example: `tenantContext` + `requirePermission('tenant', 'create')` ミドルウェアで保護する。`tenant_admin` からは呼び出せない
 
@@ -149,5 +184,5 @@ Scenario 5: `servicer_delegate` 作成が正常に完了すること
 - **Negotiable**: OK — ロールバック戦略・招待メールのテンプレート内容は交渉余地あり
 - **Valuable**: OK — プロビジョニングなしではテナントを追加できない
 - **Estimable**: OK — フロー設計ドキュメントで手順が詳細化済み
-- **Small**: OK — 管理 Lambda の実装のみ（フロントエンドを含まない）
+- **Small**: 要注意 — 管理 Lambda に加えて `service` スキーマ初期構築・全テナントマイグレーション Lambda・本番 DB 操作手順書の整備を含む。スコープが広いと判断した場合は `service` スキーマ初期構築 + 手順書整備を `PBI-SaaS-005b` として独立させることを検討する
 - **Testable**: OK — ユニットテスト（各ステップのスタブ）+ 統合テスト（ローカル Docker MySQL + Cognito Local）
