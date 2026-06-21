@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import type { AppBindings } from '../hono/types';
 import type { AdminVariables } from './adminContext';
 import type * as AdminContextModule from './adminContext';
+import { makeMockEvent, type MockLambdaEvent } from '../shared/test-helpers/adminTestHelpers';
 
 // ---- モック変数（vi.doMock のファクトリ内で参照するため先に宣言） ----
 const mockGetDb = vi.fn();
@@ -16,18 +17,6 @@ beforeAll(async () => {
 });
 
 // ---- ヘルパー型 ----
-
-/** テスト用 Lambda event の最小型 */
-type MockLambdaEvent = {
-  requestContext: {
-    authorizer: {
-      jwt: {
-        claims: Record<string, string>;
-      };
-    };
-  };
-  headers?: Record<string, string>;
-};
 
 /** テスト用 Drizzle-like mock の最小型 */
 type DrizzleMock = {
@@ -47,17 +36,6 @@ function createTestApp() {
     }),
   );
   return app;
-}
-
-/** JWT claims を持つ mock event を生成する */
-function makeMockEvent(claims: Record<string, string>): MockLambdaEvent {
-  return {
-    requestContext: {
-      authorizer: {
-        jwt: { claims },
-      },
-    },
-  };
 }
 
 /** Hono の env として event を渡してリクエストを送る */

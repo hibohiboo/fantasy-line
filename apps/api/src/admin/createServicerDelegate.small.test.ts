@@ -3,16 +3,16 @@ import { Hono } from 'hono';
 import type { AppBindings } from '../hono/types';
 import type { AdminVariables } from './adminContext';
 import type * as CreateServicerDelegateModule from './createServicerDelegate';
+import { type MockLambdaEvent } from '../shared/test-helpers/adminTestHelpers';
 
 // ---- モック変数（vi.doMock のファクトリ内で参照するため先に宣言） ----
 const mockGetDb = vi.fn();
 const mockCognitoSend = vi.fn();
-
-class MockCognitoIdentityProviderClient {
-  send = mockCognitoSend;
-}
-
-const MockAdminCreateUserCommand = vi.fn((input: unknown) => ({ _input: input }));
+// vi.fn で class 相当のコンストラクタをモックするには function キーワードが必要
+ 
+const MockCognitoIdentityProviderClient = vi.fn(function () { return { send: mockCognitoSend }; });
+ 
+const MockAdminCreateUserCommand = vi.fn(function (input: unknown) { return { _input: input }; });
 
 // ---- テスト対象は beforeAll で動的インポートする ----
 let createServicerDelegateHandler: typeof CreateServicerDelegateModule.createServicerDelegateHandler;
@@ -25,20 +25,6 @@ beforeAll(async () => {
   }));
   ({ createServicerDelegateHandler } = await import('./createServicerDelegate'));
 });
-
-// ---- ヘルパー型 ----
-
-/** テスト用 Lambda event の最小型 */
-type MockLambdaEvent = {
-  requestContext: {
-    authorizer: {
-      jwt: {
-        claims: Record<string, string>;
-      };
-    };
-  };
-  headers?: Record<string, string>;
-};
 
 // ---- テスト用 Hono アプリファクトリ ----
 

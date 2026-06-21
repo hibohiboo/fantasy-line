@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import type { AppBindings } from '../hono/types';
 import type { AdminVariables } from './adminContext';
 import type * as CreateTenantModule from './createTenant';
+import { makeMockEvent, type MockLambdaEvent } from '../shared/test-helpers/adminTestHelpers';
 
 // ---- モック変数（vi.doMock のファクトリ内で参照するため先に宣言） ----
 
@@ -86,35 +87,12 @@ beforeAll(async () => {
   ({ createTenantHandler } = await import('./createTenant'));
 });
 
-// ---- ヘルパー型 ----
-
-type MockLambdaEvent = {
-  requestContext: {
-    authorizer: {
-      jwt: {
-        claims: Record<string, string>;
-      };
-    };
-  };
-  headers?: Record<string, string>;
-};
-
 // ---- テスト用 Hono アプリファクトリ ----
 
 function createTestApp() {
   const app = new Hono<{ Variables: AdminVariables; Bindings: AppBindings }>();
   app.post('/admin/tenants', (c) => createTenantHandler(c));
   return app;
-}
-
-function makeMockEvent(claims: Record<string, string>): MockLambdaEvent {
-  return {
-    requestContext: {
-      authorizer: {
-        jwt: { claims },
-      },
-    },
-  };
 }
 
 async function postTenants(

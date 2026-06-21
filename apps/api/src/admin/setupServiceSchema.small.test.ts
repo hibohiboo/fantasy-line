@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import type { AdminVariables } from './adminContext';
 import type { AppBindings } from '../hono/types';
 import type * as SetupServiceSchemaModule from './setupServiceSchema';
+import { makeMockEvent, type MockLambdaEvent } from '../shared/test-helpers/adminTestHelpers';
 
 // ---- モック変数（vi.doMock のファクトリ内で参照するため先に宣言） ----
 const mockCreateConnection = vi.fn();
@@ -47,20 +48,6 @@ beforeAll(async () => {
   ({ setupServiceSchemaHandler } = await import('./setupServiceSchema'));
 });
 
-// ---- ヘルパー型 ----
-
-/** テスト用 Lambda event の最小型 */
-type MockLambdaEvent = {
-  requestContext: {
-    authorizer: {
-      jwt: {
-        claims: Record<string, string>;
-      };
-    };
-  };
-  headers?: Record<string, string>;
-};
-
 // ---- テスト用 Hono アプリファクトリ ----
 
 function createTestApp(handler: typeof setupServiceSchemaHandler) {
@@ -79,18 +66,6 @@ async function sendRequest(
     { method: 'POST' },
     env,
   );
-}
-
-/** テスト用 mock event を生成する */
-function makeMockEvent(): MockLambdaEvent {
-  return {
-    requestContext: {
-      authorizer: {
-        jwt: { claims: {} },
-      },
-    },
-    headers: {},
-  };
 }
 
 /** 正常系のモック設定をセットアップする */

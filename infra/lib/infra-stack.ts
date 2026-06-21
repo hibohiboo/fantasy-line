@@ -246,7 +246,8 @@ export class InfraStack extends cdk.Stack {
               const src = inputDir.replace(/\\/g, '/');
               const dst = outputDir.replace(/\\/g, '/');
               return [
-                `node -e "const {cpSync}=require('fs');const {join}=require('path');cpSync(join('${src}','apps','api','drizzle'),join('${dst}','migrations'),{recursive:true})"`,
+                // drizzle-service マイグレーションを migrations/ にコピーする（drizzle ディレクトリ名変更に伴う更新）
+                `node -e "const {cpSync}=require('fs');const {join}=require('path');cpSync(join('${src}','apps','api','drizzle-service'),join('${dst}','migrations'),{recursive:true})"`,
               ];
             },
           },
@@ -257,6 +258,36 @@ export class InfraStack extends cdk.Stack {
 
     // -- Cognito --
     const cognitoConstruct = new CognitoConstruct(this, 'Cognito');
+
+    const adminFunction = new lambdaNodejs.NodejsFunction(this, 'AdminFunction', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '../../apps/api/src/admin/admin-lambda.ts'),
+      timeout: cdk.Duration.seconds(60),
+      environment: {
+        ...lambdaDefaults.environment,
+        COGNITO_USER_POOL_ID: cognitoConstruct.userPool.userPoolId,
+      },
+      bundling: {
+        ...lambdaDefaults.bundling,
+        commandHooks: {
+          beforeInstall: () => [],
+          beforeBundling: () => [],
+          afterBundling: (inputDir: string, outputDir: string) => {
+            const src = inputDir.replace(/\\/g, '/');
+            const dst = outputDir.replace(/\\/g, '/');
+            return [
+              // drizzle-service マイグレーションを migrations-service/ にコピーする
+              `node -e "const {cpSync}=require('fs');const {join}=require('path');cpSync(join('${src}','apps','api','drizzle-service'),join('${dst}','migrations-service'),{recursive:true})"`,
+              // drizzle-tenant マイグレーションを migrations-tenant/ にコピーする
+              `node -e "const {cpSync}=require('fs');const {join}=require('path');cpSync(join('${src}','apps','api','drizzle-tenant'),join('${dst}','migrations-tenant'),{recursive:true})"`,
+            ];
+          },
+        },
+      },
+    });
+    auroraCluster.secret!.grantRead(adminFunction);
+    // AdminCreateUser / AdminDeleteUser のみ付与する（最小権限）
+    cognitoConstruct.userPool.grant(adminFunction, 'cognito-idp:AdminCreateUser', 'cognito-idp:AdminDeleteUser');
 
     // -- API Gateway --
     const api = new apigateway.RestApi(this, 'FantasyLineApi', {
@@ -331,6 +362,26 @@ export class InfraStack extends cdk.Stack {
       new apigateway.LambdaIntegration(listVillageResidentsFunction),
       cognitoMethodOptions,
     );
+
+    const adminResource = api.root.addResource('admin');
+
+    // POST /admin/setup/service-schema
+    const setupResource = adminResource.addResource('setup');
+    const serviceSchemaResource = setupResource.addResource('service-schema');
+    serviceSchemaResource.addMethod('POST', new apigateway.LambdaIntegration(adminFunction), cognitoMethodOptions);
+
+    // POST /admin/tenants
+    const tenantsResource = adminResource.addResource('tenants');
+    tenantsResource.addMethod('POST', new apigateway.LambdaIntegration(adminFunction), cognitoMethodOptions);
+
+    // POST /admin/migrate/all-tenants
+    const migrateResource = adminResource.addResource('migrate');
+    const allTenantsResource = migrateResource.addResource('all-tenants');
+    allTenantsResource.addMethod('POST', new apigateway.LambdaIntegration(adminFunction), cognitoMethodOptions);
+
+    // POST /admin/users
+    const adminUsersResource = adminResource.addResource('users');
+    adminUsersResource.addMethod('POST', new apigateway.LambdaIntegration(adminFunction), cognitoMethodOptions);
 
     // -- Outputs
 

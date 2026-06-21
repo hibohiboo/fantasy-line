@@ -57,8 +57,16 @@ const createTenantSchema = z.object({
 
 function isDuplicateEntryError(err: unknown): boolean {
   if (typeof err !== 'object' || err === null) return false;
-  const code = (err as Record<string, unknown>)['code'];
-  return code === 'ER_DUP_ENTRY';
+  const e = err as Record<string, unknown>;
+  // mysql2 が直接スローする場合
+  if (e['code'] === 'ER_DUP_ENTRY') return true;
+  // Drizzle が DrizzleQueryError でラップしている場合（cause に元の mysql2 エラーが入る）
+  const cause = e['cause'];
+  if (typeof cause === 'object' && cause !== null) {
+    const causeCode = (cause as Record<string, unknown>)['code'];
+    if (causeCode === 'ER_DUP_ENTRY') return true;
+  }
+  return false;
 }
 
 // ---- ハンドラー ----
