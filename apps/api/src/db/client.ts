@@ -21,7 +21,7 @@ interface DbSecret {
  * 本番環境（AWS_SAM_LOCAL 未設定かつ DB_SECRET_ARN あり）では Secrets Manager から取得する。
  * それ以外（ローカル環境）では環境変数またはデフォルト値を使う。
  */
-async function resolveDbCredentials(): Promise<{
+export async function resolveDbCredentials(): Promise<{
   host: string;
   port: number;
   user: string;
