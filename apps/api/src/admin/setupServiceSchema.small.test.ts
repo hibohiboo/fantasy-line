@@ -161,8 +161,8 @@ describe('setupServiceSchemaHandler', () => {
 
       // Assert
       // db.insert は呼ばれないこと（INSERT IGNORE の raw SQL に変更済み）
-      // db.execute が roles (1 回) + role_permissions (8 回) = 計 9 回呼ばれること
-      expect(mockDbExecute).toHaveBeenCalledTimes(9);
+      // db.execute が roles (1 回) + role_permissions (12 回) = 計 13 回呼ばれること
+      expect(mockDbExecute).toHaveBeenCalledTimes(13);
     });
 
     test('2 回実行しても同じ 200 OK が返ること（冪等）', async () => {

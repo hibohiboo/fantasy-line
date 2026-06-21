@@ -96,12 +96,41 @@ c.set('userType', userType);
 
 ### フロー
 
-1. `c.get('userType')` で `servicer_admin` なら **スキップ**（全権限）
-2. `c.get('userId')` と `c.get('tenantDb')` を取得
-3. `tenant_{slug}.user_roles` JOIN `tenant_{slug}.role_permissions` で `resource` × `action` の組み合わせを確認
-4. 一致なし → 403 Forbidden
+| `userType` | 処理 |
+|---|---|
+| `servicer_admin` | スキップ（全権限）|
+| `servicer_delegate` | `service.user_tenant_roles` JOIN `service.role_permissions` で `resource` × `action` を確認 |
+| `tenant_admin` / `tenant_user` | `tenant_{slug}.user_roles` JOIN `tenant_{slug}.role_permissions` で `resource` × `action` を確認 |
 
 `servicer_admin` が Tier 2 をスキップする根拠: サービス全体を管理する立場のため全テナント・全操作への権限を持つ設計とする。
+
+### `servicer_delegate` 権限設計（PBI-SaaS-006 で決定）
+
+`servicer_delegate` はテナント DB のユーザー (`tenant_{slug}.users`) に登録されないため、`tenant_{slug}.user_roles` とは ID 空間が一致しない。
+代わりに `service.user_tenant_roles`（`service.users.id` で索引）と `service.role_permissions`（`service.roles.id` で索引）を使って権限を確認する。
+
+**権限付与判断基準**: `servicer_delegate` はサービサーが委任した担当者であり、テナント内の住人データの参照・作成・編集は許可するが、住人削除・テナント内ユーザー管理（招待・削除・ロール変更）は許可しない。
+
+**`service.role_permissions` における `servicer_delegate` の初期権限**:
+
+| resource | action | 可否 |
+|---|---|---|
+| `tenant` | `read` | ✓ |
+| `user` | `read` | ✓ |
+| `village` | `read` | ✓ |
+| `resident` | `read` | ✓ |
+| `resident` | `create` | ✓ |
+| `resident` | `update` | ✓ |
+| `resident` | `delete` | ✗ |
+| `user` | `manage` | ✗（テナント内ユーザー管理は `tenant_admin` のみ）|
+
+**検討した代替案**:
+
+| 案 | 内容 | 採用しなかった理由 |
+|---|---|---|
+| A | `requirePermission` で `servicer_delegate` を明示的に 403 | `servicer_delegate` が住人作成・編集を必要とするため不採用 |
+| B | `service.role_permissions` からの専用パスを追加 | **採用** — サービス側で権限管理を統一できる |
+| C | `tenant_{slug}.user_roles` に `servicer_delegate` 行を持つ | テナントプロビジョニング複雑化・不自然なため不採用 |
 
 ### エラー
 
@@ -261,3 +290,4 @@ export const createResidentHandler: Handler = async (c) => {
 |---|---|---|
 | PBI-SaaS-001d | 2026-06-17 | 初版作成。tenantContext / requirePermission ミドルウェア設計・代表フロー・クロステナント拒否パターン・ハンドラー例・フロントエンド権限取得パターンを定義 |
 | PBI-SaaS-004b | 2026-06-21 | servicer_* 経路のエラー一覧を更新。503 を「スラッグ不在 → 404」「非 active → 403」「インフラ接続エラー → 503」に分離。列挙攻撃対策の根拠を追記 |
+| PBI-SaaS-006 | 2026-06-21 | requirePermission に servicer_delegate 専用パスを追加（案 B 採用）。servicer_delegate の権限設計・代替案比較を追記 |

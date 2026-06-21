@@ -57,18 +57,31 @@ beforeAll(async () => {
   // service データベースを作成してマイグレーション適用
   await rootPool.query('CREATE DATABASE IF NOT EXISTS `service`');
 
-  servicePool = mysql.createPool({
+  // migrate は Connection を必要とするため、単発 Connection で実行する
+  const migrateConn = await mysql.createConnection({
     host: containerHost,
     port: containerPort,
     user: 'root',
     password: 'rootpass',
     database: 'service',
   });
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const migrateDb: any = drizzle({ client: migrateConn, mode: 'default' });
+    await migrate(migrateDb, {
+      migrationsFolder: path.resolve(process.cwd(), 'drizzle-service'),
+    });
+  } finally {
+    await migrateConn.end();
+  }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const serviceDb: any = drizzle({ client: servicePool, mode: 'default' });
-  await migrate(serviceDb, {
-    migrationsFolder: path.resolve(process.cwd(), 'drizzle-service'),
+  // クエリ用 Pool（テスト内の SQL 検証で使用）
+  servicePool = mysql.createPool({
+    host: containerHost,
+    port: containerPort,
+    user: 'root',
+    password: 'rootpass',
+    database: 'service',
   });
 
   // vi.doMock でモジュールをモック設定
@@ -149,6 +162,19 @@ describe('setupServiceSchema medium テスト', () => {
       expect(rows).toHaveLength(2);
       expect(rows[0]).toMatchObject({ name: 'servicer_admin' });
       expect(rows[1]).toMatchObject({ name: 'servicer_delegate' });
+    });
+
+    test('service.role_permissions に servicer_delegate の village:read 権限が存在すること', async () => {
+      // Act: 直接 SQL で service.role_permissions を確認する
+      const [rows] = await servicePool.query<mysql.RowDataPacket[]>(
+        `SELECT rp.resource, rp.action
+         FROM service.role_permissions rp
+         INNER JOIN service.roles r ON rp.role_id = r.id
+         WHERE r.name = 'servicer_delegate' AND rp.resource = 'village' AND rp.action = 'read'`,
+      );
+
+      // Assert: 1 件存在すること
+      expect(rows).toHaveLength(1);
     });
   });
 });

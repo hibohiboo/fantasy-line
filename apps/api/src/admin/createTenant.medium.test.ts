@@ -310,6 +310,76 @@ describe('createTenantHandler medium テスト', () => {
         ]),
       });
     });
+
+    test('tenant.roles に tenant_admin と tenant_user が登録されること', async () => {
+      // Arrange
+      const app = createTestApp();
+
+      // Act
+      await postTenants(
+        app,
+        { slug: 'new-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        { event: servicerAdminEvent },
+      );
+
+      // Assert: テナント DB を取得してロールを確認する
+      const tenantDb = await mockGetTenantDb('new-tenant');
+      const roles = await tenantDb
+        .select()
+        .from(tenantSchema.tenantRoles)
+        .orderBy(tenantSchema.tenantRoles.name);
+
+      expect(roles).toHaveLength(2);
+      expect(roles.map((r: { name: string }) => r.name)).toEqual(
+        expect.arrayContaining(['tenant_admin', 'tenant_user']),
+      );
+    });
+
+    test('tenant.role_permissions に user.manage 権限が登録されること', async () => {
+      // Arrange
+      const app = createTestApp();
+
+      // Act
+      await postTenants(
+        app,
+        { slug: 'new-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        { event: servicerAdminEvent },
+      );
+
+      // Assert
+      const tenantDb = await mockGetTenantDb('new-tenant');
+      const perms = await tenantDb
+        .select()
+        .from(tenantSchema.tenantRolePermissions)
+        .innerJoin(tenantSchema.tenantRoles, eq(tenantSchema.tenantRoles.id, tenantSchema.tenantRolePermissions.roleId));
+
+      const userManagePerm = perms.find(
+        (p: { role_permissions: { resource: string; action: string } }) =>
+          p.role_permissions.resource === 'user' && p.role_permissions.action === 'manage',
+      );
+      expect(userManagePerm).toBeDefined();
+    });
+
+    test('tenant.user_roles に初期管理者のロールが登録されること', async () => {
+      // Arrange
+      const app = createTestApp();
+
+      // Act
+      await postTenants(
+        app,
+        { slug: 'new-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        { event: servicerAdminEvent },
+      );
+
+      // Assert
+      const tenantDb = await mockGetTenantDb('new-tenant');
+      const userRoles = await tenantDb
+        .select()
+        .from(tenantSchema.tenantUserRoles);
+
+      expect(userRoles).toHaveLength(1);
+      expect(userRoles[0]).toMatchObject({ userId: 1, roleId: 1 });
+    });
   });
 
   describe('Scenario 2: 重複スラッグのとき', () => {

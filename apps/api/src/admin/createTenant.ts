@@ -1,6 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { z } from 'zod';
 import {
@@ -11,8 +11,8 @@ import {
 import type { AdminVariables } from './adminContext';
 import type { AppBindings } from '../hono/types';
 import { getDb, getTenantDb, resolveDbCredentials } from '../db/client';
-import { serviceTenants, serviceRolePermissions } from '../db/service-schema';
-import { tenantUsers, tenantRolePermissions } from '../db/tenant-template-schema';
+import { serviceTenants } from '../db/service-schema';
+import { tenantUsers, tenantUserRoles } from '../db/tenant-template-schema';
 import { validateSlug, slugToSchemaName } from '../shared/tenant';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -68,6 +68,25 @@ function isDuplicateEntryError(err: unknown): boolean {
   }
   return false;
 }
+
+// ---- テナントロール初期権限 ----
+
+const TENANT_ROLE_PERMISSIONS: Array<{ roleName: string; resource: string; action: string }> = [
+  { roleName: 'tenant_admin', resource: 'village',  action: 'read'   },
+  { roleName: 'tenant_admin', resource: 'village',  action: 'create' },
+  { roleName: 'tenant_admin', resource: 'resident', action: 'read'   },
+  { roleName: 'tenant_admin', resource: 'resident', action: 'create' },
+  { roleName: 'tenant_admin', resource: 'resident', action: 'update' },
+  { roleName: 'tenant_admin', resource: 'resident', action: 'delete' },
+  { roleName: 'tenant_admin', resource: 'item',     action: 'read'   },
+  { roleName: 'tenant_admin', resource: 'item',     action: 'create' },
+  { roleName: 'tenant_admin', resource: 'user',     action: 'list'   },
+  { roleName: 'tenant_admin', resource: 'user',     action: 'manage' },
+  { roleName: 'tenant_user',  resource: 'village',  action: 'read'   },
+  { roleName: 'tenant_user',  resource: 'resident', action: 'read'   },
+  { roleName: 'tenant_user',  resource: 'item',     action: 'read'   },
+  { roleName: 'tenant_user',  resource: 'user',     action: 'list'   },
+];
 
 // ---- ハンドラー ----
 
@@ -196,25 +215,30 @@ export async function createTenantHandler(
         },
       },
 
-      // Step 4: service.role_permissions の全件を tenant_{slug}.role_permissions にシード
+      // Step 4: tenant.roles にテナントロールを挿入
       {
         execute: async () => {
-          const servicePerms = await db.select().from(serviceRolePermissions);
+          const tenantDb = await getTenantDb(slug);
+          await tenantDb.execute(sql`
+            INSERT IGNORE INTO roles (name, is_default) VALUES
+            ('tenant_admin', 0),
+            ('tenant_user', 1)
+          `);
+        },
+        rollback: async () => {
+          // Step 3 のロールバック（DROP DATABASE）に含まれるため何もしない
+        },
+      },
 
-          if (servicePerms.length > 0) {
-            const tenantDb = await getTenantDb(slug);
-            // INSERT IGNORE 相当: 重複行は無視して続行する
-            for (const perm of servicePerms) {
-              try {
-                await tenantDb.insert(tenantRolePermissions).values({
-                  roleId: perm.roleId,
-                  resource: perm.resource,
-                  action: perm.action,
-                });
-              } catch (err) {
-                if (!isDuplicateEntryError(err)) throw err;
-              }
-            }
+      // Step 5: tenant.role_permissions に初期権限を挿入
+      {
+        execute: async () => {
+          const tenantDb = await getTenantDb(slug);
+          for (const { roleName, resource, action } of TENANT_ROLE_PERMISSIONS) {
+            await tenantDb.execute(sql`
+              INSERT IGNORE INTO role_permissions (role_id, resource, action)
+              SELECT id, ${resource}, ${action} FROM roles WHERE name = ${roleName}
+            `);
           }
         },
         rollback: async () => {
@@ -222,7 +246,7 @@ export async function createTenantHandler(
         },
       },
 
-      // Step 5: Cognito に tenant_admin ユーザーを作成
+      // Step 6: Cognito に tenant_admin ユーザーを作成
       {
         execute: async () => {
           const command = new AdminCreateUserCommand({
@@ -252,19 +276,28 @@ export async function createTenantHandler(
         },
       },
 
-      // Step 6: tenant_{slug}.users に初期管理者レコードを登録
+      // Step 7: tenant_{slug}.users に初期管理者レコードを登録し user_roles を設定
       {
         execute: async () => {
           const username = cognitoUsername ?? adminEmail;
           const tenantDb = await getTenantDb(slug);
-          await tenantDb.insert(tenantUsers).values({
-            cognitoSub: username,
-            email: adminEmail,
-            userType: 'tenant_admin',
-          });
+          const [insertResult] = await tenantDb
+            .insert(tenantUsers)
+            .values({
+              cognitoSub: username,
+              email: adminEmail,
+              userType: 'tenant_admin',
+            })
+            .$returningId();
+          if (!insertResult) throw new Error('tenant users 挿入結果が空');
+
+          // tenant_admin ロール（id=1）をセット
+          await tenantDb
+            .insert(tenantUserRoles)
+            .values({ userId: insertResult.id, roleId: 1 });
         },
         rollback: async () => {
-          // Cognito ユーザー削除は Step 5 のロールバックで行う
+          // Cognito ユーザー削除は Step 6 のロールバックで行う
           // DB ロールバックは Step 3 の DROP DATABASE に含まれる
         },
       },

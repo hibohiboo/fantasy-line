@@ -17,8 +17,12 @@ const ROLE_PERMISSIONS: Array<{ role: RoleName; resource: string; action: string
   { role: 'servicer_admin', resource: 'user', action: 'read' },
   { role: 'servicer_admin', resource: 'user', action: 'write' },
   { role: 'servicer_admin', resource: 'user', action: 'delete' },
-  { role: 'servicer_delegate', resource: 'tenant', action: 'read' },
-  { role: 'servicer_delegate', resource: 'user', action: 'read' },
+  { role: 'servicer_delegate', resource: 'tenant',   action: 'read'   },
+  { role: 'servicer_delegate', resource: 'user',     action: 'read'   },
+  { role: 'servicer_delegate', resource: 'village',  action: 'read'   },
+  { role: 'servicer_delegate', resource: 'resident', action: 'read'   },
+  { role: 'servicer_delegate', resource: 'resident', action: 'create' },
+  { role: 'servicer_delegate', resource: 'resident', action: 'update' },
 ];
 
 /**
