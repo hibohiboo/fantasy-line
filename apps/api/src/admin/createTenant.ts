@@ -111,7 +111,7 @@ export async function createTenantHandler(
   }
 
   const schemaName = slugToSchemaName(slug);
-  const migrationsFolder = path.join(__dirname, 'migrations-tenant');
+  const migrationsFolder = process.env['MIGRATIONS_TENANT_FOLDER'] ?? path.join(__dirname, 'migrations-tenant');
 
   try {
     const db = await getDb();

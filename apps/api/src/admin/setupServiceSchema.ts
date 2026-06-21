@@ -7,10 +7,8 @@ import type { Context } from 'hono';
 import type { AdminVariables } from './adminContext';
 import type { AppBindings } from '../hono/types';
 import { resolveDbCredentials } from '../db/client';
-import { serviceRoles } from '../db/service-schema';
 
-const ROLES = ['servicer_admin', 'servicer_delegate'] as const;
-type RoleName = (typeof ROLES)[number];
+type RoleName = 'servicer_admin' | 'servicer_delegate';
 
 const ROLE_PERMISSIONS: Array<{ role: RoleName; resource: string; action: string }> = [
   { role: 'servicer_admin', resource: 'tenant', action: 'read' },
@@ -66,7 +64,7 @@ export async function setupServiceSchemaHandler(
       await migrate(db, { migrationsFolder: path.join(__dirname, 'migrations-service') });
 
       // Step 3: roles に servicer_admin / servicer_delegate を INSERT IGNORE でシードする
-      await db.insert(serviceRoles).values(ROLES.map((name) => ({ name })));
+      await db.execute(sql`INSERT IGNORE INTO roles (name) VALUES ('servicer_admin'), ('servicer_delegate')`);
 
       // Step 4: role_permissions に初期権限データを INSERT IGNORE でシードする
       // role_permissions は roleId が必要なため、INSERT IGNORE の raw SQL で実行する

@@ -14,9 +14,6 @@ const mockDrizzle = vi.fn();
 const mockRootExecute = vi.fn();
 const mockRootEnd = vi.fn();
 
-// drizzle インスタンスの insert チェーンモック
-const mockInsertValues = vi.fn();
-const mockInsert = vi.fn();
 // drizzle インスタンスの execute モック（raw SQL 用）
 const mockDbExecute = vi.fn();
 
@@ -97,12 +94,9 @@ function setupSuccessMocks() {
   // migrate モック
   mockMigrate.mockResolvedValue(undefined);
 
-  // drizzle インスタンスモック: insert().values() チェーンと execute() を返す
-  mockInsertValues.mockResolvedValue(undefined);
-  mockInsert.mockReturnValue({ values: mockInsertValues });
   mockDbExecute.mockResolvedValue(undefined);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  mockDrizzle.mockReturnValue({ insert: mockInsert, execute: mockDbExecute } as any);
+  mockDrizzle.mockReturnValue({ execute: mockDbExecute } as any);
 }
 
 // ---- テスト ----
@@ -156,7 +150,7 @@ describe('setupServiceSchemaHandler', () => {
       expect(mockMigrate).toHaveBeenCalledTimes(1);
     });
 
-    test('roles の INSERT IGNORE が呼ばれること', async () => {
+    test('roles が INSERT IGNORE raw SQL でシードされること', async () => {
       // Arrange
       setupSuccessMocks();
       const app = createTestApp(setupServiceSchemaHandler);
@@ -166,14 +160,9 @@ describe('setupServiceSchemaHandler', () => {
       await sendRequest(app, env);
 
       // Assert
-      // insert().values() が servicer_admin と servicer_delegate の 2 ロール分で呼ばれること
-      expect(mockInsert).toHaveBeenCalled();
-      expect(mockInsertValues).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ name: 'servicer_admin' }),
-          expect.objectContaining({ name: 'servicer_delegate' }),
-        ]),
-      );
+      // db.insert は呼ばれないこと（INSERT IGNORE の raw SQL に変更済み）
+      // db.execute が roles (1 回) + role_permissions (8 回) = 計 9 回呼ばれること
+      expect(mockDbExecute).toHaveBeenCalledTimes(9);
     });
 
     test('2 回実行しても同じ 200 OK が返ること（冪等）', async () => {

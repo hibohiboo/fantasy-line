@@ -10,7 +10,9 @@ import type { AppBindings } from '../hono/types';
 import type { AdminVariables } from './adminContext';
 import { adminContext } from './adminContext';
 import * as serviceSchema from '../db/service-schema';
+import * as tenantSchema from '../db/tenant-template-schema';
 import type * as CreateTenantModule from './createTenant';
+import { slugToSchemaName } from '../shared/tenant';
 
 // ---- モック変数（vi.doMock のファクトリ内で参照するため先に宣言） ----
 
@@ -18,13 +20,11 @@ const mockGetDb = vi.fn();
 const mockGetTenantDb = vi.fn();
 const mockResolveDbCredentials = vi.fn();
 const mockCognitoSend = vi.fn();
-const mockMigrate = vi.fn();
-const mockDrizzle = vi.fn();
 
 // mysql2/promise の createConnection はハンドラー内で動的 import されるが
 // Step 2 の CREATE DATABASE と Step 3 のマイグレーション接続に使われる
 // テストコンテナへの実接続を使うため、ここでは上書きしない
-// （migrate と drizzle のみをモックして実マイグレーションをスキップする）
+// MIGRATIONS_TENANT_FOLDER を drizzle-tenant フォルダに向けることで実際のマイグレーションが走る
 
 // ---- テスト対象は beforeAll で動的インポートする ----
 let createTenantHandler: typeof CreateTenantModule.createTenantHandler;
@@ -38,6 +38,9 @@ let containerHost: string;
 let containerPort: number;
 
 beforeAll(async () => {
+  // MIGRATIONS_TENANT_FOLDER を drizzle-tenant フォルダに向けて実際のマイグレーションを走らせる
+  process.env['MIGRATIONS_TENANT_FOLDER'] = path.resolve(process.cwd(), 'drizzle-tenant');
+
   // Testcontainer 起動
   const container = await new GenericContainer('mysql:8.0')
     .withEnvironment({ MYSQL_ROOT_PASSWORD: 'rootpass' })
@@ -111,27 +114,23 @@ beforeAll(async () => {
     },
   }));
 
-  // migrate と drizzle のみモック（実マイグレーションは CI 環境でのパス問題を回避するため）
-  vi.doMock('drizzle-orm/mysql2/migrator', () => ({
-    migrate: mockMigrate,
-  }));
-  vi.doMock('drizzle-orm/mysql2', () => ({
-    drizzle: mockDrizzle,
-  }));
-
   // ハンドラーを動的インポート
   ({ createTenantHandler } = await import('./createTenant'));
 
-  // Step 4・6 で使われる getTenantDb のスタブ
-  // テナント DB は migrate をモックしているため実際には存在しない
-  // INSERT 操作をスタブで受け流す
-  const tenantDbStub = {
-    insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue([{ insertId: 1 }]) })),
-  };
-
   // モックのデフォルト設定
   mockGetDb.mockResolvedValue(serviceDb);
-  mockGetTenantDb.mockResolvedValue(tenantDbStub);
+  // getTenantDb はマイグレーション済みのテナント DB への実接続を返す
+  mockGetTenantDb.mockImplementation(async (slug: string) => {
+    const schemaName = slugToSchemaName(slug);
+    const tenantPool = mysql.createPool({
+      host: containerHost,
+      port: containerPort,
+      user: 'root',
+      password: 'rootpass',
+      database: schemaName,
+    });
+    return drizzle({ client: tenantPool, schema: tenantSchema, mode: 'default' });
+  });
   mockResolveDbCredentials.mockResolvedValue({
     host: containerHost,
     port: containerPort,
@@ -139,8 +138,6 @@ beforeAll(async () => {
     password: 'rootpass',
   });
   mockCognitoSend.mockResolvedValue({ User: { Username: 'test-admin' } });
-  mockMigrate.mockResolvedValue(undefined);
-  mockDrizzle.mockReturnValue({});
 }, 120000);
 
 afterAll(async () => {
@@ -151,14 +148,25 @@ afterAll(async () => {
 beforeEach(async () => {
   // テスト間でデータを独立させる
   await serviceDb.delete(serviceSchema.serviceTenants);
+  // 前のテストで作成されたテナントスキーマを DROP してクリーンな状態にする
+  await rootPool.query('DROP DATABASE IF EXISTS `tenant_new_tenant`');
+  await rootPool.query('DROP DATABASE IF EXISTS `tenant_existing_tenant`');
   vi.clearAllMocks();
 
   // clearAllMocks 後に再設定
-  const tenantDbStub = {
-    insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue([{ insertId: 1 }]) })),
-  };
   mockGetDb.mockResolvedValue(serviceDb);
-  mockGetTenantDb.mockResolvedValue(tenantDbStub);
+  // getTenantDb はマイグレーション済みのテナント DB への実接続を返す
+  mockGetTenantDb.mockImplementation(async (slug: string) => {
+    const schemaName = slugToSchemaName(slug);
+    const tenantPool = mysql.createPool({
+      host: containerHost,
+      port: containerPort,
+      user: 'root',
+      password: 'rootpass',
+      database: schemaName,
+    });
+    return drizzle({ client: tenantPool, schema: tenantSchema, mode: 'default' });
+  });
   mockResolveDbCredentials.mockResolvedValue({
     host: containerHost,
     port: containerPort,
@@ -166,8 +174,6 @@ beforeEach(async () => {
     password: 'rootpass',
   });
   mockCognitoSend.mockResolvedValue({ User: { Username: 'test-admin' } });
-  mockMigrate.mockResolvedValue(undefined);
-  mockDrizzle.mockReturnValue({});
 });
 
 // ---- ヘルパー型 ----

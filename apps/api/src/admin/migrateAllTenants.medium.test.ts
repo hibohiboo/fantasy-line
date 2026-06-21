@@ -14,8 +14,6 @@ import type * as MigrateAllTenantsModule from './migrateAllTenants';
 
 const mockGetDb = vi.fn();
 const mockResolveDbCredentials = vi.fn();
-const mockMigrate = vi.fn();
-const mockDrizzle = vi.fn();
 
 // ---- テスト対象は beforeAll で動的インポートする ----
 let migrateAllTenantsHandler: typeof MigrateAllTenantsModule.migrateAllTenantsHandler;
@@ -29,6 +27,8 @@ let containerHost: string;
 let containerPort: number;
 
 beforeAll(async () => {
+  process.env['MIGRATIONS_TENANT_FOLDER'] = path.resolve(process.cwd(), 'drizzle-tenant');
+
   // Testcontainer 起動
   const container = await new GenericContainer('mysql:8.0')
     .withEnvironment({ MYSQL_ROOT_PASSWORD: 'rootpass' })
@@ -79,16 +79,6 @@ beforeAll(async () => {
     resolveDbCredentials: mockResolveDbCredentials,
   }));
 
-  // migrate と drizzle をモック
-  // （migrateAllTenants.ts の MIGRATIONS_FOLDER は __dirname 相対で Lambda バンドル時に解決されるが
-  //   テスト環境では migrations-tenant/ が存在しないため、モックして代替確認する）
-  vi.doMock('drizzle-orm/mysql2/migrator', () => ({
-    migrate: mockMigrate,
-  }));
-  vi.doMock('drizzle-orm/mysql2', () => ({
-    drizzle: mockDrizzle,
-  }));
-
   // ハンドラーを動的インポート
   ({ migrateAllTenantsHandler } = await import('./migrateAllTenants'));
 
@@ -100,8 +90,6 @@ beforeAll(async () => {
     user: 'root',
     password: 'rootpass',
   });
-  mockMigrate.mockResolvedValue(undefined);
-  mockDrizzle.mockReturnValue({});
 }, 120000);
 
 afterAll(async () => {
@@ -122,8 +110,6 @@ beforeEach(async () => {
     user: 'root',
     password: 'rootpass',
   });
-  mockMigrate.mockResolvedValue(undefined);
-  mockDrizzle.mockReturnValue({});
 });
 
 // ---- テスト用 Hono アプリファクトリ ----
@@ -150,10 +136,8 @@ describe('migrateAllTenantsHandler medium テスト', () => {
           { slug: 'beta', name: 'Beta テナント' },
         ]);
 
-        // mysql2/promise の createConnection は実 DB に接続するため
-        // CREATE DATABASE と migrate 成功をモックで制御する
-        // resolveDbCredentials がテストコンテナの接続情報を返すので CREATE DATABASE は成功する
-        // migrate はモック済みで undefined を返す
+        // resolveDbCredentials がテストコンテナの接続情報を返すので
+        // CREATE DATABASE と実際の Drizzle migrate がテストコンテナ上で成功する
 
         const app = createTestApp();
 

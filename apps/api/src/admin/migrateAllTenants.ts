@@ -16,7 +16,7 @@ import { validateSlug, slugToSchemaName } from '../shared/tenant';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const MIGRATIONS_FOLDER = path.join(__dirname, 'migrations-tenant');
+const MIGRATIONS_FOLDER = process.env['MIGRATIONS_TENANT_FOLDER'] ?? path.join(__dirname, 'migrations-tenant');
 
 /**
  * 単一テナントに対してデータベース作成とマイグレーションを実行する。
