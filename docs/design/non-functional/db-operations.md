@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-06-20
+last_updated: 2026-06-21
 ---
 
 # DB 操作手順書
@@ -10,11 +10,8 @@ last_updated: 2026-06-20
 
 ## 対象スコープ
 
-- 含む: ローカル（Docker）での DB 初期構築手順・テナント追加手順・全テナントマイグレーション手順
-- 含まない: 本番（Aurora）での手順・Cognito との連携・課金・契約管理
-
-> 本番（Aurora）での手順は **PBI-SaaS-005**（テナントプロビジョニング Lambda 実装）のスコープに含まれる。
-> PBI-SaaS-005 完了時に本ドキュメントへ本番手順セクションを追記すること。
+- 含む: ローカル（Docker）での DB 初期構築手順・テナント追加手順・全テナントマイグレーション手順、本番（Aurora）での管理 Lambda API 経由の手順
+- 含まない: Cognito との連携詳細・課金・契約管理
 
 ---
 
@@ -189,8 +186,84 @@ docker compose up -d      # 再作成（init スクリプトが再実行され�
 
 ---
 
+## 本番（Aurora）運用手順
+
+**前提**: CDK デプロイ済み・Secrets Manager に Aurora 接続情報が登録済みであること。
+
+### 本番 service スキーマ初期構築
+
+CDK デプロイ後に一度だけ実行するセットアップ。
+管理 Lambda API（`POST /admin/setup/service-schema`）を `servicer_admin` の JWT で呼び出す。
+
+```bash
+# JWT_TOKEN: servicer_admin の Cognito ID トークン
+# API_ENDPOINT: CDK Outputs の API Gateway URL
+curl -X POST ${API_ENDPOINT}/admin/setup/service-schema \
+  -H "Authorization: Bearer ${JWT_TOKEN}" \
+  -H "Content-Type: application/json"
+# 200 OK { "message": "service schema initialized" } が返ること
+```
+
+処理内容:
+
+1. Aurora に `service` スキーマを `CREATE DATABASE IF NOT EXISTS` で作成
+2. `drizzle-service/` マイグレーションを適用
+3. `service.roles`（`servicer_admin` / `servicer_delegate`）と `service.role_permissions` を `INSERT IGNORE` でシード（冪等）
+
+2 回実行しても同じ結果になること（冪等性を保証している）。
+
+### テナント発行手順（本番）
+
+`servicer_admin` の JWT で管理 Lambda API を呼び出す。
+
+```bash
+curl -X POST ${API_ENDPOINT}/admin/tenants \
+  -H "Authorization: Bearer ${JWT_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{ "slug": "new-tenant", "name": "テナント名", "adminEmail": "admin@example.com" }'
+# 201 Created { "tenant": { "id": ..., "slug": "new-tenant", ... } } が返ること
+```
+
+処理順序（Lambda 内部）:
+
+1. スラッグ・メールアドレスのバリデーション
+2. `service.tenants` にテナントレコードを登録
+3. Aurora に `tenant_new_tenant` スキーマを `CREATE DATABASE`
+4. `drizzle-tenant/` マイグレーションを適用
+5. `service.role_permissions` → `tenant_new_tenant.role_permissions` にシード
+6. Cognito `AdminCreateUser`（`tenant_admin` 権限・招待メール送信）
+7. `tenant_new_tenant.users` に初期管理者レコードを登録
+
+**ロールバック**: 途中でエラーが発生した場合、Lambda が逆順でクリーンアップを実行する（Cognito ユーザー削除 → スキーマ DROP → `service.tenants` レコード削除）。
+
+**エラー例**:
+
+- `409 Conflict` — 同じスラッグがすでに存在する
+- `500 Internal Server Error` — DB / Cognito エラー（Lambda がロールバックを実行済み）
+
+### 全テナントマイグレーション（本番）
+
+スキーマ変更デプロイ後に実行する。
+
+```bash
+curl -X POST ${API_ENDPOINT}/admin/migrate/all-tenants \
+  -H "Authorization: Bearer ${JWT_TOKEN}" \
+  -H "Content-Type: application/json"
+# 全成功: 200 OK { "success": N, "failed": [] }
+# 一部失敗: 207 Multi-Status { "success": N, "failed": ["slug1", ...] }
+```
+
+動作:
+
+- `service.tenants` からアクティブスラッグを取得し、各 `tenant_{slug}` スキーマに未適用マイグレーションを適用
+- 1 テナントの失敗で停止せず、全件処理後に結果を返す
+- 失敗テナントは CloudWatch Logs で確認できる
+
+---
+
 ## 変更履歴
 
 | PBI | 変更日 | 変更内容 |
 |---|---|---|
 | PBI-SaaS-003 | 2026-06-20 | 初版作成。service・tenant スキーマ分離に対応した DB 操作手順を定義 |
+| PBI-SaaS-005 | 2026-06-21 | 本番（Aurora）での service スキーマ初期構築・テナント発行・全テナントマイグレーション手順を追記 |
