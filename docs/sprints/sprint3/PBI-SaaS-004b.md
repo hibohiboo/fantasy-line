@@ -243,6 +243,8 @@ export const listVillagesHandler: Handler<{ Variables: HonoVariables }> = async 
 | 削除 | `apps/api/src/shared/use-mysql-container.ts` | 旧 testdb ヘルパー |
 | 更新 | `docs/design/non-functional/api-authz-multitenant.md` | servicer 経路エラー一覧更新・変更履歴追加 |
 | 更新 | `docs/design/openapi/openapi.yaml` | `NotFound` レスポンスコンポーネント追加・各パスに追記 |
+| 新規 | `apps/api/src/shared/test-helpers/mediumTestSetup.ts` | medium テスト共通のコンテナ起動・マイグレーション・シードを `useTenantTestContainer` / `makeMockEvent` として抽出（リファクタリング） |
+| 更新 | 全 7 medium テストファイル | `useTenantTestContainer` を使う形式に簡略化（各ファイルのボイラープレート約100行を削除） |
 
 ---
 
@@ -261,33 +263,44 @@ export const listVillagesHandler: Handler<{ Variables: HonoVariables }> = async 
 
 ## medium テストのパターン（移行後の共通形式）
 
-新規および移行後の medium テストは `listVillages.medium.test.ts` と同じ以下のパターンに従う。
+### 当初パターン（Phase 3 実装時）
+
+各テストファイルに testcontainers のセットアップコードを直接記述していた（約100行のボイラープレート）。
+
+### リファクタリング後のパターン（Sprint 3 追加対応）
+
+7ファイルに共通していたコンテナ起動・マイグレーション・シードを `useTenantTestContainer` ヘルパーに抽出した。
+詳細: [mediumTestSetup.ts](../../../apps/api/src/shared/test-helpers/mediumTestSetup.ts)
 
 ```typescript
-// テストファイルの共通構造
-import { vi, describe, test, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { drizzle } from 'drizzle-orm/mysql2';
-import mysql from 'mysql2/promise';
-import { migrate } from 'drizzle-orm/mysql2/migrator';
-import { GenericContainer, Wait } from 'testcontainers';
-import * as serviceSchema from '../db/service-schema';
-import * as tenantSchema from '../db/tenant-template-schema';
-
+// vi.mock は Vitest がファイル先頭にホイストするため最初に記述する
 vi.mock('../db/client', () => ({
   getDb: vi.fn(),
   getTenantDb: vi.fn(),
 }));
 
+import { vi, describe, test, expect, beforeAll, beforeEach } from 'vitest';
+import * as tenantSchema from '../db/tenant-template-schema';
 import { getDb, getTenantDb } from '../db/client';
-import { app } from '../hono/app'; // Hono アプリを直接テスト対象にする
+import { app } from '../hono/app';
+import { useTenantTestContainer, makeMockEvent } from '../shared/test-helpers/mediumTestSetup';
 
-// testcontainers で MySQL を起動し、service / tenant_test スキーマを作成する
-// → drizzle-service / drizzle-tenant でマイグレーションを適用する
-// → vi.fn でモックを実 DB インスタンスに差し替える
-// → テストデータを挿入してから app.request() でリクエストを送る
+// ヘルパー内で beforeAll / afterAll を登録する（コンテナ起動・マイグレーション・共通シード）
+const ctx = useTenantTestContainer([{ resource: 'village', action: 'create' }]);
+
+// vi.mock の hoisting 制約のため、モック差し替えはここで行う（ヘルパーの beforeAll より後に実行）
+beforeAll(() => {
+  (getDb as ReturnType<typeof vi.fn>).mockResolvedValue(ctx.serviceDb);
+  (getTenantDb as ReturnType<typeof vi.fn>).mockReturnValue(ctx.tenantDb);
+});
+
+beforeEach(async () => {
+  // テスト固有のテーブルリセット（参照整合性に注意して順序を決める）
+  await ctx.tenantDb.delete(tenantSchema.tenantVillages);
+});
 ```
 
-テナントDB の権限シードは各テストに必要な `resource:action` のみを `tenantRolePermissions` に登録する。
+**抽象化の境界**: コンテナ起動・マイグレーション・`serviceTenants`/`tenantUsers`/`tenantRoles`/`tenantUserRoles` シードはヘルパーに集約。権限シード（`resource:action`）・テーブルリセット・テストケースは各ファイルに残し DAMP を維持している。
 
 ---
 
@@ -313,5 +326,6 @@ import { app } from '../hono/app'; // Hono アプリを直接テスト対象に�
 - [ ] `openapi.yaml` に `NotFound` レスポンスコンポーネントが追加されている
 - [ ] `npm run lint`（`apps/api`）が通過している
 - [ ] `npm run test`（`apps/api`）が全テスト通過している（small・medium 全件）
+- [x] medium テスト共通セットアップを `useTenantTestContainer` ヘルパーに抽出済み（`apps/api/src/shared/test-helpers/mediumTestSetup.ts`）
 - [ ] `docs/pbi/README.md` の該当 PBI を `✅ 完了` に更新すること
 - [ ] ユーザーの承認を得てから完了とすること

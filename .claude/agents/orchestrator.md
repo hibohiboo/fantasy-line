@@ -46,6 +46,7 @@ SubAgent 定義は `.claude/agents/*.md` を参照する。
 - `CLAUDE.md`
 - `.claude/instructions/folder-structure.md`
 - `.claude/instructions/infra.md`
+- `.claude/skills/sprint-work-plan/SKILL.md`（Phase 2 作業計画・テストリファクタリング含む）
 - `.claude/skills/code-review/SKILL.md`
 - `.claude/skills/security-review/SKILL.md`
 - `.claude/skills/aws-cost-review/SKILL.md`
@@ -77,42 +78,12 @@ orchestrator は「何を書くか」の要件を決め、実際の作成は `do
 
 #### `documentation-coauthor` への指示テンプレート
 
-`documentation-coauthor` を呼び出すとき、以下の項目を指示に含める。
+`documentation-coauthor` を呼び出すとき、`.claude/skills/sprint-work-plan/SKILL.md` を参照して作業計画・設計書を作成させる。
 
-```
-## 依頼内容
+必須の記載項目・テンプレートは同スキルに定義してある。特に以下の点に注意する:
 
-### 設計書（`docs/design/` 配下）
-設計の判断と合意の記録。実装が変わっても意味を持つ内容だけを書く。
-
-含める内容:
-- Phase 1 で検討した背景・選択肢・採用しなかった案の理由
-- 外部から見える仕様（URI / API / データフロー / エラー方針 / スコープ等）
-- 権限・認可・バリデーション方針
-- テスト観点
-
-禁止: ファイルパス・関数名・コンポーネント名などの実装詳細を設計書に書かない
-（`.claude/skills/doc-coauthoring/SKILL.md` 参照）。
-
-### 作業計画（`docs/sprints/<最新スプリント>/<PBI名>.md`）
-実装 SubAgent への指示書。寿命が短い実装詳細をまとめる。
-
-含める内容:
-- ファイルパス・変更ファイル一覧
-- 依存関係・前提条件
-- SubAgent 割り当て表
-- 完了条件チェックリスト
-
-## 完了条件チェックリストの末尾への必須追加
-
-<!-- 理由: コンテキスト圧縮が発生してもチェックリストはファイルとして残る。
-     ワークフローの終了義務をチェックリストに書き落とすことで、
-     文脈が失われても見落としを防ぐ。 -->
-作業計画の完了条件チェックリストには、以下の 2 項目を**必ず最終行に追加**すること。
-
-- [ ] `docs/pbi/README.md` の該当 PBI を `✅ 完了` に更新すること
-- [ ] ユーザーの承認を得てから完了とすること
-```
+- **テストリファクタリングサブタスク**: 実装ハンドラー・テストファイルが 3 本以上の場合、全実装完了後にテスト重複を見直すサブタスクを SubAgent 割り当て表に**必ず含める**
+- **完了条件チェックリストの末尾 2 項目**: `docs/pbi/README.md` 更新とユーザー承認は削除禁止
 
 > Phase 3 の SubAgent は設計書ではなく作業計画を入力として使う。
 
