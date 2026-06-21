@@ -1,50 +1,42 @@
-import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-  Context,
-} from 'aws-lambda';
+import type { Handler } from 'hono';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { CreateResidentSchema } from '@repo/schema';
-import { getDb } from '../db/client';
-import { villages, residents } from '../db/schema';
-import { json } from '../shared/http';
-import { getOwnerId } from '../shared/auth';
-import { logInfo } from '../shared/logger';
+import { tenantVillages, tenantResidents } from '../db/tenant-template-schema';
+import type { HonoVariables } from '../hono/types';
 
-export const handler = async (
-  event: APIGatewayProxyEvent,
-  context: Context,
-): Promise<APIGatewayProxyResult> => {
-  const ownerIdResult = getOwnerId(event);
-  if (typeof ownerIdResult !== 'string') return ownerIdResult;
-  const ownerId = ownerIdResult;
-
+/**
+ * 住人を新規作成するハンドラー。
+ * リクエストボディをバリデーションし、村の所有者確認を行ったうえで tenantResidents テーブルに挿入する。
+ */
+export const createResidentHandler: Handler<{ Variables: HonoVariables }> = async (c) => {
   let body: unknown;
   try {
-    body = JSON.parse(event.body ?? '');
+    body = await c.req.json();
   } catch {
-    return json(400, { error: 'Invalid JSON' });
+    return c.json({ error: 'Invalid JSON' }, 400);
   }
 
   const parsed = CreateResidentSchema.safeParse(body);
   if (!parsed.success) {
-    return json(400, { error: z.flattenError(parsed.error) });
+    return c.json({ error: z.flattenError(parsed.error) }, 400);
   }
 
-  const db = await getDb();
+  const tenantDb = c.get('tenantDb');
+  const userId = c.get('userId');
 
-  const [village] = await db
+  // 村の所有確認
+  const [village] = await tenantDb
     .select()
-    .from(villages)
-    .where(eq(villages.id, parsed.data.villageId));
+    .from(tenantVillages)
+    .where(eq(tenantVillages.id, parsed.data.villageId));
 
-  if (!village || village.ownerId !== ownerId) {
-    return json(403, { error: 'Forbidden' });
+  if (!village || village.ownerId !== userId) {
+    return c.json({ error: 'Forbidden' }, 403);
   }
 
-  const [inserted] = await db
-    .insert(residents)
+  const [inserted] = await tenantDb
+    .insert(tenantResidents)
     .values({
       name: parsed.data.name,
       nameKana: parsed.data.nameKana,
@@ -54,12 +46,10 @@ export const handler = async (
     .$returningId();
   if (!inserted) throw new Error('Insert returned no result');
 
-  const [created] = await db
+  const [created] = await tenantDb
     .select()
-    .from(residents)
-    .where(eq(residents.id, inserted.id));
+    .from(tenantResidents)
+    .where(eq(tenantResidents.id, inserted.id));
 
-  logInfo({ message: '住人を登録しました', requestId: context.awsRequestId, userId: ownerId, villageId: parsed.data.villageId, residentId: inserted.id });
-
-  return json(201, { resident: created });
+  return c.json({ resident: created }, 201);
 };

@@ -1,50 +1,41 @@
-import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-  Context,
-} from 'aws-lambda';
+import type { Handler } from 'hono';
 import { eq, asc } from 'drizzle-orm';
-import { getDb } from '../db/client';
-import { villages, residents } from '../db/schema';
-import { json } from '../shared/http';
-import { getOwnerId } from '../shared/auth';
-import { logInfo } from '../shared/logger';
+import { tenantVillages, tenantResidents } from '../db/tenant-template-schema';
+import type { HonoVariables } from '../hono/types';
 
-export const handler = async (
-  event: APIGatewayProxyEvent,
-  context: Context,
-): Promise<APIGatewayProxyResult> => {
-  const ownerIdResult = getOwnerId(event);
-  if (typeof ownerIdResult !== 'string') return ownerIdResult;
-  const ownerId = ownerIdResult;
+/**
+ * 指定した村の住人一覧を取得するハンドラー。
+ * 村の所有者確認を行い、自分の村の住人のみを nameKana 昇順で返す。
+ *
+ * @param c - パスパラメータ id に村 ID を含む Hono コンテキスト
+ */
+export const listVillageResidentsHandler: Handler<{ Variables: HonoVariables }> = async (c) => {
+  const tenantDb = c.get('tenantDb');
+  const userId = c.get('userId');
+  const villageId = Number(c.req.param('id'));
 
-  const villageId = Number(event.pathParameters?.id);
-
-  const db = await getDb();
-
-  const [village] = await db
+  // 村の所有確認
+  const [village] = await tenantDb
     .select()
-    .from(villages)
-    .where(eq(villages.id, villageId));
+    .from(tenantVillages)
+    .where(eq(tenantVillages.id, villageId));
 
-  if (!village || village.ownerId !== ownerId) {
-    return json(403, { error: 'Forbidden' });
+  if (!village || village.ownerId !== userId) {
+    return c.json({ error: 'Forbidden' }, 403);
   }
 
-  const rows = await db
+  const rows = await tenantDb
     .select({
-      id: residents.id,
-      name: residents.name,
-      nameKana: residents.nameKana,
-      birthDate: residents.birthDate,
-      villageId: residents.villageId,
-      createdAt: residents.createdAt,
+      id: tenantResidents.id,
+      name: tenantResidents.name,
+      nameKana: tenantResidents.nameKana,
+      birthDate: tenantResidents.birthDate,
+      villageId: tenantResidents.villageId,
+      createdAt: tenantResidents.createdAt,
     })
-    .from(residents)
-    .where(eq(residents.villageId, villageId))
-    .orderBy(asc(residents.nameKana));
+    .from(tenantResidents)
+    .where(eq(tenantResidents.villageId, villageId))
+    .orderBy(asc(tenantResidents.nameKana));
 
-  logInfo({ message: '村別住人一覧を取得しました', requestId: context.awsRequestId, userId: ownerId, villageId, count: rows.length });
-
-  return json(200, { residents: rows });
+  return c.json({ residents: rows });
 };

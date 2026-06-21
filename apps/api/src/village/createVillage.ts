@@ -1,50 +1,40 @@
-import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-  Context,
-} from 'aws-lambda';
+import type { Handler } from 'hono';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { CreateVillageSchema } from '@repo/schema';
-import { getDb } from '../db/client';
-import { villages } from '../db/schema';
-import { json } from '../shared/http';
-import { getOwnerId } from '../shared/auth';
-import { logInfo } from '../shared/logger';
+import { tenantVillages } from '../db/tenant-template-schema';
+import type { HonoVariables } from '../hono/types';
 
-export const handler = async (
-  event: APIGatewayProxyEvent,
-  context: Context,
-): Promise<APIGatewayProxyResult> => {
-  const ownerIdResult = getOwnerId(event);
-  if (typeof ownerIdResult !== 'string') return ownerIdResult;
-  const ownerId = ownerIdResult;
-
+/**
+ * 村を新規作成するハンドラー。
+ * リクエストボディの name をバリデーションし、tenantVillages テーブルに挿入する。
+ */
+export const createVillageHandler: Handler<{ Variables: HonoVariables }> = async (c) => {
   let body: unknown;
   try {
-    body = JSON.parse(event.body ?? '');
+    body = await c.req.json();
   } catch {
-    return json(400, { error: 'Invalid JSON' });
+    return c.json({ error: 'Invalid JSON' }, 400);
   }
 
   const parsed = CreateVillageSchema.safeParse(body);
   if (!parsed.success) {
-    return json(400, { error: z.flattenError(parsed.error) });
+    return c.json({ error: z.flattenError(parsed.error) }, 400);
   }
 
-  const db = await getDb();
-  const [inserted] = await db
-    .insert(villages)
-    .values({ name: parsed.data.name, ownerId })
+  const tenantDb = c.get('tenantDb');
+  const userId = c.get('userId');
+
+  const [inserted] = await tenantDb
+    .insert(tenantVillages)
+    .values({ name: parsed.data.name, ownerId: userId })
     .$returningId();
   if (!inserted) throw new Error('Insert returned no result');
 
-  const [created] = await db
+  const [created] = await tenantDb
     .select()
-    .from(villages)
-    .where(eq(villages.id, inserted.id));
+    .from(tenantVillages)
+    .where(eq(tenantVillages.id, inserted.id));
 
-  logInfo({ message: '村を作成しました', requestId: context.awsRequestId, userId: ownerId, villageId: inserted.id });
-
-  return json(201, { village: created });
+  return c.json({ village: created }, 201);
 };

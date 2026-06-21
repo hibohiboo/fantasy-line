@@ -325,6 +325,53 @@ describe('tenantContext ミドルウェア', () => {
     });
   });
 
+  describe('servicer_admin が存在しないテナントスラッグを指定するとき', () => {
+    test('404 が返ること', async () => {
+      // Arrange: serviceTenants が空を返す
+      const mockServiceDb = makeServiceDbMock([]); // 空 = テナント不在
+      mockGetDb.mockResolvedValue(mockServiceDb);
+
+      const app = createTestApp();
+      const slug = 'nonexistent-slug';
+      const event = makeMockEvent(
+        { 'custom:user_type': 'servicer_admin', sub: 'sub-001' },
+        { 'X-Tenant-Id': slug },
+      );
+
+      // Act
+      const res = await sendRequest(app, '/test', { event }, { 'X-Tenant-Id': slug });
+
+      // Assert
+      expect(res.status).toBe(404);
+      const body = await res.json() as { error: string };
+      expect(body.error).toBe('Not Found');
+    });
+  });
+
+  describe('servicer_admin が停止中テナント（status=suspended）にアクセスするとき', () => {
+    test('403 が返ること', async () => {
+      // Arrange: テナントは存在するが status が suspended
+      const mockServiceDb = makeServiceDbMock(
+        [{ id: 1, slug: 'suspended-tenant', status: 'suspended' }],
+      );
+      mockGetDb.mockResolvedValue(mockServiceDb);
+
+      const app = createTestApp();
+      const event = makeMockEvent(
+        { 'custom:user_type': 'servicer_admin', sub: 'sub-001' },
+        { 'X-Tenant-Id': 'suspended-tenant' },
+      );
+
+      // Act
+      const res = await sendRequest(app, '/test', { event }, { 'X-Tenant-Id': 'suspended-tenant' });
+
+      // Assert
+      expect(res.status).toBe(403);
+      const body = await res.json() as { error: string };
+      expect(body.error).toBe('Forbidden');
+    });
+  });
+
   describe('不正な user_type のとき', () => {
     test('403 が返ること', async () => {
       // Arrange

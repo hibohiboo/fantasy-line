@@ -1,91 +1,120 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as CreateResidentModule from './createResident';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { Hono } from 'hono';
+import type { HonoVariables } from '../hono/types';
+import type { TenantDb } from '../db/client';
 
-const validBody = {
-  name: '山田太郎',
-  nameKana: 'ヤマダタロウ',
-  birthDate: '2000-01-15',
-  villageId: 1,
-};
+// early-return ケース（400 / 403）専用の最小モック
+// 正常系（201）は createResident.medium.test.ts で担保する
 
-// db-mock.ts は単純な select/insert チェーンを提供するが、createResident では
-// "village SELECT → 権限チェック → resident INSERT → resident SELECT" と
-// 同一リクエスト内で select を2回呼ぶ。db-mock.ts はこの複合チェーンに非対応のため
-// ここでは early-return ケース（401/400/403）専用の最小モックを独自実装している。
-// 正常系（201）は Medium テスト（createResident.medium.test.ts）で担保する。（R4/R6）
-function buildSelectChain(villageRows: unknown[]) {
+function makeTenantDb(villageRows: unknown[]): TenantDb {
   return {
-    from: () => ({ where: () => Promise.resolve(villageRows) }),
-  };
-}
-
-function buildInsertChain() {
-  return {
-    values: () => ({ $returningId: () => Promise.resolve([{ id: 1 }]) }),
-  };
-}
-
-function makeMockDb(villageRows: unknown[]) {
-  return {
-    getDb: () =>
-      Promise.resolve({
-        select: () => buildSelectChain(villageRows),
-        insert: () => buildInsertChain(),
+    select: () => ({
+      from: () => ({
+        where: () => Promise.resolve(villageRows),
       }),
-  };
+    }),
+    insert: () => ({
+      values: () => ({
+        $returningId: () => Promise.resolve([{ id: 1 }]),
+      }),
+    }),
+  } as unknown as TenantDb;
 }
 
-describe('createResident handler - ハンドラー固有のケース', () => {
+function makeApp(tenantDb: TenantDb, userId = 1) {
+  // createResidentHandler のみをテストするために最小 Hono アプリを構築する
+  const app = new Hono<{ Variables: HonoVariables }>();
+  app.use('*', async (c, next) => {
+    c.set('tenantDb', tenantDb);
+    c.set('userId', userId);
+    c.set('tenantSlug', 'test');
+    c.set('userType', 'tenant_user');
+    await next();
+  });
+  return app;
+}
+
+describe('createResident ハンドラー固有のケース', () => {
   beforeEach(() => {
     vi.resetModules();
   });
 
-  it('bodyがJSONでない場合は400を返す', async () => {
-    vi.doMock('../db/client', () => makeMockDb([]));
-    const { handler } = await import('./createResident') as typeof CreateResidentModule;
+  describe('body が JSON でないとき', () => {
+    test('400 と error: Invalid JSON が返ること', async () => {
+      // Arrange
+      const { createResidentHandler } = await import('./createResident');
+      const tenantDb = makeTenantDb([]);
+      const app = makeApp(tenantDb);
+      app.post('/api/residents', createResidentHandler);
 
-    const result = await handler(
-      { body: 'not json', headers: { 'X-User-Id': 'user-1' } } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
+      // Act
+      const response = await app.request('/api/residents', {
+        method: 'POST',
+        body: 'not json',
+        headers: { 'Content-Type': 'text/plain' },
+      });
 
-    expect(result.statusCode).toBe(400);
-    expect(JSON.parse(result.body).error).toBe('Invalid JSON');
+      // Assert
+      expect(response.status).toBe(400);
+      const body = await response.json() as { error: string };
+      expect(body.error).toBe('Invalid JSON');
+    });
   });
 
-  it('nameが空文字の場合は400を返す', async () => {
-    vi.doMock('../db/client', () => makeMockDb([]));
-    const { handler } = await import('./createResident') as typeof CreateResidentModule;
+  describe('name が空文字のとき', () => {
+    test('400 と fieldErrors.name が返ること', async () => {
+      // Arrange
+      const { createResidentHandler } = await import('./createResident');
+      const tenantDb = makeTenantDb([]);
+      const app = makeApp(tenantDb);
+      app.post('/api/residents', createResidentHandler);
 
-    const result = await handler(
-      {
-        body: JSON.stringify({ ...validBody, name: '' }),
-        headers: { 'X-User-Id': 'user-1' },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
+      // Act
+      const response = await app.request('/api/residents', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: '',
+          nameKana: 'ヤマダタロウ',
+          birthDate: '2000-01-15',
+          villageId: 1,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-    expect(result.statusCode).toBe(400);
-    expect(JSON.parse(result.body).error).toEqual(
-      expect.objectContaining({ fieldErrors: { name: expect.any(Array) } }),
-    );
+      // Assert
+      expect(response.status).toBe(400);
+      const body = await response.json() as { error: { fieldErrors: { name: string[] } } };
+      expect(body.error.fieldErrors.name).toBeDefined();
+    });
   });
 
-  it('他ユーザーの村へ登録しようとした場合は403を返す', async () => {
-    const otherUserVillage = [{ id: 1, name: '他者の村', ownerId: 'user-2', createdAt: new Date() }];
-    vi.doMock('../db/client', () => makeMockDb(otherUserVillage));
-    const { handler } = await import('./createResident') as typeof CreateResidentModule;
+  describe('他ユーザーの村へ登録しようとしたとき', () => {
+    test('403 が返ること', async () => {
+      // Arrange
+      const { createResidentHandler } = await import('./createResident');
+      // ownerId=2（別ユーザー）の村を返す
+      const otherUserVillage = [{ id: 1, name: '他者の村', ownerId: 2, createdAt: new Date() }];
+      const tenantDb = makeTenantDb(otherUserVillage);
+      // userId=1 としてリクエスト
+      const app = makeApp(tenantDb, 1);
+      app.post('/api/residents', createResidentHandler);
 
-    const result = await handler(
-      {
-        body: JSON.stringify(validBody),
-        headers: { 'X-User-Id': 'user-1' },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
+      // Act
+      const response = await app.request('/api/residents', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: '山田太郎',
+          nameKana: 'ヤマダタロウ',
+          birthDate: '2000-01-15',
+          villageId: 1,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-    expect(result.statusCode).toBe(403);
-    expect(JSON.parse(result.body).error).toBe('Forbidden');
+      // Assert
+      expect(response.status).toBe(403);
+      const body = await response.json() as { error: string };
+      expect(body.error).toBe('Forbidden');
+    });
   });
 });

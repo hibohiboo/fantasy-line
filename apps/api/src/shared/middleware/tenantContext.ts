@@ -149,8 +149,11 @@ async function handleServicerUser(
     .where(eq(serviceTenants.slug, slug));
 
   const tenant = tenantRows[0];
-  if (!tenant || tenant.status !== 'active') {
-    return c.json({ error: 'Service Unavailable' }, 503);
+  if (!tenant) {
+    return c.json({ error: 'Not Found' }, 404);
+  }
+  if (tenant.status !== 'active') {
+    return c.json({ error: 'Forbidden' }, 403);
   }
 
   // cognitoSub から service user を取得して userId を解決する

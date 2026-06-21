@@ -1,44 +1,56 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as ListVillageResidentsModule from './listVillageResidents';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { Hono } from 'hono';
+import type { HonoVariables } from '../hono/types';
+import type { TenantDb } from '../db/client';
 
-// createResident.small.test.ts の makeMockDb パターンを踏襲
 // early-return ケース（403）専用の最小モック
-// 正常系は Medium テスト（listVillageResidents.medium.test.ts）で担保
-function buildSelectChain(villageRows: unknown[]) {
-  return {
-    from: () => ({ where: () => Promise.resolve(villageRows) }),
-  };
-}
+// 正常系は listVillageResidents.medium.test.ts で担保する
 
-function makeMockDb(villageRows: unknown[]) {
+function makeTenantDb(villageRows: unknown[]): TenantDb {
   return {
-    getDb: () =>
-      Promise.resolve({
-        select: () => buildSelectChain(villageRows),
+    select: () => ({
+      from: () => ({
+        where: () => Promise.resolve(villageRows),
       }),
-  };
+    }),
+  } as unknown as TenantDb;
 }
 
-describe('listVillageResidents handler - ハンドラー固有のケース', () => {
+function makeApp(tenantDb: TenantDb, userId = 1) {
+  const app = new Hono<{ Variables: HonoVariables }>();
+  app.use('*', async (c, next) => {
+    c.set('tenantDb', tenantDb);
+    c.set('userId', userId);
+    c.set('tenantSlug', 'test');
+    c.set('userType', 'tenant_user');
+    await next();
+  });
+  return app;
+}
+
+describe('listVillageResidents ハンドラー固有のケース', () => {
   beforeEach(() => {
     vi.resetModules();
   });
 
-  it('他ユーザーの村への参照は403を返す', async () => {
-    const otherUserVillage = [{ id: 1, name: '他者の村', ownerId: 'user-2', createdAt: new Date() }];
-    vi.doMock('../db/client', () => makeMockDb(otherUserVillage));
-    const { handler } = await import('./listVillageResidents') as typeof ListVillageResidentsModule;
+  describe('他ユーザーの村への参照のとき', () => {
+    test('403 が返ること', async () => {
+      // Arrange
+      const { listVillageResidentsHandler } = await import('./listVillageResidents');
+      // ownerId=2（別ユーザー）の村を返す
+      const otherUserVillage = [{ id: 1, name: '他者の村', ownerId: 2, createdAt: new Date() }];
+      const tenantDb = makeTenantDb(otherUserVillage);
+      // userId=1 としてリクエスト
+      const app = makeApp(tenantDb, 1);
+      app.get('/api/villages/:id/residents', listVillageResidentsHandler);
 
-    const result = await handler(
-      {
-        headers: { 'X-User-Id': 'user-1' },
-        pathParameters: { id: '1' },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
+      // Act
+      const response = await app.request('/api/villages/1/residents');
 
-    expect(result.statusCode).toBe(403);
-    expect(JSON.parse(result.body).error).toBe('Forbidden');
+      // Assert
+      expect(response.status).toBe(403);
+      const body = await response.json() as { error: string };
+      expect(body.error).toBe('Forbidden');
+    });
   });
 });
