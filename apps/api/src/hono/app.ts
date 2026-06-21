@@ -13,6 +13,11 @@ import { listResidentsHandler } from '../resident/listResidents';
 import { listVillageResidentsHandler } from '../resident/listVillageResidents';
 import { createItemHandler } from '../item/createItem';
 import { listItemsHandler } from '../item/items';
+import { listUsersHandler } from '../user-management/listUsers';
+import { inviteUserHandler } from '../user-management/inviteUser';
+import { deleteUserHandler } from '../user-management/deleteUser';
+import { changeUserRoleHandler } from '../user-management/changeUserRole';
+import { resendInvitationHandler } from '../user-management/resendInvitation';
 
 export const app = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
 
@@ -27,3 +32,9 @@ app.get('/api/villages/:id/residents', requirePermission('resident', 'read'), li
 
 app.post('/api/items', requirePermission('item', 'create'), createItemHandler);
 app.get('/api/items', requirePermission('item', 'read'), listItemsHandler);
+
+app.get('/api/users', requirePermission('user', 'list'), listUsersHandler);
+app.post('/api/users/invite', requirePermission('user', 'manage'), inviteUserHandler);
+app.delete('/api/users/:userId', requirePermission('user', 'manage'), deleteUserHandler);
+app.put('/api/users/:userId/roles', requirePermission('user', 'manage'), changeUserRoleHandler);
+app.post('/api/users/:userId/resend-invitation', requirePermission('user', 'manage'), resendInvitationHandler);

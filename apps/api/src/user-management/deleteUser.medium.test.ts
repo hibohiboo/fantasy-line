@@ -1,8 +1,8 @@
 // vi.mock は Vitest がファイル先頭にホイストするため最初に記述する
 vi.mock('@aws-sdk/client-cognito-identity-provider', () => ({
-  CognitoIdentityProviderClient: vi.fn(() => ({
-    send: vi.fn().mockResolvedValue({}),
-  })),
+  CognitoIdentityProviderClient: class MockCognitoClient {
+    send = vi.fn().mockResolvedValue({});
+  },
   AdminDisableUserCommand: vi.fn(),
   AdminDeleteUserCommand: vi.fn(),
 }));

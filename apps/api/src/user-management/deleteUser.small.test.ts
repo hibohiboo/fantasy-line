@@ -20,35 +20,22 @@ import type { TenantDb } from '../db/client';
 // early-return ケース（400 / 404 / 409）と Cognito 呼び出し確認の最小モック
 // 正常系の DB 確認は deleteUser.medium.test.ts で担保する
 
-/**
- * tenantDb モックを生成する。
- * select が 2 回呼ばれる:
- *   1 回目: ユーザー取得（where チェーン）
- *   2 回目: adminUsers 取得（innerJoin チェーン）
- */
+// select が 2 系統:
+//   - where チェーン: ユーザー取得
+//   - innerJoin → where チェーン: adminUsers 取得
 function makeTenantDb(
   userRow: unknown,
   adminUsers: { userId: number }[],
 ): TenantDb {
-  let selectCallCount = 0;
+  const userWhereImpl = vi.fn().mockResolvedValue(userRow ? [userRow] : []);
+  const adminWhereImpl = vi.fn().mockResolvedValue(adminUsers);
+  const innerJoinImpl = vi.fn().mockReturnValue({ where: adminWhereImpl });
+  const fromImpl = vi.fn().mockReturnValue({ where: userWhereImpl, innerJoin: innerJoinImpl });
+  const deleteWhereImpl = vi.fn().mockResolvedValue(undefined);
+
   return {
-    select: () => ({
-      from: () => ({
-        where: () => {
-          selectCallCount++;
-          if (selectCallCount === 1) {
-            return Promise.resolve(userRow ? [userRow] : []);
-          }
-          return Promise.resolve([]);
-        },
-        innerJoin: () => ({
-          where: () => Promise.resolve(adminUsers),
-        }),
-      }),
-    }),
-    delete: () => ({
-      where: () => Promise.resolve(undefined),
-    }),
+    select: vi.fn().mockReturnValue({ from: fromImpl }),
+    delete: vi.fn().mockReturnValue({ where: deleteWhereImpl }),
   } as unknown as TenantDb;
 }
 

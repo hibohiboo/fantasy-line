@@ -23,8 +23,6 @@ const testApp = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
 testApp.use('*', tenantContext);
 testApp.put('/api/users/:userId/roles', requirePermission('user', 'manage'), changeUserRoleHandler);
 
-let newRoleId: number;
-
 beforeAll(() => {
   (getDb as ReturnType<typeof vi.fn>).mockResolvedValue(ctx.serviceDb);
   (getTenantDb as ReturnType<typeof vi.fn>).mockReturnValue(ctx.tenantDb);
@@ -57,7 +55,7 @@ describe('changeUserRole 統合テスト', () => {
         .insert(tenantSchema.tenantRoles)
         .values({ name: 'guest', isDefault: 0 })
         .$returningId();
-      newRoleId = insertedRole.id;
+      const newRoleId = insertedRole.id;
 
       const mockEvent = makeMockEvent({
         sub: 'user-1-sub',
