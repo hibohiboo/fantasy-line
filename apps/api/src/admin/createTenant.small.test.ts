@@ -12,7 +12,6 @@ const mockInsertInto = vi.fn(() => ({ values: mockInsert }));
 const mockDelete = vi.fn();
 const mockDeleteFrom = vi.fn(() => ({ where: mockDelete }));
 const mockSelect = vi.fn();
-const mockSelectFrom = vi.fn(() => ({ where: mockSelect }));
 const mockGetDb = vi.fn();
 
 // tenant DB (getTenantDb)
@@ -160,10 +159,9 @@ function setupSuccessMocks() {
   const mockServiceDb = {
     insert: mockInsertInto,
     delete: mockDeleteFrom,
+    // select().from() は Promise を返す（Step 4 で .where() なし全件取得）
     select: () => ({
-      from: () => ({
-        where: mockSelect,
-      }),
+      from: () => mockSelect(),
     }),
     $count: vi.fn(),
   };
@@ -261,16 +259,17 @@ describe('createTenantHandler', () => {
       );
 
       // Assert
-      expect(MockAdminCreateUserCommand).toHaveBeenCalledWith(
-        expect.objectContaining({
-          UserAttributes: expect.arrayContaining([
-            { Name: 'custom:user_type', Value: 'tenant_admin' },
-            { Name: 'custom:tenant_id', Value: 'new-tenant' },
-            { Name: 'email', Value: 'admin@example.com' },
-          ]),
-        }),
-      );
+      // AdminCreateUserCommand のコンストラクタに渡された引数を、
+      // 生成されたインスタンスの _input プロパティで検証する
       expect(mockCognitoSend).toHaveBeenCalled();
+      const sentCommand = mockCognitoSend.mock.calls[0]?.[0] as { _input: unknown } | undefined;
+      expect(sentCommand?._input).toMatchObject({
+        UserAttributes: expect.arrayContaining([
+          { Name: 'custom:user_type', Value: 'tenant_admin' },
+          { Name: 'custom:tenant_id', Value: 'new-tenant' },
+          { Name: 'email', Value: 'admin@example.com' },
+        ]),
+      });
     });
   });
 
@@ -285,7 +284,7 @@ describe('createTenantHandler', () => {
           ),
         })),
         delete: mockDeleteFrom,
-        select: () => ({ from: () => ({ where: mockSelect }) }),
+        select: () => ({ from: () => mockSelect() }),
       };
       mockGetDb.mockResolvedValue(mockServiceDb);
       mockResolveDbCredentials.mockResolvedValue({
@@ -316,7 +315,7 @@ describe('createTenantHandler', () => {
           ),
         })),
         delete: mockDeleteFrom,
-        select: () => ({ from: () => ({ where: mockSelect }) }),
+        select: () => ({ from: () => mockSelect() }),
       };
       mockGetDb.mockResolvedValue(mockServiceDb);
       mockResolveDbCredentials.mockResolvedValue({
@@ -345,7 +344,7 @@ describe('createTenantHandler', () => {
       const mockServiceDb = {
         insert: mockInsertInto,
         delete: mockDeleteFrom,
-        select: () => ({ from: () => ({ where: mockSelect }) }),
+        select: () => ({ from: () => mockSelect() }),
       };
       mockGetDb.mockResolvedValue(mockServiceDb);
       mockResolveDbCredentials.mockResolvedValue({
@@ -381,7 +380,7 @@ describe('createTenantHandler', () => {
       const mockServiceDb = {
         insert: mockInsertInto,
         delete: mockDeleteFrom,
-        select: () => ({ from: () => ({ where: mockSelect }) }),
+        select: () => ({ from: () => mockSelect() }),
       };
       mockGetDb.mockResolvedValue(mockServiceDb);
       mockResolveDbCredentials.mockResolvedValue({

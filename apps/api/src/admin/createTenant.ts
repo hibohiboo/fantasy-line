@@ -107,6 +107,8 @@ export async function createTenantHandler(
 
   try {
     const db = await getDb();
+    // DB 認証情報はハンドラー開始時に一度だけ解決して各ステップで共有する
+    const creds = await resolveDbCredentials();
     let tenantId: number | undefined;
     let cognitoUsername: string | undefined;
 
@@ -130,7 +132,6 @@ export async function createTenantHandler(
       // Step 2: Aurora に tenant_{slug} データベースを作成
       {
         execute: async () => {
-          const creds = await resolveDbCredentials();
           const { createConnection } = await import('mysql2/promise');
           const conn = await createConnection({
             host: creds.host,
@@ -154,7 +155,6 @@ export async function createTenantHandler(
       // Step 3: drizzle-tenant マイグレーション実行
       {
         execute: async () => {
-          const creds = await resolveDbCredentials();
           const { createConnection } = await import('mysql2/promise');
           const { drizzle } = await import('drizzle-orm/mysql2');
           const { migrate } = await import('drizzle-orm/mysql2/migrator');
@@ -166,14 +166,13 @@ export async function createTenantHandler(
             database: schemaName,
           });
           try {
-            const tenantDb = drizzle(conn);
-            await migrate(tenantDb, { migrationsFolder });
+            const tenantMigrateDb = drizzle(conn);
+            await migrate(tenantMigrateDb, { migrationsFolder });
           } finally {
             await conn.end();
           }
         },
         rollback: async () => {
-          const creds = await resolveDbCredentials();
           const { createConnection } = await import('mysql2/promise');
           const conn = await createConnection({
             host: creds.host,
@@ -189,17 +188,14 @@ export async function createTenantHandler(
         },
       },
 
-      // Step 4: service.role_permissions → tenant_{slug}.role_permissions シード
+      // Step 4: service.role_permissions の全件を tenant_{slug}.role_permissions にシード
       {
         execute: async () => {
-          const servicePerms = await db
-            .select()
-            .from(serviceRolePermissions)
-            .where(eq(serviceRolePermissions.roleId, serviceRolePermissions.roleId));
+          const servicePerms = await db.select().from(serviceRolePermissions);
 
           if (servicePerms.length > 0) {
             const tenantDb = await getTenantDb(slug);
-            // INSERT IGNORE 相当: 既存行があっても無視する
+            // INSERT IGNORE 相当: 重複行は無視して続行する
             for (const perm of servicePerms) {
               try {
                 await tenantDb.insert(tenantRolePermissions).values({
@@ -208,7 +204,6 @@ export async function createTenantHandler(
                   action: perm.action,
                 });
               } catch (err) {
-                // ER_DUP_ENTRY は無視する（INSERT IGNORE 相当）
                 if (!isDuplicateEntryError(err)) throw err;
               }
             }

@@ -7,7 +7,11 @@ import type * as CreateServicerDelegateModule from './createServicerDelegate';
 // ---- モック変数（vi.doMock のファクトリ内で参照するため先に宣言） ----
 const mockGetDb = vi.fn();
 const mockCognitoSend = vi.fn();
-const MockCognitoIdentityProviderClient = vi.fn(() => ({ send: mockCognitoSend }));
+
+class MockCognitoIdentityProviderClient {
+  send = mockCognitoSend;
+}
+
 const MockAdminCreateUserCommand = vi.fn((input: unknown) => ({ _input: input }));
 
 // ---- テスト対象は beforeAll で動的インポートする ----
