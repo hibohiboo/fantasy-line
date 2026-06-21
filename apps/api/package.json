@@ -13,7 +13,6 @@
     "db:generate:service": "drizzle-kit generate --config=drizzle.service.config.ts",
     "db:generate:tenant": "drizzle-kit generate --config=drizzle.tenant-template.config.ts",
     "db:migrate:service:local": "tsx ../../tools/scripts/migrate-service.ts",
-    "db:seed:local": "tsx src/db/seed.ts",
     "db:seed:service:local": "tsx ../../tools/scripts/seed-service-permissions.ts",
     "db:migrate:all:local": "tsx ../../tools/scripts/migrate-all-tenants.ts",
     "dev": "cd ../../infra && npm run local-api",

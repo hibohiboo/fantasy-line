@@ -4,7 +4,7 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from '@aws-sdk/client-secrets-manager';
-import * as schema from './schema';
+import * as serviceSchema from './service-schema';
 import * as tenantSchema from './tenant-template-schema';
 import { slugToSchemaName } from '../shared/tenant';
 
@@ -63,7 +63,7 @@ async function buildDb() {
     waitForConnections: true,
     connectionLimit: 1,
   });
-  return drizzle({ client: pool, schema, mode: 'default' });
+  return drizzle({ client: pool, schema: serviceSchema, mode: 'default' });
 }
 
 type DbInstance = Awaited<ReturnType<typeof buildDb>>;

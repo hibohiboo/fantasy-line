@@ -112,6 +112,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     get:
       summary: 全住人一覧を取得する
@@ -152,6 +154,8 @@ paths:
                     residents: []
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/villages/{id}/residents:
     get:
@@ -194,6 +198,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/villages:
     post:
@@ -252,6 +258,8 @@ paths:
                     error: Invalid JSON
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     get:
       summary: 自分の村一覧を取得する
@@ -288,6 +296,8 @@ paths:
                     villages: []
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
 components:
   securitySchemes:
@@ -510,6 +520,18 @@ components:
             $ref: '#/components/schemas/SimpleErrorResponse'
           example:
             error: Forbidden
+
+    NotFound:
+      description: リソースが見つからない、またはテナントスラッグが存在しない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SimpleErrorResponse'
+          examples:
+            notFound:
+              summary: テナントが存在しない場合
+              value:
+                error: Not Found
 
     ServiceUnavailable:
       description: テナントスキーマが存在しない、または DB 接続に失敗した

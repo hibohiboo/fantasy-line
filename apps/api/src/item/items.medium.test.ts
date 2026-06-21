@@ -1,42 +1,224 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as ItemsModule from './items';
-import * as schema from '../db/schema';
-import { useMysqlContainer } from '../shared/use-mysql-container';
-import { mockDbClient } from '../shared/db-mock';
+import { vi, describe, test, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
+import { migrate } from 'drizzle-orm/mysql2/migrator';
+import { GenericContainer, Wait } from 'testcontainers';
+import type { StartedTestContainer } from 'testcontainers';
+import path from 'path';
+import * as serviceSchema from '../db/service-schema';
+import * as tenantSchema from '../db/tenant-template-schema';
 
-const ctx = useMysqlContainer();
-let handler: typeof ItemsModule.handler;
+// vi.mock を使って getDb と getTenantDb を差し替える
+vi.mock('../db/client', () => ({
+  getDb: vi.fn(),
+  getTenantDb: vi.fn(),
+}));
 
-describe('items handler', () => {
-  beforeEach(async () => {
-    await ctx.db.delete(schema.items);
-    vi.resetModules();
-    vi.doMock('../db/client', () => mockDbClient(ctx.db));
-    ({ handler } = await import('./items'));
+import { getDb, getTenantDb } from '../db/client';
+import { app } from '../hono/app';
+
+// ---- testcontainer セットアップ ----
+
+let container: StartedTestContainer;
+let rootPool: mysql.Pool;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let serviceDb: any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let tenantDb: any;
+
+const serviceMigrationsFolder = path.resolve(process.cwd(), 'drizzle-service');
+const tenantMigrationsFolder = path.resolve(process.cwd(), 'drizzle-tenant');
+
+beforeAll(async () => {
+  // MySQL testcontainer を root で起動
+  container = await new GenericContainer('mysql:8.0')
+    .withEnvironment({
+      MYSQL_ROOT_PASSWORD: 'rootpass',
+    })
+    .withExposedPorts(3306)
+    .withWaitStrategy(Wait.forLogMessage('ready for connections', 2))
+    .start();
+
+  const host = container.getHost();
+  const port = container.getMappedPort(3306);
+
+  // root 接続でスキーマを作成する
+  rootPool = mysql.createPool({
+    host,
+    port,
+    user: 'root',
+    password: 'rootpass',
+    multipleStatements: true,
   });
 
-  it('データが存在しない場合、空のitemsを返す', async () => {
-    const result = await handler({} as APIGatewayProxyEvent, {} as Context);
+  // MySQL が起動するまで待機
+  for (let i = 0; i < 20; i++) {
+    try {
+      await rootPool.query('SELECT 1');
+      break;
+    } catch {
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
 
-    expect(result.statusCode).toBe(200);
-    expect(JSON.parse(result.body).items).toEqual([]);
+  // service スキーマと tenant_test スキーマを作成
+  await rootPool.query('CREATE DATABASE IF NOT EXISTS `service`');
+  await rootPool.query('CREATE DATABASE IF NOT EXISTS `tenant_test`');
+
+  // service DB に接続してマイグレーション適用
+  const servicePool = mysql.createPool({
+    host,
+    port,
+    user: 'root',
+    password: 'rootpass',
+    database: 'service',
+  });
+  serviceDb = drizzle({ client: servicePool, schema: serviceSchema, mode: 'default' });
+  await migrate(serviceDb, { migrationsFolder: serviceMigrationsFolder });
+
+  // tenant_test DB に接続してマイグレーション適用
+  const tenantPool = mysql.createPool({
+    host,
+    port,
+    user: 'root',
+    password: 'rootpass',
+    database: 'tenant_test',
+  });
+  tenantDb = drizzle({ client: tenantPool, schema: tenantSchema, mode: 'default' });
+  await migrate(tenantDb, { migrationsFolder: tenantMigrationsFolder });
+
+  // vi.fn の実装を DB インスタンスで差し替える
+  (getDb as ReturnType<typeof vi.fn>).mockResolvedValue(serviceDb);
+  (getTenantDb as ReturnType<typeof vi.fn>).mockReturnValue(tenantDb);
+
+  // テストデータのシード
+  await serviceDb.insert(serviceSchema.serviceTenants).values({
+    slug: 'test',
+    name: 'テストテナント',
+    status: 'active',
   });
 
-  it('データが存在する場合、全itemsを返す', async () => {
-    await ctx.db.insert(schema.items).values([
-      { name: '炎の剣', description: '炎を纏った魔法の剣', rarity: 'rare', price: 5000 },
-      { name: '回復薬', description: 'HPを100回復する', rarity: 'common', price: 100 },
-    ]);
+  await tenantDb.insert(tenantSchema.tenantUsers).values([
+    { cognitoSub: 'user-1-sub', email: 'user1@example.com', userType: 'tenant_user' },
+    { cognitoSub: 'user-2-sub', email: 'user2@example.com', userType: 'tenant_user' },
+  ]);
 
-    const result = await handler({} as APIGatewayProxyEvent, {} as Context);
+  await tenantDb.insert(tenantSchema.tenantRoles).values({
+    name: 'member',
+    isDefault: 1,
+  });
 
-    expect(result.statusCode).toBe(200);
-    const { items } = JSON.parse(result.body);
-    expect(items).toHaveLength(2);
-    expect(items[0].name).toBe('炎の剣');
-    expect(items[0].rarity).toBe('rare');
-    expect(items[0].price).toBe(5000);
-    expect(items[1].name).toBe('回復薬');
+  // userId=1, roleId=1 の user_roles を登録
+  await tenantDb.insert(tenantSchema.tenantUserRoles).values({
+    userId: 1,
+    roleId: 1,
+  });
+
+  // roleId=1 に item:read 権限を付与
+  await tenantDb.insert(tenantSchema.tenantRolePermissions).values({
+    roleId: 1,
+    resource: 'item',
+    action: 'read',
+  });
+}, 120000);
+
+afterAll(async () => {
+  await rootPool?.end();
+  await container?.stop();
+});
+
+beforeEach(async () => {
+  // 各テスト前に items をリセット
+  await tenantDb.delete(tenantSchema.tenantItems);
+});
+
+// ---- JWT claims を event に注入するヘルパー ----
+
+function makeMockEvent(claims: Record<string, string>, headers?: Record<string, string>) {
+  return {
+    requestContext: {
+      authorizer: {
+        jwt: { claims },
+      },
+    },
+    headers: headers ?? {},
+  };
+}
+
+// ---- テスト ----
+
+describe('listItems 統合テスト', () => {
+  describe('Scenario: tenant_user が GET /api/items にアクセスするとき', () => {
+    test('アイテムがない場合は空配列を返すこと', async () => {
+      // Arrange
+      const mockEvent = makeMockEvent({
+        sub: 'user-1-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
+
+      // Act
+      const response = await app.request(
+        '/api/items',
+        { method: 'GET' },
+        { event: mockEvent },
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const body = await response.json() as { items: unknown[] };
+      expect(body.items).toEqual([]);
+    });
+
+    test('自分が作成したアイテムのみ返すこと（他ユーザーのアイテムを含まない）', async () => {
+      // Arrange: user1 と user2 それぞれのアイテムをシード
+      await tenantDb.insert(tenantSchema.tenantItems).values([
+        { name: 'ユーザー1のアイテム', ownerId: 1 },
+        { name: 'ユーザー2のアイテム', ownerId: 2 },
+      ]);
+
+      const mockEvent = makeMockEvent({
+        sub: 'user-1-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
+
+      // Act
+      const response = await app.request(
+        '/api/items',
+        { method: 'GET' },
+        { event: mockEvent },
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const body = await response.json() as { items: { id: number; name: string; ownerId: number }[] };
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0].name).toBe('ユーザー1のアイテム');
+      expect(body.items[0].ownerId).toBe(1);
+    });
+  });
+
+  describe('権限のないユーザーがアクセスするとき', () => {
+    test('403 Forbidden が返ること（role_permissions に item:read がないユーザー）', async () => {
+      // Arrange: userId=2 には item:read 権限がない
+      const mockEvent = makeMockEvent({
+        sub: 'user-2-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
+
+      // Act
+      const response = await app.request(
+        '/api/items',
+        { method: 'GET' },
+        { event: mockEvent },
+      );
+
+      // Assert
+      expect(response.status).toBe(403);
+      const body = await response.json() as { error: string };
+      expect(body.error).toBe('Forbidden');
+    });
   });
 });
