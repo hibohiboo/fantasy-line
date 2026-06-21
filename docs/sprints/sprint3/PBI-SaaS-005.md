@@ -231,4 +231,28 @@ small / medium テストが 5 ファイル以上になるため、全実装サ�
 - [ ] テスト重複レビューを実施し、3 ファイル以上の共通ボイラープレートは共通ヘルパーに抽出されていること
 - [ ] テストリファクタリング後も `npm run test` が全件 Green で通ること
 - [ ] `docs/pbi/README.md` の該当 PBI を `✅ 完了` に更新すること
-- [ ] ユーザーの承認を得てから完了とすること
+- [x] ユーザーの承認を得てから完了とすること
+
+---
+
+## 未解決事項（次 PBI への引き継ぎ）
+
+実装中に判明した制約・リスクを記録する。対応は [PBI-SaaS-005b](../../pbi/07-multitenant-saas/PBI-SaaS-005b.md) で行う。
+
+### 1. `setupServiceSchema` の roles シードが冪等でない
+
+**現状**: `setupServiceSchema.ts` の roles シードが `db.insert(serviceRoles).values(...)` （Drizzle 標準 INSERT）で実装されており、重複行が存在すると `ER_DUP_ENTRY` エラーになる。
+
+**リスク**: `POST /admin/setup/service-schema` を 2 回以上呼んだとき（冪等性が破れる）。PBI-SaaS-005 の Scenario 0「2 回実行しても同じ結果が返ること」に違反する。
+
+**対処方針**: `INSERT IGNORE INTO roles ...` の raw SQL に置き換える（`db.execute(sql\`INSERT IGNORE ...\`)` パターン）。`role_permissions` のシードは既に raw SQL で実装済み。
+
+### 2. medium テストの `migrate` がパス問題でモック化されている
+
+**現状**: `createTenant.medium.test.ts` と `migrateAllTenants.medium.test.ts` の `drizzle-orm/mysql2/migrator` の `migrate` を `vi.fn()` でモックしている。
+
+**理由**: Lambda バンドル時に CDK の `afterBundling` フックが `drizzle-tenant/` を `migrations-tenant/` にコピーするが、テスト環境（`src/admin/` 直下の `__dirname`）ではそのフォルダが存在しないため。
+
+**リスク**: 実際の Drizzle マイグレーション適用が medium テストで検証されておらず、マイグレーションファイルの構文エラーが本番デプロイまで発覚しない。
+
+**対処方針**: テスト用に `MIGRATIONS_FOLDER` を環境変数で上書きできるよう `migrateAllTenants.ts` / `createTenant.ts` をリファクタリングし、medium テストでは `process.cwd() + '/drizzle-tenant'` を指すよう設定する。
