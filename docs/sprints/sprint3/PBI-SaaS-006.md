@@ -19,6 +19,31 @@ Sprint 3 / 作成日: 2026-06-21
 
 ---
 
+## 実装ノート
+
+### `import.meta.url` を使わないこと
+
+`apps/api/tsconfig.json` は `"module": "commonjs"` であり、`import.meta.url` は TypeScript コンパイルエラー（TS1343）になる。
+
+PBI-SaaS-005b の実装中に `createTenant.ts` / `migrateAllTenants.ts` で以下の ESM スタイルの `__dirname` polyfill が混入し、エラーが発生した:
+
+```ts
+// ❌ やってはいけない（module: commonjs では TS1343 エラー）
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+```
+
+CDK `NodejsFunction` は esbuild で CJS バンドルするため、Lambda 実行時に `__dirname` はネイティブのグローバル変数として利用できる。以下のように直接使えばよい:
+
+```ts
+// ✅ 正しい（CJS バンドル環境では __dirname はグローバル変数）
+import path from 'path';
+const migrationsFolder = process.env['MIGRATIONS_TENANT_FOLDER'] ?? path.join(__dirname, 'migrations-service');
+```
+
+---
+
 ## 設計決定サマリ（Phase 1 で合意済み）
 
 1. **`servicer_delegate` 権限設計**: 案 B を採用。`requirePermission` に `servicer_delegate` 専用パスを追加し、`service.user_tenant_roles` JOIN `service.role_permissions` で確認する
@@ -441,7 +466,7 @@ export const handler = handle(app);
 - [x] `npm run test:medium` — `deleteUser.medium.test.ts` が Green 🔲
 - [x] `npm run test:medium` — `changeUserRole.medium.test.ts` が Green 🔲
 - [x] `npm run test:medium` — `resendInvitation.medium.test.ts` が Green 🔲
-- [x] テスト重複レビューを実施し、抽出要否を判断したこと ✅（DAMP 現状維持と判断 — 理由は後述）
+- [x] テストリファクタリング（サブタスク 10）実施済み ✅（`setupDbMocks` 抽出 + Cognito スーパーセットモック統一）
 - [x] `npm run test` が全件 Green で通ること ✅（small テスト 23 件確認済み、medium テストはエージェント報告済み）
 - [x] `npm run lint` が `apps/api` で通ること ✅
 - [x] `docs/pbi/README.md` の該当 PBI を `✅ 完了` に更新すること ✅
@@ -454,4 +479,4 @@ export const handler = handle(app);
 | `inviteUser` 入力スキーマ | `role: 'tenant_admin' \| 'tenant_user'` | `roleId: number`（ID ベース） | ロール動的変更に対応できる方式で合理的 |
 | ラストアドミン削除エラー | 400 Bad Request | 409 Conflict | HTTP セマンティクス上より正確 |
 | ロール不存在エラー (`changeUserRole`) | 400 Bad Request | 422 Unprocessable Entity | HTTP セマンティクス上より正確 |
-| サブタスク 10（テストリファクタリング） | 共通化を検討 | DAMP 現状維持 | `vi.mock` はホイスト制約で抽出不可。Cognito モックはファイルごとに内容が異なる。既存 medium テストとスタイル一貫性を保つため共通化せず |
+| サブタスク 10（テストリファクタリング） | 共通化を検討 | 一部抽出を実施 | `vi.mock` 呼び出し自体はホイスト制約で各ファイルに残置。`beforeAll` の DB モック設定は `setupDbMocks(ctx)` として `mediumTestSetup.ts` に抽出。Cognito `vi.mock` ファクトリ内容は `vi.hoisted` + スーパーセットに統一（全 Command + UsernameExistsException）。ユーザー判断により保守性のため採用 |

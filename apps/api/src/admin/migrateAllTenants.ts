@@ -1,5 +1,4 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
 import type { Context } from 'hono';
 import { createConnection } from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
@@ -10,11 +9,6 @@ import type { AppBindings } from '../hono/types';
 import { getDb, resolveDbCredentials } from '../db/client';
 import { serviceTenants } from '../db/service-schema';
 import { validateSlug, slugToSchemaName } from '../shared/tenant';
-
-// ESM 環境では __dirname が使えないため fileURLToPath で求める
-// CDK afterBundling でこのファイルと同階層に migrations-tenant/ がコピーされる
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const MIGRATIONS_FOLDER = process.env['MIGRATIONS_TENANT_FOLDER'] ?? path.join(__dirname, 'migrations-tenant');
 

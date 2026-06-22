@@ -1,5 +1,4 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { eq, sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { z } from 'zod';
@@ -14,9 +13,6 @@ import { getDb, getTenantDb, resolveDbCredentials } from '../db/client';
 import { serviceTenants } from '../db/service-schema';
 import { tenantUsers, tenantUserRoles } from '../db/tenant-template-schema';
 import { validateSlug, slugToSchemaName } from '../shared/tenant';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // ---- サガパターン ----
 
