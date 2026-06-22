@@ -8,6 +8,6 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "exclude": ["drizzle.config.ts", "node_modules"],
+  "exclude": ["drizzle.config.ts", "node_modules", "src/**/*.test.ts"],
   "include": ["src"]
 }
