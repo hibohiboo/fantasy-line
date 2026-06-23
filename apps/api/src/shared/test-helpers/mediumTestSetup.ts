@@ -1,4 +1,5 @@
-import { beforeAll, afterAll } from 'vitest';
+import { beforeAll, afterAll, vi } from 'vitest';
+import { getDb, getTenantDb } from '../../db/client';
 import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
@@ -110,6 +111,18 @@ export function useTenantTestContainer(
   });
 
   return ctx;
+}
+
+/**
+ * `vi.mock('../db/client', () => ({ getDb: vi.fn(), getTenantDb: vi.fn() }))` を宣言した
+ * テストファイル内のトップレベルで呼び出すこと。
+ * beforeAll 内で getDb / getTenantDb のモックを ctx に紐付ける。
+ */
+export function setupDbMocks(ctx: TenantTestContext): void {
+  beforeAll(() => {
+    vi.mocked(getDb).mockResolvedValue(ctx.serviceDb);
+    vi.mocked(getTenantDb).mockReturnValue(ctx.tenantDb);
+  });
 }
 
 /**

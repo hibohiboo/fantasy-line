@@ -8,6 +8,14 @@ vi.mock('@aws-sdk/client-cognito-identity-provider', () => ({
     send = mockCognitoSend;
   },
   AdminCreateUserCommand: vi.fn(),
+  AdminDisableUserCommand: vi.fn(),
+  AdminDeleteUserCommand: vi.fn(),
+  UsernameExistsException: class UsernameExistsException extends Error {
+    constructor() {
+      super();
+      this.name = 'UsernameExistsException';
+    }
+  },
 }));
 
 vi.mock('../db/client', () => ({
@@ -15,13 +23,12 @@ vi.mock('../db/client', () => ({
   getTenantDb: vi.fn(),
 }));
 
-import { vi, describe, test, expect, beforeAll, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach } from 'vitest';
 import { Hono } from 'hono';
-import { getDb, getTenantDb } from '../db/client';
 import { tenantContext } from '../shared/middleware/tenantContext';
 import { requirePermission } from '../shared/middleware/requirePermission';
 import { resendInvitationHandler } from './resendInvitation';
-import { useTenantTestContainer, makeMockEvent } from '../shared/test-helpers/mediumTestSetup';
+import { useTenantTestContainer, makeMockEvent, setupDbMocks } from '../shared/test-helpers/mediumTestSetup';
 import type { AppBindings, HonoVariables } from '../hono/types';
 
 // userId=1 に user.manage 権限を付与する。userId=2 には権限を持たせない
@@ -31,6 +38,7 @@ import type { AppBindings, HonoVariables } from '../hono/types';
 //   tenantUserRoles: userId=1, roleId=1
 //   tenantRolePermissions: roleId=1, resource='user', action='manage'
 const ctx = useTenantTestContainer([{ resource: 'user', action: 'manage' }]);
+setupDbMocks(ctx);
 
 // app.ts にはまだルートがないため、独自の mini Hono app を作成する
 const testApp = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
@@ -40,11 +48,6 @@ testApp.post(
   requirePermission('user', 'manage'),
   resendInvitationHandler,
 );
-
-beforeAll(() => {
-  (getDb as ReturnType<typeof vi.fn>).mockResolvedValue(ctx.serviceDb);
-  (getTenantDb as ReturnType<typeof vi.fn>).mockReturnValue(ctx.tenantDb);
-});
 
 beforeEach(() => {
   mockCognitoSend.mockReset();

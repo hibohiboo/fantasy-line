@@ -1,11 +1,13 @@
 // vi.mock は Vitest がファイル先頭にホイストするため最初に記述する
+const { mockCognitoSend } = vi.hoisted(() => ({ mockCognitoSend: vi.fn() }));
+
 vi.mock('@aws-sdk/client-cognito-identity-provider', () => ({
   CognitoIdentityProviderClient: class MockCognitoClient {
-    send = vi.fn().mockResolvedValue({
-      User: { Username: 'cognito-sub-new-user' },
-    });
+    send = mockCognitoSend;
   },
   AdminCreateUserCommand: vi.fn(),
+  AdminDisableUserCommand: vi.fn(),
+  AdminDeleteUserCommand: vi.fn(),
   UsernameExistsException: class UsernameExistsException extends Error {
     constructor() {
       super();
@@ -19,17 +21,16 @@ vi.mock('../db/client', () => ({
   getTenantDb: vi.fn(),
 }));
 
-import { vi, describe, test, expect, beforeAll, afterEach } from 'vitest';
+import { vi, describe, test, expect, afterEach, beforeEach } from 'vitest';
 import { Hono } from 'hono';
 import { gt } from 'drizzle-orm';
 import * as tenantSchema from '../db/tenant-template-schema';
-import { getDb, getTenantDb } from '../db/client';
 import { tenantContext } from '../shared/middleware/tenantContext';
 import { requirePermission } from '../shared/middleware/requirePermission';
 import { inviteUserHandler } from './inviteUser';
 import type { HonoVariables } from '../hono/types';
 import type { AppBindings } from '../hono/types';
-import { useTenantTestContainer, makeMockEvent } from '../shared/test-helpers/mediumTestSetup';
+import { useTenantTestContainer, makeMockEvent, setupDbMocks } from '../shared/test-helpers/mediumTestSetup';
 
 // tenant_admin ロールに user.manage 権限を付与して DB をセットアップする
 // mediumTestSetup シード:
@@ -38,15 +39,16 @@ import { useTenantTestContainer, makeMockEvent } from '../shared/test-helpers/me
 //   tenantUserRoles: userId=1, roleId=1
 //   tenantRolePermissions: roleId=1, resource='user', action='manage'
 const ctx = useTenantTestContainer([{ resource: 'user', action: 'manage' }]);
+setupDbMocks(ctx);
 
 // mini Hono app（inviteUser ルートのみ）
 const testApp = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
 testApp.use('*', tenantContext);
 testApp.post('/api/users/invite', requirePermission('user', 'manage'), inviteUserHandler);
 
-beforeAll(() => {
-  (getDb as ReturnType<typeof vi.fn>).mockResolvedValue(ctx.serviceDb);
-  (getTenantDb as ReturnType<typeof vi.fn>).mockReturnValue(ctx.tenantDb);
+beforeEach(() => {
+  mockCognitoSend.mockReset();
+  mockCognitoSend.mockResolvedValue({ User: { Username: 'mock-cognito-sub' } });
 });
 
 afterEach(async () => {

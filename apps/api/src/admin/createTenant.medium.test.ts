@@ -1,11 +1,23 @@
-import { describe, test, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
+import {
+  describe,
+  test,
+  expect,
+  vi,
+  beforeAll,
+  beforeEach,
+  afterAll,
+} from 'vitest';
 import { Hono } from 'hono';
 import mysql from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
 import path from 'path';
 import { eq } from 'drizzle-orm';
-import { GenericContainer, Wait } from 'testcontainers';
+import {
+  GenericContainer,
+  Wait,
+  type StoppedTestContainer,
+} from 'testcontainers';
 import type { AppBindings } from '../hono/types';
 import type { AdminVariables } from './adminContext';
 import { adminContext } from './adminContext';
@@ -33,13 +45,16 @@ let createTenantHandler: typeof CreateTenantModule.createTenantHandler;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let serviceDb: any;
 let rootPool: mysql.Pool;
-let stopContainer: (() => Promise<void>) | undefined;
+let stopContainer: (() => Promise<StoppedTestContainer>) | undefined;
 let containerHost: string;
 let containerPort: number;
 
 beforeAll(async () => {
   // MIGRATIONS_TENANT_FOLDER を drizzle-tenant フォルダに向けて実際のマイグレーションを走らせる
-  process.env['MIGRATIONS_TENANT_FOLDER'] = path.resolve(process.cwd(), 'drizzle-tenant');
+  process.env['MIGRATIONS_TENANT_FOLDER'] = path.resolve(
+    process.cwd(),
+    'drizzle-tenant',
+  );
 
   // Testcontainer 起動
   const container = await new GenericContainer('mysql:8.0')
@@ -80,7 +95,11 @@ beforeAll(async () => {
     password: 'rootpass',
     database: 'service',
   });
-  serviceDb = drizzle({ client: servicePool, schema: serviceSchema, mode: 'default' });
+  serviceDb = drizzle({
+    client: servicePool,
+    schema: serviceSchema,
+    mode: 'default',
+  });
   await migrate(serviceDb, {
     migrationsFolder: path.resolve(process.cwd(), 'drizzle-service'),
   });
@@ -106,11 +125,15 @@ beforeAll(async () => {
     // new で呼ばれるため class 構文を使う（アロー関数は constructor として使用不可）
     AdminCreateUserCommand: class {
       _input: unknown;
-      constructor(args: unknown) { this._input = args; }
+      constructor(args: unknown) {
+        this._input = args;
+      }
     },
     AdminDeleteUserCommand: class {
       _input: unknown;
-      constructor(args: unknown) { this._input = args; }
+      constructor(args: unknown) {
+        this._input = args;
+      }
     },
   }));
 
@@ -129,7 +152,11 @@ beforeAll(async () => {
       password: 'rootpass',
       database: schemaName,
     });
-    return drizzle({ client: tenantPool, schema: tenantSchema, mode: 'default' });
+    return drizzle({
+      client: tenantPool,
+      schema: tenantSchema,
+      mode: 'default',
+    });
   });
   mockResolveDbCredentials.mockResolvedValue({
     host: containerHost,
@@ -165,7 +192,11 @@ beforeEach(async () => {
       password: 'rootpass',
       database: schemaName,
     });
-    return drizzle({ client: tenantPool, schema: tenantSchema, mode: 'default' });
+    return drizzle({
+      client: tenantPool,
+      schema: tenantSchema,
+      mode: 'default',
+    });
   });
   mockResolveDbCredentials.mockResolvedValue({
     host: containerHost,
@@ -248,13 +279,19 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       const res = await postTenants(
         app,
-        { slug: 'new-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'new-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: servicerAdminEvent },
       );
 
       // Assert
       expect(res.status).toBe(201);
-      const body = await res.json() as { tenant: { id: number; slug: string; name: string; status: string } };
+      const body = (await res.json()) as {
+        tenant: { id: number; slug: string; name: string; status: string };
+      };
       expect(body.tenant).toMatchObject({
         slug: 'new-tenant',
         name: 'テナント名',
@@ -270,7 +307,11 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       await postTenants(
         app,
-        { slug: 'new-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'new-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: servicerAdminEvent },
       );
 
@@ -295,13 +336,19 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       await postTenants(
         app,
-        { slug: 'new-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'new-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: servicerAdminEvent },
       );
 
       // Assert
       expect(mockCognitoSend).toHaveBeenCalled();
-      const sentCommand = mockCognitoSend.mock.calls[0]?.[0] as { _input: unknown } | undefined;
+      const sentCommand = mockCognitoSend.mock.calls[0]?.[0] as
+        | { _input: unknown }
+        | undefined;
       expect(sentCommand?._input).toMatchObject({
         UserAttributes: expect.arrayContaining([
           { Name: 'custom:user_type', Value: 'tenant_admin' },
@@ -318,7 +365,11 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       await postTenants(
         app,
-        { slug: 'new-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'new-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: servicerAdminEvent },
       );
 
@@ -342,7 +393,11 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       await postTenants(
         app,
-        { slug: 'new-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'new-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: servicerAdminEvent },
       );
 
@@ -351,11 +406,18 @@ describe('createTenantHandler medium テスト', () => {
       const perms = await tenantDb
         .select()
         .from(tenantSchema.tenantRolePermissions)
-        .innerJoin(tenantSchema.tenantRoles, eq(tenantSchema.tenantRoles.id, tenantSchema.tenantRolePermissions.roleId));
+        .innerJoin(
+          tenantSchema.tenantRoles,
+          eq(
+            tenantSchema.tenantRoles.id,
+            tenantSchema.tenantRolePermissions.roleId,
+          ),
+        );
 
       const userManagePerm = perms.find(
         (p: { role_permissions: { resource: string; action: string } }) =>
-          p.role_permissions.resource === 'user' && p.role_permissions.action === 'manage',
+          p.role_permissions.resource === 'user' &&
+          p.role_permissions.action === 'manage',
       );
       expect(userManagePerm).toBeDefined();
     });
@@ -367,7 +429,11 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       await postTenants(
         app,
-        { slug: 'new-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'new-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: servicerAdminEvent },
       );
 
@@ -394,13 +460,17 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       const res = await postTenants(
         app,
-        { slug: 'existing-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'existing-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: servicerAdminEvent },
       );
 
       // Assert
       expect(res.status).toBe(409);
-      const body = await res.json() as { error: { code: string } };
+      const body = (await res.json()) as { error: { code: string } };
       expect(body.error.code).toBe('conflict');
     });
 
@@ -415,7 +485,11 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       await postTenants(
         app,
-        { slug: 'existing-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'existing-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: servicerAdminEvent },
       );
 
@@ -445,13 +519,17 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       const res = await postTenants(
         app,
-        { slug: 'fail-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'fail-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: servicerAdminEvent },
       );
 
       // Assert
       expect(res.status).toBe(500);
-      const body = await res.json() as { error: { code: string } };
+      const body = (await res.json()) as { error: { code: string } };
       expect(body.error.code).toBe('internal_error');
     }, 30000);
 
@@ -468,7 +546,11 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       await postTenants(
         app,
-        { slug: 'fail-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'fail-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: servicerAdminEvent },
       );
 
@@ -494,13 +576,17 @@ describe('createTenantHandler medium テスト', () => {
       // Act
       const res = await postTenants(
         app,
-        { slug: 'new-tenant', name: 'テナント名', adminEmail: 'tenant-admin@example.com' },
+        {
+          slug: 'new-tenant',
+          name: 'テナント名',
+          adminEmail: 'tenant-admin@example.com',
+        },
         { event: nonAdminEvent },
       );
 
       // Assert
       expect(res.status).toBe(403);
-      const body = await res.json() as { error: string };
+      const body = (await res.json()) as { error: string };
       expect(body.error).toBe('Forbidden');
     });
   });

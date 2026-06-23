@@ -4,29 +4,24 @@ vi.mock('../db/client', () => ({
   getTenantDb: vi.fn(),
 }));
 
-import { vi, describe, test, expect, beforeAll, beforeEach } from 'vitest';
+import { vi, describe, test, expect, beforeEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
-import { getDb, getTenantDb } from '../db/client';
 import { tenantContext } from '../shared/middleware/tenantContext';
 import { requirePermission } from '../shared/middleware/requirePermission';
 import { changeUserRoleHandler } from './changeUserRole';
-import { useTenantTestContainer, makeMockEvent } from '../shared/test-helpers/mediumTestSetup';
+import { useTenantTestContainer, makeMockEvent, setupDbMocks } from '../shared/test-helpers/mediumTestSetup';
 import type { AppBindings, HonoVariables } from '../hono/types';
 import * as tenantSchema from '../db/tenant-template-schema';
 
 // userId=1 に user.manage 権限を付与する。userId=2 には権限を持たせない
 const ctx = useTenantTestContainer([{ resource: 'user', action: 'manage' }]);
+setupDbMocks(ctx);
 
 // mini app: app.ts にまだ /api/users/:userId/roles ルートがないため独自に構築する
 const testApp = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
 testApp.use('*', tenantContext);
 testApp.put('/api/users/:userId/roles', requirePermission('user', 'manage'), changeUserRoleHandler);
-
-beforeAll(() => {
-  (getDb as ReturnType<typeof vi.fn>).mockResolvedValue(ctx.serviceDb);
-  (getTenantDb as ReturnType<typeof vi.fn>).mockReturnValue(ctx.tenantDb);
-});
 
 beforeEach(async () => {
   // role_permissions をリセットして user.manage 権限を付与し直す

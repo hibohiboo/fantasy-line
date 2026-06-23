@@ -9,10 +9,14 @@ import { type MockLambdaEvent } from '../shared/test-helpers/adminTestHelpers';
 const mockGetDb = vi.fn();
 const mockCognitoSend = vi.fn();
 // vi.fn で class 相当のコンストラクタをモックするには function キーワードが必要
- 
-const MockCognitoIdentityProviderClient = vi.fn(function () { return { send: mockCognitoSend }; });
- 
-const MockAdminCreateUserCommand = vi.fn(function (input: unknown) { return { _input: input }; });
+
+const MockCognitoIdentityProviderClient = vi.fn(function () {
+  return { send: mockCognitoSend };
+});
+
+const MockAdminCreateUserCommand = vi.fn(function (input: unknown) {
+  return { _input: input };
+});
 
 // ---- テスト対象は beforeAll で動的インポートする ----
 let createServicerDelegateHandler: typeof CreateServicerDelegateModule.createServicerDelegateHandler;
@@ -23,7 +27,8 @@ beforeAll(async () => {
     CognitoIdentityProviderClient: MockCognitoIdentityProviderClient,
     AdminCreateUserCommand: MockAdminCreateUserCommand,
   }));
-  ({ createServicerDelegateHandler } = await import('./createServicerDelegate'));
+  ({ createServicerDelegateHandler } =
+    await import('./createServicerDelegate'));
 });
 
 // ---- テスト用 Hono アプリファクトリ ----
@@ -107,7 +112,7 @@ describe('createServicerDelegateHandler', () => {
 
       // Assert
       expect(res.status).toBe(201);
-      const body = await res.json() as {
+      const body = (await res.json()) as {
         user: { id: number; email: string; userType: string };
       };
       expect(body.user.email).toBe('delegate@example.com');
@@ -139,7 +144,7 @@ describe('createServicerDelegateHandler', () => {
       await sendRequest(app, validBody);
 
       // Assert
-      const commandArgs = MockAdminCreateUserCommand.mock.calls[0][0] as {
+      const commandArgs = MockAdminCreateUserCommand.mock.calls[0]?.[0] as {
         UserAttributes: Array<{ Name: string; Value: string }>;
       };
       const attrNames = commandArgs.UserAttributes.map((a) => a.Name);
@@ -158,14 +163,16 @@ describe('createServicerDelegateHandler', () => {
 
       // Assert
       expect(mockDb.insert).toHaveBeenCalled();
-      const insertValues = (mockDb.insert().values as ReturnType<typeof vi.fn>).mock.calls;
+      const insertValues = (mockDb.insert().values as ReturnType<typeof vi.fn>)
+        .mock.calls;
       const userInsertCall = insertValues.find(
         (args: unknown[]) =>
           Array.isArray(args) &&
           args[0] !== null &&
           typeof args[0] === 'object' &&
           'email' in (args[0] as Record<string, unknown>) &&
-          (args[0] as Record<string, unknown>)['email'] === 'delegate@example.com',
+          (args[0] as Record<string, unknown>)['email'] ===
+            'delegate@example.com',
       );
       expect(userInsertCall).toBeDefined();
     });
@@ -200,7 +207,9 @@ describe('createServicerDelegateHandler', () => {
 
       // Assert
       expect(res.status).toBe(400);
-      const body = await res.json() as { error: { code: string; message: string } };
+      const body = (await res.json()) as {
+        error: { code: string; message: string };
+      };
       expect(body.error.code).toBe('validation_error');
     });
 
@@ -216,7 +225,9 @@ describe('createServicerDelegateHandler', () => {
 
       // Assert
       expect(res.status).toBe(400);
-      const body = await res.json() as { error: { code: string; message: string } };
+      const body = (await res.json()) as {
+        error: { code: string; message: string };
+      };
       expect(body.error.code).toBe('validation_error');
     });
   });

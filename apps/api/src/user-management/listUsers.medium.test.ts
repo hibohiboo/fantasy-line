@@ -4,27 +4,22 @@ vi.mock('../db/client', () => ({
   getTenantDb: vi.fn(),
 }));
 
-import { vi, describe, test, expect, beforeAll } from 'vitest';
+import { vi, describe, test, expect } from 'vitest';
 import { Hono } from 'hono';
-import { getDb, getTenantDb } from '../db/client';
 import { tenantContext } from '../shared/middleware/tenantContext';
 import { requirePermission } from '../shared/middleware/requirePermission';
 import { listUsersHandler } from './listUsers';
-import { useTenantTestContainer, makeMockEvent } from '../shared/test-helpers/mediumTestSetup';
+import { useTenantTestContainer, makeMockEvent, setupDbMocks } from '../shared/test-helpers/mediumTestSetup';
 import type { AppBindings, HonoVariables } from '../hono/types';
 
 // userId=1 に user.list 権限を付与する。userId=2 には権限を持たせない
 const ctx = useTenantTestContainer([{ resource: 'user', action: 'list' }]);
+setupDbMocks(ctx);
 
 // mini app: app.ts にまだ /api/users ルートがないため独自に構築する
 const testApp = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
 testApp.use('*', tenantContext);
 testApp.get('/api/users', requirePermission('user', 'list'), listUsersHandler);
-
-beforeAll(() => {
-  (getDb as ReturnType<typeof vi.fn>).mockResolvedValue(ctx.serviceDb);
-  (getTenantDb as ReturnType<typeof vi.fn>).mockReturnValue(ctx.tenantDb);
-});
 
 // ---- テスト ----
 
