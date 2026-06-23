@@ -18,6 +18,7 @@ const mockGetDb = vi.fn();
 // tenant DB (getTenantDb)
 const mockTenantInsert = vi.fn();
 const mockTenantInsertInto = vi.fn(() => ({ values: mockTenantInsert }));
+const mockTenantExecute = vi.fn();
 const mockGetTenantDb = vi.fn();
 
 // resolveDbCredentials
@@ -146,9 +147,14 @@ function setupSuccessMocks() {
   mockGetDb.mockResolvedValue(mockServiceDb);
 
   // getTenantDb
-  mockTenantInsert.mockResolvedValue([{ insertId: 100 }]);
+  // Step 4/5 で execute(sql`...`) を使う。Step 7 では insert().values().$returningId() と insert().values() を使う
+  mockTenantExecute.mockResolvedValue(undefined);
+  mockTenantInsert
+    .mockReturnValueOnce({ $returningId: vi.fn().mockResolvedValue([{ id: 100 }]) })
+    .mockReturnValue(Promise.resolve(undefined));
   const mockTenantDb = {
     insert: mockTenantInsertInto,
+    execute: mockTenantExecute,
   };
   mockGetTenantDb.mockResolvedValue(mockTenantDb);
 

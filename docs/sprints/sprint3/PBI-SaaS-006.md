@@ -508,7 +508,7 @@ export const handler = handle(app);
 - [x] `npm run test` が全件 Green で通ること ✅（small テスト 23 件確認済み、medium テストはエージェント報告済み）
 - [x] `npm run lint` が `apps/api` で通ること ✅
 - [x] `docs/pbi/README.md` の該当 PBI を `✅ 完了` に更新すること ✅
-- [ ] ユーザーの承認を得てから完了とすること
+- [x] ユーザーの承認を得てから完了とすること ✅
 
 ## 作業計画との差異
 
@@ -518,3 +518,5 @@ export const handler = handle(app);
 | ラストアドミン削除エラー | 400 Bad Request | 409 Conflict | HTTP セマンティクス上より正確 |
 | ロール不存在エラー (`changeUserRole`) | 400 Bad Request | 422 Unprocessable Entity | HTTP セマンティクス上より正確 |
 | サブタスク 10（テストリファクタリング） | 共通化を検討 | 一部抽出を実施 | `vi.mock` 呼び出し自体はホイスト制約で各ファイルに残置。`beforeAll` の DB モック設定は `setupDbMocks(ctx)` として `mediumTestSetup.ts` に抽出。Cognito `vi.mock` ファクトリ内容は `vi.hoisted` + スーパーセットに統一（全 Command + UsernameExistsException）。ユーザー判断により保守性のため採用 |
+| サブタスク 9（Lambda 分割） | `userManagement-lambda.ts` 1 ファイルで 5 ルートをバンドル | ルートごとに独立した `-lambda.ts` を作成（案 A）| `admin-lambda.ts` → 4 ファイル、`userManagement-lambda.ts` → 5 ファイルに分割。CDK も 4 + 5 の個別 Lambda 定義に更新。URL パラメータを持つルート（`:userId`）は `'*'` ではなくフルパスパターンで登録（`c.req.param()` 対応）。`api-architecture.md` に 1 ルート = 1 Lambda 方針を明文化 |
+| `createTenant.small.test.ts` バグ修正 | Green | 新ステップ追加後に mock 不足で Red 化 | Step 4/5 の `tenantDb.execute()` と Step 7 の `$returningId()` チェーンに対応する mock を追加 |
