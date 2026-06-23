@@ -4,7 +4,7 @@ import mysql from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
 import path from 'path';
-import { GenericContainer, Wait } from 'testcontainers';
+import { startServiceContainer } from '../shared/test-helpers/adminTestSetup';
 import type { AppBindings } from '../hono/types';
 import type { AdminVariables } from './adminContext';
 import type * as SetupServiceSchemaModule from './setupServiceSchema';
@@ -25,37 +25,7 @@ let containerHost: string;
 let containerPort: number;
 
 beforeAll(async () => {
-  // Testcontainer 起動
-  const container = await new GenericContainer('mysql:8.0')
-    .withEnvironment({ MYSQL_ROOT_PASSWORD: 'rootpass' })
-    .withExposedPorts(3306)
-    .withWaitStrategy(Wait.forLogMessage('ready for connections', 2))
-    .start();
-
-  stopContainer = () => container.stop();
-  containerHost = container.getHost();
-  containerPort = container.getMappedPort(3306);
-
-  rootPool = mysql.createPool({
-    host: containerHost,
-    port: containerPort,
-    user: 'root',
-    password: 'rootpass',
-    multipleStatements: true,
-  });
-
-  // MySQL が完全に起動するまで待機
-  for (let i = 0; i < 20; i++) {
-    try {
-      await rootPool.query('SELECT 1');
-      break;
-    } catch {
-      await new Promise((r) => setTimeout(r, 500));
-    }
-  }
-
-  // service データベースを作成してマイグレーション適用
-  await rootPool.query('CREATE DATABASE IF NOT EXISTS `service`');
+  ({ host: containerHost, port: containerPort, rootPool, stop: stopContainer } = await startServiceContainer());
 
   // migrate は Connection を必要とするため、単発 Connection で実行する
   const migrateConn = await mysql.createConnection({
