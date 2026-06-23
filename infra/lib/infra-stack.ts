@@ -259,9 +259,30 @@ export class InfraStack extends cdk.Stack {
     // -- Cognito --
     const cognitoConstruct = new CognitoConstruct(this, 'Cognito');
 
-    const adminFunction = new lambdaNodejs.NodejsFunction(this, 'AdminFunction', {
+    const setupServiceSchemaFunction = new lambdaNodejs.NodejsFunction(this, 'SetupServiceSchemaFunction', {
       ...lambdaDefaults,
-      entry: path.join(__dirname, '../../apps/api/src/admin/admin-lambda.ts'),
+      entry: path.join(__dirname, '../../apps/api/src/admin/setupServiceSchema-lambda.ts'),
+      timeout: cdk.Duration.seconds(60),
+      bundling: {
+        ...lambdaDefaults.bundling,
+        commandHooks: {
+          beforeInstall: () => [],
+          beforeBundling: () => [],
+          afterBundling: (inputDir: string, outputDir: string) => {
+            const src = inputDir.replace(/\\/g, '/');
+            const dst = outputDir.replace(/\\/g, '/');
+            return [
+              `node -e "const {cpSync}=require('fs');const {join}=require('path');cpSync(join('${src}','apps','api','drizzle-service'),join('${dst}','migrations-service'),{recursive:true})"`,
+            ];
+          },
+        },
+      },
+    });
+    auroraCluster.secret!.grantRead(setupServiceSchemaFunction);
+
+    const createTenantFunction = new lambdaNodejs.NodejsFunction(this, 'CreateTenantFunction', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '../../apps/api/src/admin/createTenant-lambda.ts'),
       timeout: cdk.Duration.seconds(60),
       environment: {
         ...lambdaDefaults.environment,
@@ -276,18 +297,91 @@ export class InfraStack extends cdk.Stack {
             const src = inputDir.replace(/\\/g, '/');
             const dst = outputDir.replace(/\\/g, '/');
             return [
-              // drizzle-service マイグレーションを migrations-service/ にコピーする
-              `node -e "const {cpSync}=require('fs');const {join}=require('path');cpSync(join('${src}','apps','api','drizzle-service'),join('${dst}','migrations-service'),{recursive:true})"`,
-              // drizzle-tenant マイグレーションを migrations-tenant/ にコピーする
               `node -e "const {cpSync}=require('fs');const {join}=require('path');cpSync(join('${src}','apps','api','drizzle-tenant'),join('${dst}','migrations-tenant'),{recursive:true})"`,
             ];
           },
         },
       },
     });
-    auroraCluster.secret!.grantRead(adminFunction);
-    // AdminCreateUser / AdminDeleteUser のみ付与する（最小権限）
-    cognitoConstruct.userPool.grant(adminFunction, 'cognito-idp:AdminCreateUser', 'cognito-idp:AdminDeleteUser');
+    auroraCluster.secret!.grantRead(createTenantFunction);
+    cognitoConstruct.userPool.grant(createTenantFunction, 'cognito-idp:AdminCreateUser', 'cognito-idp:AdminDeleteUser');
+
+    const migrateAllTenantsFunction = new lambdaNodejs.NodejsFunction(this, 'MigrateAllTenantsFunction', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '../../apps/api/src/admin/migrateAllTenants-lambda.ts'),
+      timeout: cdk.Duration.seconds(60),
+      bundling: {
+        ...lambdaDefaults.bundling,
+        commandHooks: {
+          beforeInstall: () => [],
+          beforeBundling: () => [],
+          afterBundling: (inputDir: string, outputDir: string) => {
+            const src = inputDir.replace(/\\/g, '/');
+            const dst = outputDir.replace(/\\/g, '/');
+            return [
+              `node -e "const {cpSync}=require('fs');const {join}=require('path');cpSync(join('${src}','apps','api','drizzle-tenant'),join('${dst}','migrations-tenant'),{recursive:true})"`,
+            ];
+          },
+        },
+      },
+    });
+    auroraCluster.secret!.grantRead(migrateAllTenantsFunction);
+
+    const createServicerDelegateFunction = new lambdaNodejs.NodejsFunction(this, 'CreateServicerDelegateFunction', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '../../apps/api/src/admin/createServicerDelegate-lambda.ts'),
+      environment: {
+        ...lambdaDefaults.environment,
+        COGNITO_USER_POOL_ID: cognitoConstruct.userPool.userPoolId,
+      },
+    });
+    auroraCluster.secret!.grantRead(createServicerDelegateFunction);
+    cognitoConstruct.userPool.grant(createServicerDelegateFunction, 'cognito-idp:AdminCreateUser');
+
+    const listUsersFunction = new lambdaNodejs.NodejsFunction(this, 'ListUsersFunction', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '../../apps/api/src/user-management/listUsers-lambda.ts'),
+    });
+    auroraCluster.secret!.grantRead(listUsersFunction);
+
+    const inviteUserFunction = new lambdaNodejs.NodejsFunction(this, 'InviteUserFunction', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '../../apps/api/src/user-management/inviteUser-lambda.ts'),
+      environment: {
+        ...lambdaDefaults.environment,
+        COGNITO_USER_POOL_ID: cognitoConstruct.userPool.userPoolId,
+      },
+    });
+    auroraCluster.secret!.grantRead(inviteUserFunction);
+    cognitoConstruct.userPool.grant(inviteUserFunction, 'cognito-idp:AdminCreateUser');
+
+    const deleteUserFunction = new lambdaNodejs.NodejsFunction(this, 'DeleteUserFunction', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '../../apps/api/src/user-management/deleteUser-lambda.ts'),
+      environment: {
+        ...lambdaDefaults.environment,
+        COGNITO_USER_POOL_ID: cognitoConstruct.userPool.userPoolId,
+      },
+    });
+    auroraCluster.secret!.grantRead(deleteUserFunction);
+    cognitoConstruct.userPool.grant(deleteUserFunction, 'cognito-idp:AdminDisableUser', 'cognito-idp:AdminDeleteUser');
+
+    const changeUserRoleFunction = new lambdaNodejs.NodejsFunction(this, 'ChangeUserRoleFunction', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '../../apps/api/src/user-management/changeUserRole-lambda.ts'),
+    });
+    auroraCluster.secret!.grantRead(changeUserRoleFunction);
+
+    const resendInvitationFunction = new lambdaNodejs.NodejsFunction(this, 'ResendInvitationFunction', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '../../apps/api/src/user-management/resendInvitation-lambda.ts'),
+      environment: {
+        ...lambdaDefaults.environment,
+        COGNITO_USER_POOL_ID: cognitoConstruct.userPool.userPoolId,
+      },
+    });
+    auroraCluster.secret!.grantRead(resendInvitationFunction);
+    cognitoConstruct.userPool.grant(resendInvitationFunction, 'cognito-idp:AdminCreateUser');
 
     // -- API Gateway --
     const api = new apigateway.RestApi(this, 'FantasyLineApi', {
@@ -363,25 +457,40 @@ export class InfraStack extends cdk.Stack {
       cognitoMethodOptions,
     );
 
+    const usersResource = apiResource.addResource('users');
+    usersResource.addMethod('GET', new apigateway.LambdaIntegration(listUsersFunction), cognitoMethodOptions);
+
+    const inviteResource = usersResource.addResource('invite');
+    inviteResource.addMethod('POST', new apigateway.LambdaIntegration(inviteUserFunction), cognitoMethodOptions);
+
+    const userByIdResource = usersResource.addResource('{userId}');
+    userByIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(deleteUserFunction), cognitoMethodOptions);
+
+    const rolesResource = userByIdResource.addResource('roles');
+    rolesResource.addMethod('PUT', new apigateway.LambdaIntegration(changeUserRoleFunction), cognitoMethodOptions);
+
+    const resendResource = userByIdResource.addResource('resend-invitation');
+    resendResource.addMethod('POST', new apigateway.LambdaIntegration(resendInvitationFunction), cognitoMethodOptions);
+
     const adminResource = api.root.addResource('admin');
 
     // POST /admin/setup/service-schema
     const setupResource = adminResource.addResource('setup');
     const serviceSchemaResource = setupResource.addResource('service-schema');
-    serviceSchemaResource.addMethod('POST', new apigateway.LambdaIntegration(adminFunction), cognitoMethodOptions);
+    serviceSchemaResource.addMethod('POST', new apigateway.LambdaIntegration(setupServiceSchemaFunction), cognitoMethodOptions);
 
     // POST /admin/tenants
     const tenantsResource = adminResource.addResource('tenants');
-    tenantsResource.addMethod('POST', new apigateway.LambdaIntegration(adminFunction), cognitoMethodOptions);
+    tenantsResource.addMethod('POST', new apigateway.LambdaIntegration(createTenantFunction), cognitoMethodOptions);
 
     // POST /admin/migrate/all-tenants
     const migrateResource = adminResource.addResource('migrate');
     const allTenantsResource = migrateResource.addResource('all-tenants');
-    allTenantsResource.addMethod('POST', new apigateway.LambdaIntegration(adminFunction), cognitoMethodOptions);
+    allTenantsResource.addMethod('POST', new apigateway.LambdaIntegration(migrateAllTenantsFunction), cognitoMethodOptions);
 
     // POST /admin/users
     const adminUsersResource = adminResource.addResource('users');
-    adminUsersResource.addMethod('POST', new apigateway.LambdaIntegration(adminFunction), cognitoMethodOptions);
+    adminUsersResource.addMethod('POST', new apigateway.LambdaIntegration(createServicerDelegateFunction), cognitoMethodOptions);
 
     // -- Outputs
 

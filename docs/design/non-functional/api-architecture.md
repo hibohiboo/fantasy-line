@@ -165,6 +165,57 @@ sequenceDiagram
 
 ---
 
+## Lambda デプロイ方針: 1 ルート = 1 Lambda
+
+本番 Lambda は **CloudWatch ログを分離するため**、ルートごとに専用の `*-lambda.ts` ファイルを用意する。
+
+### ルール
+
+- 1 つの `*-lambda.ts` に登録するルートは **1 つだけ**
+- URL パラメータを持たないルート（`/api/users`、`/api/users/invite` など）は `app.get('*', ...)` / `app.post('*', ...)` で登録
+- URL パラメータを持つルート（`/api/users/:userId` など）は **フルパスパターン** で登録する（`c.req.param()` が動作するように）
+
+```
+app.delete('/api/users/:userId', handler)       // ✓ c.req.param('userId') が取得できる
+app.delete('*', handler)                         // ✗ c.req.param('userId') は undefined になる
+```
+
+### ファイル命名規則
+
+```
+apps/api/src/<feature>/
+  <action>-lambda.ts   # 1 ルート 1 ファイル
+```
+
+### 実装例
+
+```ts
+// listUsers-lambda.ts — URL パラメータなし
+const app = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
+app.use('*', tenantContext);
+app.get('*', requirePermission('user', 'list'), listUsersHandler);
+export const handler = handle(app);
+
+// deleteUser-lambda.ts — URL パラメータあり
+const app = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
+app.use('*', tenantContext);
+app.delete('/api/users/:userId', requirePermission('user', 'manage'), deleteUserHandler);
+export const handler = handle(app);
+```
+
+### 禁止パターン
+
+複数ルートを 1 つの Lambda にまとめない。
+
+```ts
+// ✗ 禁止: 複数ルートのバンドル
+app.get('/api/users', listUsersHandler);
+app.post('/api/users/invite', inviteUserHandler);
+app.delete('/api/users/:userId', deleteUserHandler);
+```
+
+---
+
 ## バリデーションエラーレスポンス形式
 
 すべてのエンドポイントで以下の形式に統一する。詳細は [error-handling.md](./error-handling.md) を参照。
@@ -199,3 +250,4 @@ sequenceDiagram
 | PBI-003 | 2026-05-10 | 認証チェックを `src/auth.ts` の `getOwnerId()` に共通化。使い方・テスト方針を追記 |
 | PBI-019 | 2026-05-30 | `src/auth.ts` を `src/shared/auth.ts` に移動。import パスとテスト配置を更新 |
 | PBI-SaaS-001d | 2026-06-17 | マルチテナント対応: SaaS 化後の認証フェーズ追加・代表パターン 4（Cognito JWT Authorizer → tenantContext → requirePermission → ハンドラー）追加・getOwnerId から Hono ミドルウェアへの移行経路を追記 |
+| PBI-SaaS-006 | 2026-06-23 | 1 ルート = 1 Lambda 方針を明文化。禁止パターン・命名規則・URL パラメータ対応の実装例を追記 |
