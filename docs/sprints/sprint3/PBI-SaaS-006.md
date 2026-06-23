@@ -42,6 +42,44 @@ import path from 'path';
 const migrationsFolder = process.env['MIGRATIONS_TENANT_FOLDER'] ?? path.join(__dirname, 'migrations-service');
 ```
 
+### `drizzle({ client, mode })` を `schema` なしで使ってはいけない
+
+drizzle-orm 0.45.x には `isConfig()` 関数に論理バグがある。
+
+`drizzle()` に渡した引数が config オブジェクトかどうかを `isConfig()` で判定しているが、
+`"mode"` キーが `"schema"` より先に評価されるパスで OR 条件が常に `true` になるため、
+**`schema` を持たない `{ client, mode }` 形式は config として認識されない**。
+
+```js
+// utils.js の isConfig() 内（バグ箇所）
+if ("mode" in data) {
+  // OR 条件なので常に true → 常に return false になる
+  if (data["mode"] !== "default" || data["mode"] !== "planetscale" || ...) return false;
+  return true;
+}
+```
+
+結果として `drizzle()` はフォールスルーし、渡したオブジェクト全体が mysql2 クライアントとして扱われる。
+
+```ts
+// ❌ やってはいけない（schema なし + mode あり → isConfig が false → オブジェクト全体がクライアントに）
+const db = drizzle({ client: serviceConn, mode: 'default' });
+await db.execute(sql`...`);
+// → TypeError: client.query is not a function
+```
+
+`migrate()` や `db.execute(sql`...`)` は RQB を使わないため `mode` は不要。Connection を直接渡す:
+
+```ts
+// ✅ 正しい（Connection を直接渡す）
+const db = drizzle(serviceConn);
+await migrate(db, { migrationsFolder: '...' });
+await db.execute(sql`INSERT IGNORE INTO ...`);
+```
+
+`schema` を含む場合（`{ client, schema, mode }`）は `"schema"` 分岐が先に評価されるため影響を受けない。
+`client.ts` の `buildDb()` / `getTenantDb()` は `schema` を持つので問題なく動作する。
+
 ---
 
 ## 設計決定サマリ（Phase 1 で合意済み）

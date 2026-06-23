@@ -66,8 +66,7 @@ beforeAll(async () => {
     database: 'service',
   });
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const migrateDb: any = drizzle({ client: migrateConn, mode: 'default' });
+    const migrateDb = drizzle(migrateConn);
     await migrate(migrateDb, {
       migrationsFolder: path.resolve(process.cwd(), 'drizzle-service'),
     });

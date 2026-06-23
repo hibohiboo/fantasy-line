@@ -64,7 +64,7 @@ export async function setupServiceSchemaHandler(
       database: 'service',
     });
     try {
-      const db = drizzle({ client: serviceConn, mode: 'default' });
+      const db = drizzle(serviceConn);
       await migrate(db, { migrationsFolder: path.join(__dirname, 'migrations-service') });
 
       // Step 3: roles に servicer_admin / servicer_delegate を INSERT IGNORE でシードする
