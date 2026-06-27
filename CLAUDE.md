@@ -4,7 +4,8 @@
 
 詳細な作業手順・チェックリスト・レビュー観点などは以下に分離している。
 **このファイルへの追記は「全領域に常時関わる方針」に限定し、肥大化させない。**
-
+ CLAUDE.md は 200 行以内に収めること。 ( https://claude.com/blog/steering-claude-code-skills-hooks-rules-subagents-and-more )
+ 
 | 用途 | 場所 |
 |---|---|
 | リポジトリ横断ルール（全体に常時適用） | `.claude/instructions/*.md`（ルート `CLAUDE.md` に `@.claude/instructions/ファイル名.md` と記述して自動ロード） |
