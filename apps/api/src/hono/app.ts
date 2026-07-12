@@ -1,0 +1,40 @@
+/**
+ * 統合テスト専用の Hono アプリケーション。
+ * 本番 Lambda はルートごとに *-lambda.ts を使うこと（CloudWatch ログ分離のため）。
+ */
+import { Hono } from 'hono';
+import type { AppBindings, HonoVariables } from './types';
+import { tenantContext } from '../shared/middleware/tenantContext';
+import { requirePermission } from '../shared/middleware/requirePermission';
+import { listVillagesHandler } from '../village/listVillages';
+import { createVillageHandler } from '../village/createVillage';
+import { createResidentHandler } from '../resident/createResident';
+import { listResidentsHandler } from '../resident/listResidents';
+import { listVillageResidentsHandler } from '../resident/listVillageResidents';
+import { createItemHandler } from '../item/createItem';
+import { listItemsHandler } from '../item/items';
+import { listUsersHandler } from '../user-management/listUsers';
+import { inviteUserHandler } from '../user-management/inviteUser';
+import { deleteUserHandler } from '../user-management/deleteUser';
+import { changeUserRoleHandler } from '../user-management/changeUserRole';
+import { resendInvitationHandler } from '../user-management/resendInvitation';
+
+export const app = new Hono<{ Variables: HonoVariables; Bindings: AppBindings }>();
+
+app.use('*', tenantContext);
+
+app.get('/api/villages', requirePermission('village', 'read'), listVillagesHandler);
+app.post('/api/villages', requirePermission('village', 'create'), createVillageHandler);
+
+app.post('/api/residents', requirePermission('resident', 'create'), createResidentHandler);
+app.get('/api/residents', requirePermission('resident', 'read'), listResidentsHandler);
+app.get('/api/villages/:id/residents', requirePermission('resident', 'read'), listVillageResidentsHandler);
+
+app.post('/api/items', requirePermission('item', 'create'), createItemHandler);
+app.get('/api/items', requirePermission('item', 'read'), listItemsHandler);
+
+app.get('/api/users', requirePermission('user', 'list'), listUsersHandler);
+app.post('/api/users/invite', requirePermission('user', 'manage'), inviteUserHandler);
+app.delete('/api/users/:userId', requirePermission('user', 'manage'), deleteUserHandler);
+app.put('/api/users/:userId/roles', requirePermission('user', 'manage'), changeUserRoleHandler);
+app.post('/api/users/:userId/resend-invitation', requirePermission('user', 'manage'), resendInvitationHandler);

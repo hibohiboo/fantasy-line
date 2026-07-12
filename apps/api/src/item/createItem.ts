@@ -1,43 +1,43 @@
-import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-  Context,
-} from 'aws-lambda';
+import type { Handler } from 'hono';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { CreateItemSchema } from '@repo/schema';
-import { getDb } from '../db/client';
-import { items } from '../db/schema';
-import { json } from '../shared/http';
-import { logInfo } from '../shared/logger';
+import { tenantItems } from '../db/tenant-template-schema';
+import type { HonoVariables } from '../hono/types';
 
-// items テーブルはユーザー所有リソースでないため認証チェック不要
-export const handler = async (
-  event: APIGatewayProxyEvent,
-  context: Context,
-): Promise<APIGatewayProxyResult> => {
+const createTenantItemSchema = z.object({
+  name: z.string().min(1),
+});
+
+/**
+ * POST /api/items のハンドラー。
+ * tenantItems テーブルに name・ownerId を挿入して 201 を返す。
+ */
+export const createItemHandler: Handler<{ Variables: HonoVariables }> = async (c) => {
   let body: unknown;
   try {
-    body = JSON.parse(event.body ?? '');
+    body = await c.req.json();
   } catch {
-    return json(400, { error: 'Invalid JSON' });
+    return c.json({ error: 'Invalid JSON' }, 400);
   }
 
-  const parsed = CreateItemSchema.safeParse(body);
+  const parsed = createTenantItemSchema.safeParse(body);
   if (!parsed.success) {
-    return json(400, { error: z.flattenError(parsed.error) });
+    return c.json({ error: z.flattenError(parsed.error) }, 400);
   }
 
-  const db = await getDb();
-  const [inserted] = await db.insert(items).values(parsed.data).$returningId();
+  const tenantDb = c.get('tenantDb');
+  const userId = c.get('userId');
+
+  const [inserted] = await tenantDb
+    .insert(tenantItems)
+    .values({ name: parsed.data.name, ownerId: userId })
+    .$returningId();
   if (!inserted) throw new Error('Insert returned no result');
 
-  const [created] = await db
+  const [created] = await tenantDb
     .select()
-    .from(items)
-    .where(eq(items.id, inserted.id));
+    .from(tenantItems)
+    .where(eq(tenantItems.id, inserted.id));
 
-  logInfo({ message: 'アイテムを作成しました', requestId: context.awsRequestId, itemId: inserted.id });
-
-  return json(201, { item: created });
+  return c.json({ item: created }, 201);
 };

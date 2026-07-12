@@ -9,5 +9,6 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.small.test.ts'],
+    typecheck: { tsconfig: './tsconfig.test.json' },
   },
 });

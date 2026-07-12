@@ -46,6 +46,7 @@ SubAgent 定義は `.claude/agents/*.md` を参照する。
 - `CLAUDE.md`
 - `.claude/instructions/folder-structure.md`
 - `.claude/instructions/infra.md`
+- `.claude/skills/sprint-work-plan/SKILL.md`（Phase 2 作業計画・テストリファクタリング含む）
 - `.claude/skills/code-review/SKILL.md`
 - `.claude/skills/security-review/SKILL.md`
 - `.claude/skills/aws-cost-review/SKILL.md`
@@ -67,16 +68,32 @@ SubAgent 定義は `.claude/agents/*.md` を参照する。
 
 ### Phase 2: ドキュメント作成
 
-ドキュメントには以下を含める:
-- Phase 1 で検討した背景・選択肢・採用しなかった案の理由
-- これから実装する内容の設計
-- 外部から見える仕様（URI / API / データフロー / エラー方針 / スコープ等）
+orchestrator は「何を書くか」の要件を決め、実際の作成は `documentation-coauthor` SubAgent に委譲する。
+
+#### orchestrator が決める要件
+
+- 作成するドキュメントの種類（設計書 / ADR / 作業計画）
+- 配置先パス
+- 必ず含める内容（Phase 1 の方針検討結果・スコープ・制約など）
+
+#### `documentation-coauthor` への指示テンプレート
+
+`documentation-coauthor` を呼び出すとき、`.claude/skills/sprint-work-plan/SKILL.md` を参照して作業計画・設計書を作成させる。
+
+必須の記載項目・テンプレートは同スキルに定義してある。特に以下の点に注意する:
+
+- **テストリファクタリングサブタスク**: 実装ハンドラー・テストファイルが 3 本以上の場合、全実装完了後にテスト重複を見直すサブタスクを SubAgent 割り当て表に**必ず含める**
+- **完了条件チェックリストの末尾 2 項目**: `docs/pbi/README.md` 更新とユーザー承認は削除禁止
+
+> Phase 3 の SubAgent は設計書ではなく作業計画を入力として使う。
 
 ### Phase 3: 実装タスク分解
 
 - 最小単位のサブタスクに分ける（1 サブタスク 1 SubAgent を目安）
 - 依存関係を明示する
 - 「テストコード → プロダクトコード → レビュー」の流れを基本にする
+- 全サブタスク完了後に `docs/pbi/README.md` の該当 PBI を `✅ 完了` に更新する
+- **ユーザーの承認を得てから完了とする**
 
 ## 禁止事項
 

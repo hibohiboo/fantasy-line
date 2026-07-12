@@ -1,5 +1,8 @@
 node_modules
 dist
 .env
+.env.mock
+.env.local
+.env.*.local
 test-results/
 .claude/settings.local.json

@@ -1,41 +1,31 @@
-import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-  Context,
-} from 'aws-lambda';
+import type { Handler } from 'hono';
 import { eq, asc } from 'drizzle-orm';
-import { getDb } from '../db/client';
-import { villages, residents } from '../db/schema';
-import { json } from '../shared/http';
-import { getOwnerId } from '../shared/auth';
-import { logInfo } from '../shared/logger';
+import { tenantVillages, tenantResidents } from '../db/tenant-template-schema';
+import type { HonoVariables } from '../hono/types';
 
-export const handler = async (
-  event: APIGatewayProxyEvent,
-  context: Context,
-): Promise<APIGatewayProxyResult> => {
-  const ownerIdResult = getOwnerId(event);
-  if (typeof ownerIdResult !== 'string') return ownerIdResult;
-  const ownerId = ownerIdResult;
+/**
+ * テナントの住人一覧を取得するハンドラー。
+ * 自分が所有する村の住人のみを nameKana 昇順で返す。
+ * レスポンスには villageName フィールドを含む。
+ */
+export const listResidentsHandler: Handler<{ Variables: HonoVariables }> = async (c) => {
+  const tenantDb = c.get('tenantDb');
+  const userId = c.get('userId');
 
-  const db = await getDb();
-
-  const rows = await db
+  const rows = await tenantDb
     .select({
-      id: residents.id,
-      name: residents.name,
-      nameKana: residents.nameKana,
-      birthDate: residents.birthDate,
-      villageId: residents.villageId,
-      createdAt: residents.createdAt,
-      villageName: villages.name,
+      id: tenantResidents.id,
+      name: tenantResidents.name,
+      nameKana: tenantResidents.nameKana,
+      birthDate: tenantResidents.birthDate,
+      villageId: tenantResidents.villageId,
+      createdAt: tenantResidents.createdAt,
+      villageName: tenantVillages.name,
     })
-    .from(residents)
-    .innerJoin(villages, eq(residents.villageId, villages.id))
-    .where(eq(villages.ownerId, ownerId))
-    .orderBy(asc(residents.nameKana));
+    .from(tenantResidents)
+    .innerJoin(tenantVillages, eq(tenantResidents.villageId, tenantVillages.id))
+    .where(eq(tenantVillages.ownerId, userId))
+    .orderBy(asc(tenantResidents.nameKana));
 
-  logInfo({ message: '住人一覧を取得しました', requestId: context.awsRequestId, userId: ownerId, count: rows.length });
-
-  return json(200, { residents: rows });
+  return c.json({ residents: rows });
 };

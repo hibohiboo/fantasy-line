@@ -8,3 +8,5 @@ services:
       MYSQL_PASSWORD: testpass
     ports:
       - 3306:3306
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d

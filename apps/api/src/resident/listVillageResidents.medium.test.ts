@@ -1,138 +1,207 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import { ListVillageResidentsResponseSchema } from '@repo/schema';
-import type * as ListVillageResidentsModule from './listVillageResidents';
-import * as schema from '../db/schema';
-import { useMysqlContainer } from '../shared/use-mysql-container';
-import { mockDbClient } from '../shared/db-mock';
+// vi.mock は Vitest がファイル先頭にホイストするため最初に記述する
+vi.mock('../db/client', () => ({
+  getDb: vi.fn(),
+  getTenantDb: vi.fn(),
+}));
 
-const ctx = useMysqlContainer();
-let handler: typeof ListVillageResidentsModule.handler;
+import { vi, describe, test, expect, beforeAll, beforeEach } from 'vitest';
+import * as tenantSchema from '../db/tenant-template-schema';
+import { getDb, getTenantDb } from '../db/client';
+import { app } from '../hono/app';
+import { useTenantTestContainer, makeMockEvent } from '../shared/test-helpers/mediumTestSetup';
 
-describe('listVillageResidents handler - 統合テスト', () => {
-  let ownedVillageId: number;
+const ctx = useTenantTestContainer([{ resource: 'resident', action: 'read' }]);
 
-  beforeEach(async () => {
-    // residents → villages の順で削除（参照整合性）
-    await ctx.db.delete(schema.residents);
-    await ctx.db.delete(schema.villages);
+beforeAll(() => {
+  (getDb as ReturnType<typeof vi.fn>).mockResolvedValue(ctx.serviceDb);
+  (getTenantDb as ReturnType<typeof vi.fn>).mockReturnValue(ctx.tenantDb);
+});
 
-    // テスト用村を作成（user-1 所有）
-    const [inserted] = await ctx.db
-      .insert(schema.villages)
-      .values({ name: '勇者の村', ownerId: 'user-1' })
-      .$returningId();
-    ownedVillageId = inserted!.id;
+beforeEach(async () => {
+  // 参照整合性のため residents → villages の順でリセット
+  await ctx.tenantDb.delete(tenantSchema.tenantResidents);
+  await ctx.tenantDb.delete(tenantSchema.tenantVillages);
+});
 
-    vi.resetModules();
-    vi.doMock('../db/client', () => mockDbClient(ctx.db));
-    ({ handler } = await import('./listVillageResidents') as typeof ListVillageResidentsModule);
+// ---- テスト ----
+
+describe('listVillageResidents 統合テスト', () => {
+  describe('Scenario: tenant_user が GET /api/villages/:id/residents にアクセスするとき', () => {
+    test('住人がいない場合は空配列を返すこと', async () => {
+      // Arrange
+      const [myVillage] = await ctx.tenantDb
+        .insert(tenantSchema.tenantVillages)
+        .values({ name: '勇者の村', ownerId: 1 })
+        .$returningId();
+
+      const mockEvent = makeMockEvent({
+        sub: 'user-1-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
+
+      // Act
+      const response = await app.request(
+        `/api/villages/${myVillage.id}/residents`,
+        {},
+        { event: mockEvent },
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const body = await response.json() as { residents: unknown[] };
+      expect(body.residents).toEqual([]);
+    });
+
+    test('指定した村の住人のみ返すこと（他の村の住人を含まない）', async () => {
+      // Arrange: user-1 が 2 つの村を所有
+      const [myVillage] = await ctx.tenantDb
+        .insert(tenantSchema.tenantVillages)
+        .values({ name: '勇者の村', ownerId: 1 })
+        .$returningId();
+      const [anotherVillage] = await ctx.tenantDb
+        .insert(tenantSchema.tenantVillages)
+        .values({ name: '戦士の村', ownerId: 1 })
+        .$returningId();
+
+      await ctx.tenantDb.insert(tenantSchema.tenantResidents).values([
+        {
+          name: '山田太郎',
+          nameKana: 'ヤマダタロウ',
+          birthDate: '2000-01-15',
+          villageId: myVillage.id,
+        },
+        {
+          name: '鈴木一郎',
+          nameKana: 'スズキイチロウ',
+          birthDate: '1995-05-20',
+          villageId: anotherVillage.id,
+        },
+      ]);
+
+      const mockEvent = makeMockEvent({
+        sub: 'user-1-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
+
+      // Act
+      const response = await app.request(
+        `/api/villages/${myVillage.id}/residents`,
+        {},
+        { event: mockEvent },
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const body = await response.json() as { residents: Array<{ name: string }> };
+      expect(body.residents).toHaveLength(1);
+      expect(body.residents[0]?.name).toBe('山田太郎');
+    });
+
+    test('nameKana 昇順でソートされること', async () => {
+      // Arrange
+      const [myVillage] = await ctx.tenantDb
+        .insert(tenantSchema.tenantVillages)
+        .values({ name: '勇者の村', ownerId: 1 })
+        .$returningId();
+
+      await ctx.tenantDb.insert(tenantSchema.tenantResidents).values([
+        {
+          name: '山田太郎',
+          nameKana: 'ヤマダタロウ',
+          birthDate: '2000-01-15',
+          villageId: myVillage.id,
+        },
+        {
+          name: '佐藤花子',
+          nameKana: 'サトウハナコ',
+          birthDate: '1998-03-10',
+          villageId: myVillage.id,
+        },
+        {
+          name: '安部一郎',
+          nameKana: 'アベイチロウ',
+          birthDate: '1990-07-22',
+          villageId: myVillage.id,
+        },
+      ]);
+
+      const mockEvent = makeMockEvent({
+        sub: 'user-1-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
+
+      // Act
+      const response = await app.request(
+        `/api/villages/${myVillage.id}/residents`,
+        {},
+        { event: mockEvent },
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const body = await response.json() as { residents: Array<{ nameKana: string }> };
+      expect(body.residents).toHaveLength(3);
+      expect(body.residents[0]?.nameKana).toBe('アベイチロウ');
+      expect(body.residents[1]?.nameKana).toBe('サトウハナコ');
+      expect(body.residents[2]?.nameKana).toBe('ヤマダタロウ');
+    });
+
+    test('他ユーザーの村へのアクセスは 403 が返ること', async () => {
+      // Arrange: user-2 が所有する村を作成
+      const [otherVillage] = await ctx.tenantDb
+        .insert(tenantSchema.tenantVillages)
+        .values({ name: '他者の村', ownerId: 2 })
+        .$returningId();
+
+      const mockEvent = makeMockEvent({
+        sub: 'user-1-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
+
+      // Act
+      const response = await app.request(
+        `/api/villages/${otherVillage.id}/residents`,
+        {},
+        { event: mockEvent },
+      );
+
+      // Assert
+      expect(response.status).toBe(403);
+      const body = await response.json() as { error: string };
+      expect(body.error).toBe('Forbidden');
+    });
   });
 
-  it('住人がいない場合は空配列を返す', async () => {
-    const result = await handler(
-      {
-        headers: { 'X-User-Id': 'user-1' },
-        pathParameters: { id: String(ownedVillageId) },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
+  describe('権限のないユーザーがアクセスするとき', () => {
+    test('403 Forbidden が返ること（role_permissions に resident:read がないユーザー）', async () => {
+      // Arrange: userId=2 には resident:read 権限がない
+      // まず user-2 の村を作成
+      const [otherVillage] = await ctx.tenantDb
+        .insert(tenantSchema.tenantVillages)
+        .values({ name: '他者の村', ownerId: 2 })
+        .$returningId();
 
-    expect(result.statusCode).toBe(200);
-    const { residents } = ListVillageResidentsResponseSchema.parse(JSON.parse(result.body));
-    expect(residents).toEqual([]);
-  });
+      const mockEvent = makeMockEvent({
+        sub: 'user-2-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
 
-  it('指定した村の住人のみ返す（他の村の住人を含まない）', async () => {
-    // user-1 所有の別村を作成
-    const [anotherVillage] = await ctx.db
-      .insert(schema.villages)
-      .values({ name: '戦士の村', ownerId: 'user-1' })
-      .$returningId();
+      // Act
+      const response = await app.request(
+        `/api/villages/${otherVillage.id}/residents`,
+        {},
+        { event: mockEvent },
+      );
 
-    await ctx.db.insert(schema.residents).values([
-      {
-        name: '山田太郎',
-        nameKana: 'ヤマダタロウ',
-        birthDate: '2000-01-15',
-        villageId: ownedVillageId,
-      },
-      {
-        name: '鈴木一郎',
-        nameKana: 'スズキイチロウ',
-        birthDate: '1995-05-20',
-        villageId: anotherVillage!.id,
-      },
-    ]);
-
-    const result = await handler(
-      {
-        headers: { 'X-User-Id': 'user-1' },
-        pathParameters: { id: String(ownedVillageId) },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(200);
-    const { residents } = ListVillageResidentsResponseSchema.parse(JSON.parse(result.body));
-    expect(residents).toHaveLength(1);
-    expect(residents.at(0)?.name).toBe('山田太郎');
-  });
-
-  it('nameKana の昇順でソートされて返す', async () => {
-    await ctx.db.insert(schema.residents).values([
-      {
-        name: '山田太郎',
-        nameKana: 'ヤマダタロウ',
-        birthDate: '2000-01-15',
-        villageId: ownedVillageId,
-      },
-      {
-        name: '佐藤花子',
-        nameKana: 'サトウハナコ',
-        birthDate: '1998-03-10',
-        villageId: ownedVillageId,
-      },
-      {
-        name: '安部一郎',
-        nameKana: 'アベイチロウ',
-        birthDate: '1990-07-22',
-        villageId: ownedVillageId,
-      },
-    ]);
-
-    const result = await handler(
-      {
-        headers: { 'X-User-Id': 'user-1' },
-        pathParameters: { id: String(ownedVillageId) },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(200);
-    const { residents } = ListVillageResidentsResponseSchema.parse(JSON.parse(result.body));
-    expect(residents).toHaveLength(3);
-    expect(residents.at(0)?.nameKana).toBe('アベイチロウ');
-    expect(residents.at(1)?.nameKana).toBe('サトウハナコ');
-    expect(residents.at(2)?.nameKana).toBe('ヤマダタロウ');
-  });
-
-  it('他ユーザーの村へのアクセスは403を返す', async () => {
-    // user-2 所有の村を作成
-    const [otherVillage] = await ctx.db
-      .insert(schema.villages)
-      .values({ name: '魔王の村', ownerId: 'user-2' })
-      .$returningId();
-
-    const result = await handler(
-      {
-        headers: { 'X-User-Id': 'user-1' },
-        pathParameters: { id: String(otherVillage!.id) },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
-
-    expect(result.statusCode).toBe(403);
-    expect(JSON.parse(result.body).error).toBe('Forbidden');
+      // Assert
+      expect(response.status).toBe(403);
+      const body = await response.json() as { error: string };
+      expect(body.error).toBe('Forbidden');
+    });
   });
 });

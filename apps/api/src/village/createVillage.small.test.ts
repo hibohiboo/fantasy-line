@@ -1,39 +1,78 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
-import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as CreateVillageModule from './createVillage';
-import { mockDbClient } from '../shared/db-mock';
+import { describe, test, expect, vi, beforeAll } from 'vitest';
+import { Hono } from 'hono';
+import type { HonoVariables } from '../hono/types';
+import type { TenantDb } from '../db/client';
 
-let handler: typeof CreateVillageModule.handler;
+const mockInsert = vi.fn();
+const mockSelect = vi.fn();
 
-beforeAll(async () => {
-  vi.doMock('../db/client', () => mockDbClient({}));
-  ({ handler } = await import('./createVillage'));
-});
+// tenantDb のモック
+function makeMockTenantDb() {
+  return {
+    insert: () => ({ values: () => ({ $returningId: mockInsert }) }),
+    select: () => ({ from: () => ({ where: mockSelect }) }),
+  } as unknown as TenantDb;
+}
 
-describe('createVillage handler - ハンドラー固有のケース', () => {
-  it('bodyがJSONでない場合は400を返す', async () => {
-    const result = await handler(
-      { body: 'not json', headers: { 'X-User-Id': 'user-1' } } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
+// createVillageHandler をテストするための最小 Hono app
+// tenantContext / requirePermission は呼ばず、context を直接セットする
+function createTestApp(tenantDb: TenantDb, userId: number) {
+  const app = new Hono<{ Variables: HonoVariables }>();
+  // テスト用: ミドルウェアをスキップして Variables を直接セット
+  app.use('*', async (c, next) => {
+    c.set('tenantDb', tenantDb);
+    c.set('userId', userId);
+    c.set('tenantSlug', 'test');
+    c.set('userType', 'tenant_user');
+    await next();
+  });
+  return app;
+}
 
-    expect(result.statusCode).toBe(400);
-    expect(JSON.parse(result.body).error).toBe('Invalid JSON');
+describe('createVillageHandler', () => {
+  beforeAll(async () => {
+    vi.doMock('../db/client', () => ({ getDb: vi.fn(), getTenantDb: vi.fn() }));
   });
 
-  it('nameが空文字の場合は400を返す', async () => {
-    const result = await handler(
-      {
+  describe('body が JSON でないとき', () => {
+    test('400 が返ること', async () => {
+      // Arrange
+      const { createVillageHandler } = await import('./createVillage');
+      const app = createTestApp(makeMockTenantDb(), 1);
+      app.post('/api/villages', createVillageHandler);
+
+      // Act
+      const res = await app.request('/api/villages', {
+        method: 'POST',
+        body: 'not json',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      // Assert
+      expect(res.status).toBe(400);
+      const body = await res.json() as { error: string };
+      expect(body.error).toBe('Invalid JSON');
+    });
+  });
+
+  describe('name が空文字のとき', () => {
+    test('400 が返ること', async () => {
+      // Arrange
+      const { createVillageHandler } = await import('./createVillage');
+      const app = createTestApp(makeMockTenantDb(), 1);
+      app.post('/api/villages', createVillageHandler);
+
+      // Act
+      const res = await app.request('/api/villages', {
+        method: 'POST',
         body: JSON.stringify({ name: '' }),
-        headers: { 'X-User-Id': 'user-1' },
-      } as unknown as APIGatewayProxyEvent,
-      {} as Context,
-    );
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-    expect(result.statusCode).toBe(400);
-    expect(JSON.parse(result.body).error).toEqual(
-      expect.objectContaining({ fieldErrors: { name: expect.any(Array) } }),
-    );
+      // Assert
+      expect(res.status).toBe(400);
+      const body = await res.json() as { error: { fieldErrors: Record<string, string[]> } };
+      expect(body.error.fieldErrors.name).toBeDefined();
+    });
   });
-
 });

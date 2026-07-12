@@ -1,42 +1,100 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
-import type * as ItemsModule from './items';
-import * as schema from '../db/schema';
-import { useMysqlContainer } from '../shared/use-mysql-container';
-import { mockDbClient } from '../shared/db-mock';
+// vi.mock は Vitest がファイル先頭にホイストするため最初に記述する
+vi.mock('../db/client', () => ({
+  getDb: vi.fn(),
+  getTenantDb: vi.fn(),
+}));
 
-const ctx = useMysqlContainer();
-let handler: typeof ItemsModule.handler;
+import { vi, describe, test, expect, beforeAll, beforeEach } from 'vitest';
+import * as tenantSchema from '../db/tenant-template-schema';
+import { getDb, getTenantDb } from '../db/client';
+import { app } from '../hono/app';
+import { useTenantTestContainer, makeMockEvent } from '../shared/test-helpers/mediumTestSetup';
 
-describe('items handler', () => {
-  beforeEach(async () => {
-    await ctx.db.delete(schema.items);
-    vi.resetModules();
-    vi.doMock('../db/client', () => mockDbClient(ctx.db));
-    ({ handler } = await import('./items'));
+const ctx = useTenantTestContainer([{ resource: 'item', action: 'read' }]);
+
+beforeAll(() => {
+  (getDb as ReturnType<typeof vi.fn>).mockResolvedValue(ctx.serviceDb);
+  (getTenantDb as ReturnType<typeof vi.fn>).mockReturnValue(ctx.tenantDb);
+});
+
+beforeEach(async () => {
+  await ctx.tenantDb.delete(tenantSchema.tenantItems);
+});
+
+// ---- テスト ----
+
+describe('listItems 統合テスト', () => {
+  describe('Scenario: tenant_user が GET /api/items にアクセスするとき', () => {
+    test('アイテムがない場合は空配列を返すこと', async () => {
+      // Arrange
+      const mockEvent = makeMockEvent({
+        sub: 'user-1-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
+
+      // Act
+      const response = await app.request(
+        '/api/items',
+        { method: 'GET' },
+        { event: mockEvent },
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const body = await response.json() as { items: unknown[] };
+      expect(body.items).toEqual([]);
+    });
+
+    test('自分が作成したアイテムのみ返すこと（他ユーザーのアイテムを含まない）', async () => {
+      // Arrange: user1 と user2 それぞれのアイテムをシード
+      await ctx.tenantDb.insert(tenantSchema.tenantItems).values([
+        { name: 'ユーザー1のアイテム', ownerId: 1 },
+        { name: 'ユーザー2のアイテム', ownerId: 2 },
+      ]);
+
+      const mockEvent = makeMockEvent({
+        sub: 'user-1-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
+
+      // Act
+      const response = await app.request(
+        '/api/items',
+        { method: 'GET' },
+        { event: mockEvent },
+      );
+
+      // Assert
+      expect(response.status).toBe(200);
+      const body = await response.json() as { items: { id: number; name: string; ownerId: number }[] };
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0].name).toBe('ユーザー1のアイテム');
+      expect(body.items[0].ownerId).toBe(1);
+    });
   });
 
-  it('データが存在しない場合、空のitemsを返す', async () => {
-    const result = await handler({} as APIGatewayProxyEvent, {} as Context);
+  describe('権限のないユーザーがアクセスするとき', () => {
+    test('403 Forbidden が返ること（role_permissions に item:read がないユーザー）', async () => {
+      // Arrange: userId=2 には item:read 権限がない
+      const mockEvent = makeMockEvent({
+        sub: 'user-2-sub',
+        'custom:user_type': 'tenant_user',
+        'custom:tenant_id': 'test',
+      });
 
-    expect(result.statusCode).toBe(200);
-    expect(JSON.parse(result.body).items).toEqual([]);
-  });
+      // Act
+      const response = await app.request(
+        '/api/items',
+        { method: 'GET' },
+        { event: mockEvent },
+      );
 
-  it('データが存在する場合、全itemsを返す', async () => {
-    await ctx.db.insert(schema.items).values([
-      { name: '炎の剣', description: '炎を纏った魔法の剣', rarity: 'rare', price: 5000 },
-      { name: '回復薬', description: 'HPを100回復する', rarity: 'common', price: 100 },
-    ]);
-
-    const result = await handler({} as APIGatewayProxyEvent, {} as Context);
-
-    expect(result.statusCode).toBe(200);
-    const { items } = JSON.parse(result.body);
-    expect(items).toHaveLength(2);
-    expect(items[0].name).toBe('炎の剣');
-    expect(items[0].rarity).toBe('rare');
-    expect(items[0].price).toBe(5000);
-    expect(items[1].name).toBe('回復薬');
+      // Assert
+      expect(response.status).toBe(403);
+      const body = await response.json() as { error: string };
+      expect(body.error).toBe('Forbidden');
+    });
   });
 });

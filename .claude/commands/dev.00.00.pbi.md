@@ -36,6 +36,25 @@
 
 ---
 
+## 保存先
+
+作成した PBI は必ず `docs/pbi/` 配下に保存すること。
+
+1. **エピックディレクトリ**: 機能の性質に合った既存ディレクトリを選ぶ。該当なければ新規ディレクトリを作成する。
+   - `00-authentication/` — 認証・認可
+   - `00-infrastructure/` — インフラ・基盤・テスト戦略
+   - `01-village-management/` — 村の管理
+   - `02-resident-management/` — 住人の管理
+   - `03-job-schedule/` — 職業・生活リズム
+   - `04-daily-simulation/` — 1日シミュレーション
+   - `05-visualization/` — 可視化・統計
+   - `06-mana-system/` — 魔力システム
+   - `07-multitenant-saas/` — マルチテナント SaaS
+
+2. **ファイル名**: `PBI-XXX.md`（既存の連番に続く番号、またはエピックの接頭辞付き識別子）
+
+3. **README の更新**: `docs/pbi/README.md` のエピックテーブルと PBI 一覧テーブルに新 PBI のリンク行を追加する。
+
 ## 出力形式
 
 下記のテンプレートに従って出力してください。

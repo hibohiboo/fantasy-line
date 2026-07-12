@@ -1,31 +1,21 @@
-import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-  Context,
-} from 'aws-lambda';
+import type { Handler } from 'hono';
 import { desc, eq } from 'drizzle-orm';
-import { getDb } from '../db/client';
-import { villages } from '../db/schema';
-import { json } from '../shared/http';
-import { getOwnerId } from '../shared/auth';
-import { logInfo } from '../shared/logger';
+import { tenantVillages } from '../db/tenant-template-schema';
+import type { HonoVariables } from '../hono/types';
 
-export const handler = async (
-  event: APIGatewayProxyEvent,
-  context: Context,
-): Promise<APIGatewayProxyResult> => {
-  const ownerIdResult = getOwnerId(event);
-  if (typeof ownerIdResult !== 'string') return ownerIdResult;
-  const ownerId = ownerIdResult;
+/**
+ * テナントの村一覧を取得するハンドラー。
+ * tenantContext ミドルウェアが解決した tenantDb と userId を使用する。
+ */
+export const listVillagesHandler: Handler<{ Variables: HonoVariables }> = async (c) => {
+  const tenantDb = c.get('tenantDb');
+  const userId = c.get('userId');
 
-  const db = await getDb();
-  const result = await db
+  const result = await tenantDb
     .select()
-    .from(villages)
-    .where(eq(villages.ownerId, ownerId))
-    .orderBy(desc(villages.createdAt));
+    .from(tenantVillages)
+    .where(eq(tenantVillages.ownerId, userId))
+    .orderBy(desc(tenantVillages.createdAt));
 
-  logInfo({ message: '村一覧を取得しました', requestId: context.awsRequestId, userId: ownerId, count: result.length });
-
-  return json(200, { villages: result });
+  return c.json({ villages: result });
 };
